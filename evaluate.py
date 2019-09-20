@@ -69,7 +69,7 @@ for droneInx, drone in enumerate(dronesID):
             if not os.path.isdir(images_output_dir):
                 raise
 
-        for imageIdx,imageID in tqdm(enumerate(imagesList), desc="Image"):
+        for imageIdx,imageID in enumerate(tqdm(imagesList, desc="Image")):
 
             n_cars = np.zeros((len(dronesID),wayPointsSize,timeStepsSize))
             conf_cars = np.zeros((len(dronesID),wayPointsSize,timeStepsSize))
