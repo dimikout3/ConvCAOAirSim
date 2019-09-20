@@ -19,6 +19,8 @@ except OSError:
     if not os.path.isdir(detected_output_dir):
         raise
 
+report_file = open(os.path.join(detected_output_dir, "report_detected.txt"),"w+")
+
 dronesID = os.listdir(raw_output_dir)
 wayPointsID = os.listdir(os.path.join(raw_output_dir, dronesID[0]))
 wayPointsSize = len(wayPointsID)
@@ -160,10 +162,10 @@ for droneInx, drone in enumerate(dronesID):
                         n_trafficLights[droneInx][position][imageIdx] += 1
 
 
-            print(f"Drone: {drone} - Position: {position} - Time: {imageIdx}")
-            print(f"{2*' '}Number of cars detected: {n_cars[droneInx][position][imageIdx]}")
-            print(f"{2*' '}Number of persons detected: {n_persons[droneInx][position][imageIdx]}")
-            print(f"{2*' '}Number of traffic lights detected: {n_trafficLights[droneInx][position][imageIdx]}")
+            report_file.write(f"Drone: {drone} - Position: {position} - Time: {imageIdx}\n")
+            report_file.write(f"{2*' '}Number of cars detected: {n_cars[droneInx][position][imageIdx]}\n")
+            report_file.write(f"{2*' '}Number of persons detected: {n_persons[droneInx][position][imageIdx]}\n")
+            report_file.write(f"{2*' '}Number of traffic lights detected: {n_trafficLights[droneInx][position][imageIdx]}\n")
 
             # show the output image
             # cv2.imshow("Image", image)
@@ -171,4 +173,5 @@ for droneInx, drone in enumerate(dronesID):
             # plt.show()
             plt.savefig(os.path.join(images_output_dir,imageID))
             plt.close()
+report_file.close
             # cv2.waitKey(0)
