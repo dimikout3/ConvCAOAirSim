@@ -102,7 +102,7 @@ setCameraOrientation(dronesID)
 airsim.wait_key('Press any key to takeoff all drones')
 takeoffAsyncAllDrones(dronesID)
 
-parentDir = os.path.join(os.getcwd(), "airsim_swarm")
+parentDir = os.path.join(os.getcwd(), "swarm_raw_output")
 try:
     os.makedirs(parentDir)
 except OSError:
