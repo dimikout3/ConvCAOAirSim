@@ -48,8 +48,6 @@ configPath = os.path.join(os.getcwd(),"yolo-coco", "yolov3.cfg")
 print("[INFO] loading YOLO from disk...")
 net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 
-# for drone in tqdm(dronesID, desc="Drone"):
-#     for position in tqdm(range(0,wayPointsSize), desc="Position"):
 for drone in dronesID:
     print(f"\n[DRONE]: {drone}")
     for position in range(0,wayPointsSize):
