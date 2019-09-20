@@ -10,13 +10,6 @@ import os
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-# path expressed as x, y, z and speed
-PATH = {"Drone1":[(10,0,-10,5), (30,0,-10,5),(50,0,-10,5)],
-        "Drone2":[(10,10,-10,5), (10,20,-10,5),(10,30,-10,5)],
-        }
-
-dronesID = list(PATH.keys())
-wayPointsSize = len(PATH[dronesID[0]])
 
 raw_output_dir = os.path.join(os.getcwd(), "swarm_raw_output")
 detected_output_dir = os.path.join(os.getcwd(), "swarm_detected")
@@ -25,6 +18,10 @@ try:
 except OSError:
     if not os.path.isdir(detected_output_dir):
         raise
+
+dronesID = os.listdir(raw_output_dir)
+wayPointsID = os.listdir(os.path.join(raw_output_dir, dronesID[0]))
+wayPointsSize = len(wayPointsID)
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
