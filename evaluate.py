@@ -189,7 +189,7 @@ for droneInx, drone in enumerate(dronesID):
 
 report_file.close
 
-np.save(os.path.join(detected_output_dir,"n_cars.npy"),n_cars)
-np.save(os.path.join(detected_output_dir,"n_persons.npy"),n_persons)
-np.save(os.path.join(detected_output_dir,"n_trafficLights.npy"),n_trafficLights)
+np.save(os.path.join(detected_output_dir,"n_cars"),n_cars)
+np.save(os.path.join(detected_output_dir,"n_persons"),n_persons)
+np.save(os.path.join(detected_output_dir,"n_trafficLights"),n_trafficLights)
             # cv2.waitKey(0)
