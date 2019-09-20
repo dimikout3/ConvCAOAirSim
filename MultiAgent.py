@@ -65,7 +65,7 @@ def monitor(droneList, posInd, parentDir, timeInterval = 1, totalTime = 10):
                 os.makedirs(subDir)
 
             responses = client.simGetImages([
-                airsim.ImageRequest("0", airsim.ImageType.DepthVis),  #depth visualization image
+                # airsim.ImageRequest("0", airsim.ImageType.DepthVis),  #depth visualization image
                 airsim.ImageRequest("1", airsim.ImageType.Scene, False, False)], vehicle_name=drone)  #scene vision image in uncompressed RGB array
 
             saveImage(subDir, timeStep, responses)
