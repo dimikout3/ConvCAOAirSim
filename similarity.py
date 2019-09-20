@@ -28,6 +28,7 @@ def compareImages(image1, image2):
     return len(good_p)
 
 raw_output_dir = os.path.join(os.getcwd(), "swarm_raw_output")
+detected_output_dir = os.path.join(os.getcwd(), "swarm_detected")
 
 dronesID = os.listdir(raw_output_dir)
 wayPointsID = os.listdir(os.path.join(raw_output_dir, dronesID[0]))
@@ -35,11 +36,14 @@ wayPointsSize = len(wayPointsID)
 timeStepsID = os.listdir(os.path.join(raw_output_dir, dronesID[0],wayPointsID[0]))
 timeStepsSize = len(timeStepsID)
 
+report_file = open(os.path.join(detected_output_dir, "report_similarity.txt"),"w+")
+
+
 for positionInx, position in enumerate(wayPointsID):
-    print(f"[POSITION]: {position}")
+    print(f"[POSITION]: {position}", file=report_file)
 
     for imageIdx,imageID in enumerate(timeStepsID):
-        print(f"{2*' '}[TIME]: {imageIdx} -- [IMAGE]: {imageID}")
+        print(f"{2*' '}[TIME]: {imageIdx} -- [IMAGE]: {imageID}", file=report_file)
 
         # dronesComb -> [("drone1,drone2"),("drones1","drones3") ...]
         for dronesComb in itertools.combinations(dronesID,2):
@@ -49,4 +53,6 @@ for positionInx, position in enumerate(wayPointsID):
 
             good_points = compareImages(image1, image2)
 
-            print(f"{4*' '} {dronesComb[0]} - {dronesComb[1]} have {good_points} good points (similarity)")
+            print(f"{4*' '} {dronesComb[0]} - {dronesComb[1]} have {good_points} good points (similarity)", file=report_file)
+
+report_file.close()
