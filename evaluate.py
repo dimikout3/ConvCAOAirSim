@@ -22,6 +22,8 @@ except OSError:
 dronesID = os.listdir(raw_output_dir)
 wayPointsID = os.listdir(os.path.join(raw_output_dir, dronesID[0]))
 wayPointsSize = len(wayPointsID)
+timeStepsID = os.listdir(os.path.join(raw_output_dir, dronesID[0],wayPointsID[0]))
+timeStepsSize = len(timeStepsID)
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -48,7 +50,7 @@ configPath = os.path.join(os.getcwd(),"yolo-coco", "yolov3.cfg")
 print("[INFO] loading YOLO from disk...")
 net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 
-for drone in dronesID:
+for droneInx, drone in enumerate(dronesID):
     print(f"\n[DRONE]: {drone}")
     for position in range(0,wayPointsSize):
         print(f"{4*' '}[POSITION]: {position}")
@@ -65,7 +67,14 @@ for drone in dronesID:
             if not os.path.isdir(images_output_dir):
                 raise
 
-        for imageID in tqdm(imagesList, desc="Image"):
+        for imageIdx,imageID in tqdm(enumerate(imagesList), desc="Image"):
+
+            n_cars = np.zeros((len(dronesID),wayPointsSize,timeStepsSize))
+            conf_cars = np.zeros((len(dronesID),wayPointsSize,timeStepsSize))
+            n_persons = np.zeros((len(dronesID),wayPointsSize,timeStepsSize))
+            conf_persons = np.zeros((len(dronesID),wayPointsSize,timeStepsSize))
+            n_trafficLights = np.zeros((len(dronesID),wayPointsSize,timeStepsSize))
+            conf_trafficLights = np.zeros((len(dronesID),wayPointsSize,timeStepsSize))
 
             image = cv2.imread(os.path.join(images_raw_dir,imageID))
             (H, W) = image.shape[:2]
@@ -131,18 +140,30 @@ for drone in dronesID:
 
             # ensure at least one detection exists
             if len(idxs) > 0:
-            	# loop over the indexes we are keeping
-            	for i in idxs.flatten():
-            		# extract the bounding box coordinates
-            		(x, y) = (boxes[i][0], boxes[i][1])
-            		(w, h) = (boxes[i][2], boxes[i][3])
+                # loop over the indexes we are keeping
+                for i in idxs.flatten():
+                    # extract the bounding box coordinates
+                    (x, y) = (boxes[i][0], boxes[i][1])
+                    (w, h) = (boxes[i][2], boxes[i][3])
 
-            		# draw a bounding box rectangle and label on the image
-            		color = [int(c) for c in COLORS[classIDs[i]]]
-            		cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
-            		text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
-            		cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
-            			0.5, color, 2)
+                    # draw a bounding box rectangle and label on the image
+                    color = [int(c) for c in COLORS[classIDs[i]]]
+                    cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
+                    text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
+                    cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,0.5, color, 2)
+
+                    if LABELS[classIDs[i]] == "car":
+                        n_cars[droneInx][position][imageIdx] += 1
+                    elif LABELS[classIDs[i]] == "person":
+                        n_persons[droneInx][position][imageIdx] += 1
+                    elif LABELS[classIDs[i]] == "traffic light":
+                        n_trafficLights[droneInx][position][imageIdx] += 1
+
+
+            print(f"Drone: {drone} - Position: {position} - Time: {imageIdx}")
+            print(f"{2*' '}Number of cars detected: {n_cars[droneInx][position][imageIdx]}")
+            print(f"{2*' '}Number of persons detected: {n_persons[droneInx][position][imageIdx]}")
+            print(f"{2*' '}Number of traffic lights detected: {n_trafficLights[droneInx][position][imageIdx]}")
 
             # show the output image
             # cv2.imshow("Image", image)
