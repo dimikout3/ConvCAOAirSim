@@ -6,6 +6,7 @@ import numpy as np
 import cv2
 import os
 import itertools
+from tqdm import tqdm
 
 def compareImages(image1, image2):
 
@@ -38,8 +39,11 @@ timeStepsSize = len(timeStepsID)
 
 report_file = open(os.path.join(detected_output_dir, "report_similarity.txt"),"w+")
 
+image1 = cv2.imread(os.path.join(raw_output_dir, dronesID[0], wayPointsID[0], timeStepsID[0]))
+image2 = cv2.imread(os.path.join(raw_output_dir, dronesID[0], wayPointsID[0], timeStepsID[0]))
+good_points_max = compareImages(image1, image2)
 
-for positionInx, position in enumerate(wayPointsID):
+for positionInx, position in enumerate(tqdm(wayPointsID, desc="Postion")):
     print(f"[POSITION]: {position}", file=report_file)
 
     for imageIdx,imageID in enumerate(timeStepsID):
@@ -53,6 +57,6 @@ for positionInx, position in enumerate(wayPointsID):
 
             good_points = compareImages(image1, image2)
 
-            print(f"{4*' '} {dronesComb[0]} - {dronesComb[1]} have {good_points} good points (similarity)", file=report_file)
+            print(f"{4*' '} {dronesComb[0]} - {dronesComb[1]} have {good_points/good_points_max}[%] similarity", file=report_file)
 
 report_file.close()
