@@ -141,6 +141,7 @@ for droneInx, drone in enumerate(dronesID):
             	args["threshold"])
 
             # ensure at least one detection exists
+            # Loop every detection
             if len(idxs) > 0:
                 # loop over the indexes we are keeping
                 for i in idxs.flatten():
@@ -168,16 +169,16 @@ for droneInx, drone in enumerate(dronesID):
             report_file.write(f"Drone: {drone} - Position: {position} - Time: {imageIdx}\n")
 
             report_file.write(f"{2*' '}Number of cars detected: {n_cars[droneInx][position][imageIdx]}\n")
-            avgConf = conf_cars[droneInx][position][imageIdx]/n_cars[droneInx][position][imageIdx] if n_cars[droneInx][position][imageIdx] != 0.0 else 0.0
-            report_file.write(f"{2*' '}Confidence of cars detected: {avgConf}\n")
+            avgConf_cars = conf_cars[droneInx][position][imageIdx]/n_cars[droneInx][position][imageIdx] if n_cars[droneInx][position][imageIdx] != 0.0 else 0.0
+            report_file.write(f"{2*' '}Confidence of cars detected: {avgConf_cars}\n")
 
             report_file.write(f"{2*' '}Number of persons detected: {n_persons[droneInx][position][imageIdx]}\n")
-            avgConf = conf_persons[droneInx][position][imageIdx]/n_persons[droneInx][position][imageIdx] if n_persons[droneInx][position][imageIdx] != 0.0 else 0.0
-            report_file.write(f"{2*' '}Confidence of persons detected: {avgConf}\n")
+            avgConf_persons = conf_persons[droneInx][position][imageIdx]/n_persons[droneInx][position][imageIdx] if n_persons[droneInx][position][imageIdx] != 0.0 else 0.0
+            report_file.write(f"{2*' '}Confidence of persons detected: {avgConf_persons}\n")
 
             report_file.write(f"{2*' '}Number of traffic lights detected: {n_trafficLights[droneInx][position][imageIdx]}\n")
-            avgConf = conf_trafficLights[droneInx][position][imageIdx]/n_trafficLights[droneInx][position][imageIdx] if n_trafficLights[droneInx][position][imageIdx] != 0.0 else 0.0
-            report_file.write(f"{2*' '}Confidence of traffic lights detected: {avgConf}\n")
+            avgConf_trafficLights = conf_trafficLights[droneInx][position][imageIdx]/n_trafficLights[droneInx][position][imageIdx] if n_trafficLights[droneInx][position][imageIdx] != 0.0 else 0.0
+            report_file.write(f"{2*' '}Confidence of traffic lights detected: {avgConf_trafficLights}\n")
 
             # show the output image
             # cv2.imshow("Image", image)
@@ -185,5 +186,10 @@ for droneInx, drone in enumerate(dronesID):
             # plt.show()
             plt.savefig(os.path.join(images_output_dir,imageID))
             plt.close()
+
 report_file.close
+
+np.save(os.path.join(detected_output_dir,"n_cars.npy"),n_cars)
+np.save(os.path.join(detected_output_dir,"n_persons.npy"),n_persons)
+np.save(os.path.join(detected_output_dir,"n_trafficLights.npy"),n_trafficLights)
             # cv2.waitKey(0)
