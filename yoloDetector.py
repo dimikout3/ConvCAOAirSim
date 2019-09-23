@@ -107,7 +107,7 @@ class yoloDetector:
                 # draw a bounding box rectangle and label on the image
                 color = [int(c) for c in self.COLORS[classIDs[i]]]
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
-                text = "{}: {:.4f}".format(self.LABELS[classIDs[i]], confidences[i])
+                text = f"{self.LABELS[classIDs[i]]}: {confidences[i]:.4f} - X: {x+w/2} Y: {y+h/2}"
                 cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,0.5, color, 2)
 
         cv2.namedWindow("output", cv2.WINDOW_NORMAL)
