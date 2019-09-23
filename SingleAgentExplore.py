@@ -9,6 +9,7 @@ import cv2
 import time
 from tqdm import tqdm
 from matplotlib import pyplot as plt
+import yoloDetector
 
 CAM_YAW = -0.5
 CAM_PITCH = 0.
@@ -58,9 +59,36 @@ def showImage(responses):
             cv2.destroyAllWindows()
 
 
+def detectObjects(detector, responses):
+
+    for idx, response in enumerate(responses):
+
+        if response.pixels_as_float:
+            # print("PIXEL AS FLOAT")
+            airsim.write_pfm(os.path.normpath(filename + '.pfm'), airsim.get_pfm_array(response))
+        elif response.compress: #png format
+            # print("PIXEL Compressed [second option]")
+            airsim.write_file(os.path.normpath(filename + '.png'), response.image_data_uint8)
+        else: #uncompressed array
+            # print("IN UNCOMPRESS ARRAY [third option]")
+            img1d = np.frombuffer(response.image_data_uint8, dtype=np.uint8) #get numpy array
+            img_rgb = img1d.reshape(response.height, response.width, 3) #reshape array to 3 channel image array H X W X 3
+
+            # cv2.namedWindow("output", cv2.WINDOW_NORMAL)
+            # imS = cv2.resize(img_rgb, (960, 540))
+            # cv2.imshow("output", imS)
+            #
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
+
+            detector.detect(img_rgb)
+
+
 def monitor(droneList,timeInterval = 1, totalTime = 10):
 
     # print(f"[MONITORING] position {posInd}")
+
+    detector = yoloDetector.yoloDetector()
 
     for timeStep in tqdm(range(0,totalTime,timeInterval)):
 
@@ -70,7 +98,8 @@ def monitor(droneList,timeInterval = 1, totalTime = 10):
                 # airsim.ImageRequest("0", airsim.ImageType.DepthVis),  #depth visualization image
                 airsim.ImageRequest("1", airsim.ImageType.Scene, False, False)], vehicle_name=drone)  #scene vision image in uncompressed RGB array
 
-            showImage(responses)
+            # showImage(responses)
+            detectObjects(detector, responses)
 
         time.sleep(timeInterval)
 
@@ -113,7 +142,7 @@ for positionIdx in range(0,wayPointsSize):
     print(f"{2*' '}[WAITING] drones to reach their positions")
     # TODO: why this fail ? (check inheritance)
     # client.waitOnLastTask()
-    time.sleep(10)
+    time.sleep(8)
     monitor(dronesID)
 
 airsim.wait_key('Press any key to reset to original state')
