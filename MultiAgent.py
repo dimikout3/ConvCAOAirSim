@@ -3,35 +3,14 @@ import airsim
 
 import numpy as np
 import os
-import tempfile
-import pprint
 import cv2
 import time
 from tqdm import tqdm
+from controller import controller
 
 CAM_YAW = -0.5
 CAM_PITCH = 0.
 CAM_ROOL = 0.
-
-
-def enableApiForAllDrones(droneList):
-    for drone in droneList:
-        client.enableApiControl(True, drone)
-        client.armDisarm(True, drone)
-
-
-def takeoffAsyncAllDrones(droneList):
-    for drone in droneList:
-        print(f"{2*' '}[TAKEOFF]: {drone}")
-        f1 = client.takeoffAsync(vehicle_name=drone)
-        f1.join()
-
-
-def quitCleanly(droneList):
-    for drone in droneList:
-        client.armDisarm(False, drone)
-        client.enableApiControl(False, drone)
-    client.reset()
 
 
 def saveImage(subDir, timeStep, responses):
@@ -51,36 +30,27 @@ def saveImage(subDir, timeStep, responses):
             cv2.imwrite(os.path.normpath(filename + '.png'), img_rgb) # write to png
 
 
-def monitor(droneList, posInd, parentDir, timeInterval = 1, totalTime = 10):
+def monitor(droneList, posInd, parentDir, timeInterval = 1, totalTime = 3):
 
     print(f"[MONITORING] position {posInd}")
 
     for timeStep in tqdm(range(0,totalTime,timeInterval)):
 
-        for drone in droneList:
+        for ctrl in controllers:
 
-            subDir = os.path.join(parentDir, drone, f"position_{posInd}")
+            subDir = os.path.join(parentDir, ctrl.getName(), f"position_{posInd}")
 
             if not os.path.isdir(subDir):
                 os.makedirs(subDir)
 
-            responses = client.simGetImages([
-                # airsim.ImageRequest("0", airsim.ImageType.DepthVis),  #depth visualization image
-                airsim.ImageRequest("1", airsim.ImageType.Scene, False, False)], vehicle_name=drone)  #scene vision image in uncompressed RGB array
+            # responses = client.simGetImages([
+            #     # airsim.ImageRequest("0", airsim.ImageType.DepthVis),  #depth visualization image
+            #     airsim.ImageRequest("1", airsim.ImageType.Scene, False, False)], vehicle_name=drone)  #scene vision image in uncompressed RGB array
+            responses = ctrl.getImages()
 
             saveImage(subDir, timeStep, responses)
 
         time.sleep(timeInterval)
-
-
-def setCameraOrientation(droneList):
-
-    for drone in droneList:
-
-        client.simSetCameraOrientation("0",
-                                       airsim.to_quaternion(CAM_YAW, CAM_PITCH, CAM_ROOL),
-                                       vehicle_name=drone)
-
 
 # path expressed as x, y, z and speed
 PATH = {"Drone1":[(10,0,-10,5), (30,0,-10,5),(50,0,-10,5)],
@@ -95,12 +65,16 @@ print(f"Detected {dronesID} with {wayPointsSize} positions")
 client = airsim.MultirotorClient()
 client.confirmConnection()
 
-enableApiForAllDrones(dronesID)
+controllers = []
+for drone in dronesID:
+    controllers.append(controller(client, drone))
 
-setCameraOrientation(dronesID)
+# Setting Camera Orientation
+for ctrl in controllers: ctrl.setCameraOrientation(CAM_YAW, CAM_PITCH, CAM_ROOL)
 
-airsim.wait_key('Press any key to takeoff all drones')
-takeoffAsyncAllDrones(dronesID)
+# airsim.wait_key('Press any key to takeoff all drones')
+print("Taking off all drones")
+for ctrl in controllers: ctrl.takeOff()
 
 parentDir = os.path.join(os.getcwd(), "swarm_raw_output")
 try:
@@ -110,11 +84,12 @@ except OSError:
         raise
 
 for positionIdx in range(0,wayPointsSize):
-    airsim.wait_key(f"\nPress any key to move drones to position {positionIdx}")
-    for drone in dronesID:
-        x, y, z, speed = PATH[drone].pop(0)
-        print(f"{2*' '}[MOVING] {drone} to ({x}, {y}, {z}) at {speed} m/s")
-        client.moveToPositionAsync(x, y, z, speed, vehicle_name=drone).join()
+    # airsim.wait_key(f"\nPress any key to move drones to position {positionIdx}")
+    for ctrl in controllers:
+        x, y, z, speed = PATH[ctrl.getName()].pop(0)
+        print(f"{2*' '}[MOVING] {ctrl.getName()} to ({x}, {y}, {z}) at {speed} m/s")
+        # client.moveToPositionAsync(x, y, z, speed, vehicle_name=drone).join()
+        ctrl.moveToPostion(x,y,z,speed)
     print(f"{2*' '}[WAITING] drones to reach their positions")
     # TODO: why this fail ? (check inheritance)
     # client.waitOnLastTask()
@@ -123,4 +98,6 @@ for positionIdx in range(0,wayPointsSize):
 
 airsim.wait_key('Press any key to reset to original state')
 
-quitCleanly(dronesID)
+
+for ctrl in controllers: ctrl.quit()
+client.reset()
