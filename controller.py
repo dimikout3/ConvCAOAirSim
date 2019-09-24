@@ -40,5 +40,5 @@ class controller:
 
     def quit(self):
 
-        client.armDisarm(False, self.name)
-        client.enableApiControl(False, self.name)
+        self.client.armDisarm(False, self.name)
+        self.client.enableApiControl(False, self.name)
