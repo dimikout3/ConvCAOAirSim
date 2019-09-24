@@ -7,10 +7,30 @@ import cv2
 import time
 from tqdm import tqdm
 from controller import controller
+import yoloDetector
 
 CAM_YAW = -0.5
 CAM_PITCH = 0.
 CAM_ROOL = 0.
+
+
+
+def detectObjects(detector, responses):
+
+    for idx, response in enumerate(responses):
+
+        if response.pixels_as_float:
+            # print("PIXEL AS FLOAT")
+            airsim.write_pfm(os.path.normpath(filename + '.pfm'), airsim.get_pfm_array(response))
+        elif response.compress: #png format
+            # print("PIXEL Compressed [second option]")
+            airsim.write_file(os.path.normpath(filename + '.png'), response.image_data_uint8)
+        else: #uncompressed array
+            # print("IN UNCOMPRESS ARRAY [third option]")
+            img1d = np.frombuffer(response.image_data_uint8, dtype=np.uint8) #get numpy array
+            img_rgb = img1d.reshape(response.height, response.width, 3) #reshape array to 3 channel image array H X W X 3
+
+            detector.detect(img_rgb)
 
 
 def saveImage(subDir, timeStep, responses):
@@ -34,6 +54,8 @@ def monitor(droneList, posInd, parentDir, timeInterval = 1, totalTime = 3):
 
     print(f"[MONITORING] position {posInd}")
 
+    detector = yoloDetector.yoloDetector()
+
     for timeStep in tqdm(range(0,totalTime,timeInterval)):
 
         for ctrl in controllers:
@@ -48,7 +70,8 @@ def monitor(droneList, posInd, parentDir, timeInterval = 1, totalTime = 3):
             #     airsim.ImageRequest("1", airsim.ImageType.Scene, False, False)], vehicle_name=drone)  #scene vision image in uncompressed RGB array
             responses = ctrl.getImages()
 
-            saveImage(subDir, timeStep, responses)
+            # saveImage(subDir, timeStep, responses)
+            detectObjects(detector, responses)
 
         time.sleep(timeInterval)
 
