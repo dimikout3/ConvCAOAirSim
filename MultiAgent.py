@@ -30,8 +30,8 @@ def detectObjects(detector, responses):
             img1d = np.frombuffer(response.image_data_uint8, dtype=np.uint8) #get numpy array
             img_rgb = img1d.reshape(response.height, response.width, 3) #reshape array to 3 channel image array H X W X 3
 
-            detector.detect(img_rgb)
-
+            detections = detector.detect(img_rgb, display=True)
+            print(detections)
 
 def saveImage(subDir, timeStep, responses):
 
@@ -65,9 +65,6 @@ def monitor(droneList, posInd, parentDir, timeInterval = 1, totalTime = 3):
             if not os.path.isdir(subDir):
                 os.makedirs(subDir)
 
-            # responses = client.simGetImages([
-            #     # airsim.ImageRequest("0", airsim.ImageType.DepthVis),  #depth visualization image
-            #     airsim.ImageRequest("1", airsim.ImageType.Scene, False, False)], vehicle_name=drone)  #scene vision image in uncompressed RGB array
             responses = ctrl.getImages()
 
             # saveImage(subDir, timeStep, responses)

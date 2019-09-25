@@ -33,7 +33,7 @@ class yoloDetector:
         print("[INFO] loading YOLO from disk...")
         self.net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 
-    def detect(self, imageInput):
+    def detect(self, imageInput, display=False):
 
         image = imageInput
         (H, W) = image.shape[:2]
@@ -58,6 +58,8 @@ class yoloDetector:
         boxes = []
         confidences = []
         classIDs = []
+
+        detections = {'cars':[], 'persons':[], 'trafficLights':[]}
 
         # loop over each of the layer outputs
         for output in layerOutputs:
@@ -110,9 +112,19 @@ class yoloDetector:
                 text = f"{self.LABELS[classIDs[i]]}: {confidences[i]:.4f} - X: {x+w/2} Y: {y+h/2}"
                 cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,0.5, color, 2)
 
-        cv2.namedWindow("output", cv2.WINDOW_NORMAL)
-        imS = cv2.resize(image, (960, 540))
-        cv2.imshow("output", imS)
+                if "car" in self.LABELS[classIDs[i]]:
+                    detections['cars'].append( (x+w/2,y+h/2) )
+                elif "person" in self.LABELS[classIDs[i]]:
+                    detections['persons'].append( (x+w/2,y+h/2) )
+                elif "traffic light" in self.LABELS[classIDs[i]]:
+                    detections['trafficLights'].append( (x+w/2,y+h/2) )
 
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        if display:
+            cv2.namedWindow("output", cv2.WINDOW_NORMAL)
+            imS = cv2.resize(image, (960, 540))
+            cv2.imshow("output", imS)
+
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+
+        return detections
