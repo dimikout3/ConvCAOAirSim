@@ -32,11 +32,19 @@ class controller:
     def getImages(self):
 
         responses = self.client.simGetImages([
-            # airsim.ImageRequest("0", airsim.ImageType.DepthVis),  #depth visualization image
+            airsim.ImageRequest("0", airsim.ImageType.DepthPerspective, True),  #depth visualization image
             airsim.ImageRequest("0", airsim.ImageType.Scene, False, False)],
             vehicle_name = self.name)  #scene vision image in uncompressed RGB array
 
         return responses
+
+    def getPose(self):
+        return self.client.simGetVehiclePose(vehicle_name=self.name)
+
+
+    def getState(self):
+        return self.client.getMultirotorState(vehicle_name=self.name)
+
 
     def quit(self):
 
