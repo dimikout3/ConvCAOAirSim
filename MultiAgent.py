@@ -49,17 +49,17 @@ def Estimator(response, detections, ctrl):
         print(f"{2*' '}Relative orientation (pitch:{relativePitch:.2f}, yaw:{relativeYaw:.2f})")
 
         randomPointsSize = 100*100
-        # points = np.random.randint(width,size=(2,randomPointsSize))
+        points = np.random.randint(width,size=(2,randomPointsSize))
         # TODO: get the field of view from camInfo()
         FoV = (np.pi/2)
 
-        points = [[],[]]
-        for key, val in detections.items():
-            for x,y in val:
-                points[0].append(int(x))
-                points[1].append(int(y))
-
-        points = np.array(points)
+        # points = [[],[]]
+        # for key, val in detections.items():
+        #     for x,y in val:
+        #         points[0].append(int(x))
+        #         points[1].append(int(y))
+        #
+        # points = np.array(points)
 
         pixelPitch = ((points[0,:]-halfHeight)/halfHeight) * (FoV/2)
         pixelYaw = ((points[1,:]-halfWidth)/halfWidth) * (FoV/2)
@@ -71,15 +71,11 @@ def Estimator(response, detections, ctrl):
 
         r = imageReshaped[ points[0,:] , points[1,:] ]
 
-        x = r*np.sin(theta)*np.cos(phi)
-        y = r*np.sin(theta)*np.sin(phi)
-        z = r*np.cos(theta)
+        d_x = r*np.sin(theta)*np.cos(phi)
+        d_y = r*np.sin(theta)*np.sin(phi)
+        d_z = r*np.cos(theta)
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(x, y, z, c='r')
-        plt.show()
-        plt.close()
+        return (vehX+d_x, vehY+d_y, vehZ+d_z)
 
 
 def detectObjects(detector, responses, ctrl):
@@ -98,7 +94,8 @@ def detectObjects(detector, responses, ctrl):
 
     detections = detector.detect(img_rgb, display=False)
     # print(detections)
-    Estimator(depthResponse, detections, ctrl)
+    abs_x, abs_y, abs_z = Estimator(depthResponse, detections, ctrl)
+    return (abs_x, abs_y, abs_z)
 
 def saveImage(subDir, timeStep, responses):
 
@@ -123,7 +120,10 @@ def monitor(droneList, posInd, parentDir, timeInterval = 1, totalTime = 1):
 
     detector = yoloDetector.yoloDetector()
 
+    c = ['r','b']
     for timeStep in tqdm(range(0,totalTime,timeInterval)):
+
+        absoluteCoordinates = []
 
         for ctrl in controllers:
 
@@ -135,7 +135,15 @@ def monitor(droneList, posInd, parentDir, timeInterval = 1, totalTime = 1):
             responses = ctrl.getImages()
 
             # saveImage(subDir, timeStep, responses)
-            detectObjects(detector, responses, ctrl)
+            absoluteCoordinates.append(detectObjects(detector, responses, ctrl))
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        for i,(x,y,z) in enumerate(absoluteCoordinates):
+            ax.scatter(x, y, z, c=c[i])
+        plt.show()
+        plt.close()
 
         time.sleep(timeInterval)
 
@@ -183,6 +191,6 @@ for positionIdx in range(0,wayPointsSize):
     time.sleep(10)
     monitor(dronesID, positionIdx, parentDir)
 
-printf("\n[RESETING] to original state ....")
+print("\n[RESETING] to original state ....")
 for ctrl in controllers: ctrl.quit()
 client.reset()
