@@ -49,9 +49,17 @@ def Estimator(response, detections, ctrl):
         print(f"{2*' '}Relative orientation (pitch:{relativePitch:.2f}, yaw:{relativeYaw:.2f})")
 
         randomPointsSize = 100*100
+        # points = np.random.randint(width,size=(2,randomPointsSize))
         # TODO: get the field of view from camInfo()
         FoV = (np.pi/2)
-        points = np.random.randint(width,size=(2,randomPointsSize))
+
+        points = [[],[]]
+        for key, val in detections.items():
+            for x,y in val:
+                points[0].append(int(x))
+                points[1].append(int(y))
+
+        points = np.array(points)
 
         pixelPitch = ((points[0,:]-halfHeight)/halfHeight) * (FoV/2)
         pixelYaw = ((points[1,:]-halfWidth)/halfWidth) * (FoV/2)
@@ -62,10 +70,6 @@ def Estimator(response, detections, ctrl):
         phi = relativeYaw + pixelYaw
 
         r = imageReshaped[ points[0,:] , points[1,:] ]
-        # for key, val in detections.items():
-        #     for x,y in val:
-        #         r = imageReshaped[int(x)][int(y)]
-        #         print(f"  {ctrl.getName()} distance to {key} is {r}")
 
         x = r*np.sin(theta)*np.cos(phi)
         y = r*np.sin(theta)*np.sin(phi)
@@ -179,8 +183,6 @@ for positionIdx in range(0,wayPointsSize):
     time.sleep(10)
     monitor(dronesID, positionIdx, parentDir)
 
-airsim.wait_key('Press any key to reset to original state')
-
-
+printf("\n[RESETING] to original state ....")
 for ctrl in controllers: ctrl.quit()
 client.reset()
