@@ -45,29 +45,33 @@ def Estimator(response, detections, ctrl):
         print(f"\n{ctrl.getName()} is located at (x:{vehX:.2f}, y:{vehY:.2f}, z:{vehZ:.2f})")
         print(f"{2*' '}with orientation (pitch:{vehPitch:.2f}, yaw:{vehYaw:.2f})")
         print(f"{2*' '}Its camera is located at (x:{camX:.2f}, y:{camY:.2f}, z:{camZ:.2f})")
-        print(f"{2*' '}with orientation (pitch:{camPitch:.2f}, yaw:{camYaw:.2f})")
-        print(f"{2*' '}Relative orientation (pitch:{relativePitch:.2f}, yaw:{relativeYaw:.2f})")
+        # print(f"{2*' '}with orientation (pitch:{camPitch:.2f}, yaw:{camYaw:.2f})")
+        # print(f"{2*' '}Relative orientation (pitch:{relativePitch:.2f}, yaw:{relativeYaw:.2f})")
 
-        randomPointsSize = 100*100
-        points = np.random.randint(width,size=(2,randomPointsSize))
+        # randomPointsSize = 100*100
+        # points = np.random.randint(width,size=(2,randomPointsSize))
         # TODO: get the field of view from camInfo()
         FoV = (np.pi/2)
 
-        # points = [[],[]]
-        # for key, val in detections.items():
-        #     for x,y in val:
-        #         points[0].append(int(x))
-        #         points[1].append(int(y))
-        #
-        # points = np.array(points)
+        points = [[],[]]
+        for key, val in detections.items():
+            for x,y in val:
+                points[0].append(int(x))
+                points[1].append(int(y))
+
+        points = np.array(points)
 
         pixelPitch = ((points[0,:]-halfHeight)/halfHeight) * (FoV/2)
         pixelYaw = ((points[1,:]-halfWidth)/halfWidth) * (FoV/2)
 
-        # inclination (in radiants)
-        theta = -(np.pi/2) + relativePitch + pixelPitch
+        # # inclination (in radiants)
+        # theta = -(np.pi/2) + relativePitch + pixelPitch
+        # # turn
+        # phi = relativeYaw + pixelYaw
+        # # inclination (in radiants)
+        theta = +(np.pi/2) + pixelPitch + camPitch
         # turn
-        phi = relativeYaw + pixelYaw
+        phi = pixelYaw + camYaw
 
         r = imageReshaped[ points[0,:] , points[1,:] ]
 
@@ -78,7 +82,7 @@ def Estimator(response, detections, ctrl):
         return (vehX+d_x, vehY+d_y, vehZ+d_z)
 
 
-def detectObjects(detector, responses, ctrl):
+def detectObjects(detector, responses, ctrl, subdir=None):
 
     for idx, response in enumerate(responses):
 
@@ -92,12 +96,12 @@ def detectObjects(detector, responses, ctrl):
             img1d = np.frombuffer(response.image_data_uint8, dtype=np.uint8) #get numpy array
             img_rgb = img1d.reshape(response.height, response.width, 3) #reshape array to 3 channel image array H X W X 3
 
-    detections = detector.detect(img_rgb, display=False)
+    detections = detector.detect(img_rgb, display=False, save=subdir)
     # print(detections)
     abs_x, abs_y, abs_z = Estimator(depthResponse, detections, ctrl)
     return (abs_x, abs_y, abs_z)
 
-def saveImage(subDir, timeStep, responses):
+def saveImagesRaw(subDir, timeStep, responses):
 
     for idx, response in enumerate(responses):
 
@@ -114,7 +118,7 @@ def saveImage(subDir, timeStep, responses):
             cv2.imwrite(os.path.normpath(filename + '.png'), img_rgb) # write to png
 
 
-def monitor(droneList, posInd, parentDir, timeInterval = 1, totalTime = 1):
+def monitor(droneList, posInd, parentRaw, parentDetect, timeInterval = 1, totalTime = 1):
 
     print(f"[MONITORING] position {posInd}")
 
@@ -127,29 +131,47 @@ def monitor(droneList, posInd, parentDir, timeInterval = 1, totalTime = 1):
 
         for ctrl in controllers:
 
-            subDir = os.path.join(parentDir, ctrl.getName(), f"position_{posInd}")
+            subdir = os.path.join(parentRaw, ctrl.getName(), f"position_{posInd}")
+            if not os.path.isdir(subdir):
+                os.makedirs(subdir)
 
-            if not os.path.isdir(subDir):
-                os.makedirs(subDir)
+            detectedDir = os.path.join(parentDetect, ctrl.getName(), f"position_{posInd}")
+            if not os.path.isdir(detectedDir):
+                os.makedirs(detectedDir)
+            detectedDir = os.path.join(detectedDir, f"detected_time{timeStep}.png")
 
             responses = ctrl.getImages()
 
-            # saveImage(subDir, timeStep, responses)
-            absoluteCoordinates.append(detectObjects(detector, responses, ctrl))
+            saveImagesRaw(subdir, timeStep, responses)
+            absoluteCoordinates.append(detectObjects(detector, responses, ctrl, detectedDir))
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
+            # fig = plt.figure()
+            # ax = fig.add_subplot(111, projection='3d')
+            #
+            # for i,(x,y,z) in enumerate(absoluteCoordinates):
+            #     ax.scatter(x, y, z, c=c[i])
+            #
+            # ax.set_xlabel('X Label')
+            # ax.set_ylabel('Y Label')
+            # ax.set_zlabel('Z Label')
 
-        for i,(x,y,z) in enumerate(absoluteCoordinates):
-            ax.scatter(x, y, z, c=c[i])
-        plt.show()
-        plt.close()
+            for i,(x,y,z) in enumerate(absoluteCoordinates):
+                plt.scatter(x, y, c=c[i])
 
-        time.sleep(timeInterval)
+            plt.xlabel('X Label')
+            plt.xlim(0,100)
+            plt.ylim(0,100)
+            plt.ylabel('Y Label')
+
+            # plt.show()
+            plt.savefig(os.path.join(parentDetect, f"Aggregated_pos_{posInd}_time_{timeStep}.png"))
+            plt.close()
+
+            time.sleep(timeInterval)
 
 # path expressed as x, y, z and speed
 PATH = {"Drone1":[(10,0,-10,5), (30,0,-10,5),(50,0,-10,5)],
-        "Drone2":[(10,10,-10,5), (10,20,-10,5),(10,30,-10,5)],
+        "Drone2":[(0,10,-10,5), (0,30,-10,5),(0,50,-10,5)],
         }
 
 dronesID = list(PATH.keys())
@@ -171,11 +193,18 @@ for ctrl in controllers: ctrl.setCameraOrientation(CAM_YAW, CAM_PITCH, CAM_ROOL)
 print("Taking off all drones")
 for ctrl in controllers: ctrl.takeOff()
 
-parentDir = os.path.join(os.getcwd(), "swarm_raw_output")
+parentRaw = os.path.join(os.getcwd(), "swarm_raw_output")
 try:
-    os.makedirs(parentDir)
+    os.makedirs(parentRaw)
 except OSError:
-    if not os.path.isdir(parentDir):
+    if not os.path.isdir(parentRaw):
+        raise
+
+parentDetect = os.path.join(os.getcwd(), "swarm_detected")
+try:
+    os.makedirs(parentDetect)
+except OSError:
+    if not os.path.isdir(parentDetect):
         raise
 
 for positionIdx in range(0,wayPointsSize):
@@ -189,7 +218,7 @@ for positionIdx in range(0,wayPointsSize):
     # TODO: why this fail ? (check inheritance)
     # client.waitOnLastTask()
     time.sleep(10)
-    monitor(dronesID, positionIdx, parentDir)
+    monitor(dronesID, positionIdx, parentRaw, parentDetect)
 
 print("\n[RESETING] to original state ....")
 for ctrl in controllers: ctrl.quit()

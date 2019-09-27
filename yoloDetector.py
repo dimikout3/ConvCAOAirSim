@@ -33,7 +33,7 @@ class yoloDetector:
         print("[INFO] loading YOLO from disk...")
         self.net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 
-    def detect(self, imageInput, display=False):
+    def detect(self, imageInput, display=False, save=None):
 
         image = imageInput
         (H, W) = image.shape[:2]
@@ -109,7 +109,8 @@ class yoloDetector:
                 # draw a bounding box rectangle and label on the image
                 color = [int(c) for c in self.COLORS[classIDs[i]]]
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
-                text = f"{self.LABELS[classIDs[i]]}: {confidences[i]:.4f} - X: {x+w/2} Y: {y+h/2}"
+                # text = f"{self.LABELS[classIDs[i]]}: {confidences[i]:.4f} - X: {x+w/2} Y: {y+h/2}"
+                text = f"{self.LABELS[classIDs[i]]}_{i}: {confidences[i]:.4f} "
                 cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,0.5, color, 2)
 
                 if "car" in self.LABELS[classIDs[i]]:
@@ -126,5 +127,8 @@ class yoloDetector:
 
             cv2.waitKey(0)
             cv2.destroyAllWindows()
+
+        if save!=None:
+            cv2.imwrite(save, image) # write to png
 
         return detections
