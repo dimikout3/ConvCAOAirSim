@@ -54,10 +54,13 @@ def Estimator(response, detections, ctrl):
         FoV = (np.pi/2)
 
         points = [[],[]]
+        labels = []
         for key, val in detections.items():
-            for x,y in val:
+            for x, y, label in val:
                 points[0].append(int(x))
                 points[1].append(int(y))
+                labels.append(label)
+
 
         points = np.array(points)
 
@@ -69,7 +72,7 @@ def Estimator(response, detections, ctrl):
         # # turn
         # phi = relativeYaw + pixelYaw
         # # inclination (in radiants)
-        theta = +(np.pi/2) + pixelPitch + camPitch
+        theta = +(np.pi/2) - pixelPitch + camPitch
         # turn
         phi = pixelYaw + camYaw
 
@@ -79,7 +82,9 @@ def Estimator(response, detections, ctrl):
         d_y = r*np.sin(theta)*np.sin(phi)
         d_z = r*np.cos(theta)
 
-        return (vehX+d_x, vehY+d_y, vehZ+d_z)
+        print(f"\n average of Z axis:{np.average(d_z)}")
+
+        return (vehX+d_x, vehY+d_y, vehZ+d_z, labels)
 
 
 def detectObjects(detector, responses, ctrl, subdir=None):
@@ -98,8 +103,8 @@ def detectObjects(detector, responses, ctrl, subdir=None):
 
     detections = detector.detect(img_rgb, display=False, save=subdir)
     # print(detections)
-    abs_x, abs_y, abs_z = Estimator(depthResponse, detections, ctrl)
-    return (abs_x, abs_y, abs_z)
+    abs_x, abs_y, abs_z, labels = Estimator(depthResponse, detections, ctrl)
+    return (abs_x, abs_y, abs_z, labels)
 
 def saveImagesRaw(subDir, timeStep, responses):
 
@@ -145,29 +150,39 @@ def monitor(droneList, posInd, parentRaw, parentDetect, timeInterval = 1, totalT
             saveImagesRaw(subdir, timeStep, responses)
             absoluteCoordinates.append(detectObjects(detector, responses, ctrl, detectedDir))
 
-            # fig = plt.figure()
-            # ax = fig.add_subplot(111, projection='3d')
-            #
-            # for i,(x,y,z) in enumerate(absoluteCoordinates):
-            #     ax.scatter(x, y, z, c=c[i])
-            #
-            # ax.set_xlabel('X Label')
-            # ax.set_ylabel('Y Label')
-            # ax.set_zlabel('Z Label')
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111, projection='3d')
+        #
+        # for i,(x,y,z,_) in enumerate(absoluteCoordinates):
+        #     ax.scatter(x, y, z, c=c[i])
+        #
+        # ax.set_xlabel('X Label')
+        # ax.set_ylabel('Y Label')
+        # ax.set_zlabel('Z Label')
+        #
+        # plt.show()
+        # plt.close()
 
-            for i,(x,y,z) in enumerate(absoluteCoordinates):
-                plt.scatter(x, y, c=c[i])
+        for i,(x,y,z, labels) in enumerate(absoluteCoordinates):
+            for ind, z_val in enumerate(z):
+                if np.abs(z_val)>15:
+                    continue
+                else:
+                    plt.scatter(x[ind], y[ind], c=c[i])
+                    plt.annotate(labels[ind],(x[ind],y[ind]))
+            # for ind, txt in enumerate(labels):
+            #     plt.annotate(txt,(x[ind],y[ind]))
 
-            plt.xlabel('X Label')
-            plt.xlim(0,100)
-            plt.ylim(0,100)
-            plt.ylabel('Y Label')
+        plt.xlabel('X Label')
+        plt.xlim(0,100)
+        plt.ylim(0,100)
+        plt.ylabel('Y Label')
 
-            # plt.show()
-            plt.savefig(os.path.join(parentDetect, f"Aggregated_pos_{posInd}_time_{timeStep}.png"))
-            plt.close()
+        # plt.show()
+        plt.savefig(os.path.join(parentDetect, f"Aggregated_pos_{posInd}_time_{timeStep}.png"))
+        plt.close()
 
-            time.sleep(timeInterval)
+        time.sleep(timeInterval)
 
 # path expressed as x, y, z and speed
 PATH = {"Drone1":[(10,0,-10,5), (30,0,-10,5),(50,0,-10,5)],
