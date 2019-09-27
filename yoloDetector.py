@@ -114,11 +114,11 @@ class yoloDetector:
                 cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,0.5, color, 2)
 
                 if "car" in self.LABELS[classIDs[i]]:
-                    detections['cars'].append( (x+w/2,y+h/2) )
+                    detections['cars'].append( (x+w/2,y+h/2, f"car_{i}") )
                 elif "person" in self.LABELS[classIDs[i]]:
-                    detections['persons'].append( (x+w/2,y+h/2) )
+                    detections['persons'].append( (x+w/2,y+h/2, f"person_{i}") )
                 elif "traffic light" in self.LABELS[classIDs[i]]:
-                    detections['trafficLights'].append( (x+w/2,y+h/2) )
+                    detections['trafficLights'].append( (x+w/2,y+h/2, f"traffic_{i}") )
 
         if display:
             cv2.namedWindow("output", cv2.WINDOW_NORMAL)
