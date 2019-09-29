@@ -13,11 +13,11 @@ class controller:
 
     def takeOff(self):
 
-        self.client.takeoffAsync(vehicle_name = self.name).join()
+        return self.client.takeoffAsync(vehicle_name = self.name)
 
     def moveToPostion(self, x, y, z, speed):
 
-        self.client.moveToPositionAsync(x,y,z,speed,vehicle_name=self.name).join()
+        return self.client.moveToPositionAsync(x,y,z,speed,vehicle_name=self.name)
 
     def setCameraOrientation(self, cam_yaw, cam_pitch, cam_roll):
 

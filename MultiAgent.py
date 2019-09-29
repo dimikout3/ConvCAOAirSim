@@ -148,7 +148,7 @@ def monitor(droneList, posInd, parentRaw, parentDetect, timeInterval = 1, totalT
             responses = ctrl.getImages()
 
             saveImagesRaw(subdir, timeStep, responses)
-            absoluteCoordinates.append(detectObjects(detector, responses, ctrl, detectedDir))
+            # absoluteCoordinates.append(detectObjects(detector, responses, ctrl, detectedDir))
 
         # fig = plt.figure()
         # ax = fig.add_subplot(111, projection='3d')
@@ -163,24 +163,24 @@ def monitor(droneList, posInd, parentRaw, parentDetect, timeInterval = 1, totalT
         # plt.show()
         # plt.close()
 
-        for i,(x,y,z, labels) in enumerate(absoluteCoordinates):
-            for ind, z_val in enumerate(z):
-                if np.abs(z_val)>15:
-                    continue
-                else:
-                    plt.scatter(x[ind], y[ind], c=c[i])
-                    plt.annotate(labels[ind],(x[ind],y[ind]))
-            # for ind, txt in enumerate(labels):
-            #     plt.annotate(txt,(x[ind],y[ind]))
-
-        plt.xlabel('X Label')
-        plt.xlim(0,100)
-        plt.ylim(0,100)
-        plt.ylabel('Y Label')
-
-        # plt.show()
-        plt.savefig(os.path.join(parentDetect, f"Aggregated_pos_{posInd}_time_{timeStep}.png"))
-        plt.close()
+        # for i,(x,y,z, labels) in enumerate(absoluteCoordinates):
+        #     for ind, z_val in enumerate(z):
+        #         if np.abs(z_val)>15:
+        #             continue
+        #         else:
+        #             plt.scatter(x[ind], y[ind], c=c[i])
+        #             plt.annotate(labels[ind],(x[ind],y[ind]))
+        #     # for ind, txt in enumerate(labels):
+        #     #     plt.annotate(txt,(x[ind],y[ind]))
+        #
+        # plt.xlabel('X Label')
+        # plt.xlim(0,100)
+        # plt.ylim(0,100)
+        # plt.ylabel('Y Label')
+        #
+        # # plt.show()
+        # plt.savefig(os.path.join(parentDetect, f"Aggregated_pos_{posInd}_time_{timeStep}.png"))
+        # plt.close()
 
         time.sleep(timeInterval)
 
@@ -206,7 +206,12 @@ for ctrl in controllers: ctrl.setCameraOrientation(CAM_YAW, CAM_PITCH, CAM_ROOL)
 
 # airsim.wait_key('Press any key to takeoff all drones')
 print("Taking off all drones")
-for ctrl in controllers: ctrl.takeOff()
+tasks = []
+for ctrl in controllers:
+    t = ctrl.takeOff()
+    tasks.append(t)
+
+for t in tasks: t.join()
 
 parentRaw = os.path.join(os.getcwd(), "swarm_raw_output")
 try:
@@ -224,15 +229,20 @@ except OSError:
 
 for positionIdx in range(0,wayPointsSize):
     # airsim.wait_key(f"\nPress any key to move drones to position {positionIdx}")
+    tasks = []
     for ctrl in controllers:
         x, y, z, speed = PATH[ctrl.getName()].pop(0)
         print(f"{2*' '}[MOVING] {ctrl.getName()} to ({x}, {y}, {z}) at {speed} m/s")
         # client.moveToPositionAsync(x, y, z, speed, vehicle_name=drone).join()
-        ctrl.moveToPostion(x,y,z,speed)
-    print(f"{2*' '}[WAITING] drones to reach their positions")
+        t = ctrl.moveToPostion(x,y,z,speed)
+        tasks.append(t)
+
+    for t in tasks: t.join()
+
+    # print(f"{2*' '}[WAITING] drones to reach their positions")
     # TODO: why this fail ? (check inheritance)
     # client.waitOnLastTask()
-    time.sleep(10)
+    # time.sleep(10)
     monitor(dronesID, positionIdx, parentRaw, parentDetect)
 
 print("\n[RESETING] to original state ....")
