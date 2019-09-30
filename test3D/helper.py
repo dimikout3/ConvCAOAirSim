@@ -42,7 +42,8 @@ def kickstart(random_points=[300,300]):
 
 def getColorPerPixel():
     img = cv2.imread("type_1_time_0.png")
-    return img
+    imgRGB = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    return imgRGB
 
 
 def plot3d(x,y,z,size):
@@ -56,7 +57,7 @@ def plot3d(x,y,z,size):
     ax.set_zlabel('Z Label')
 
     ax.invert_zaxis()
-    ax.invert_xaxis()
+    # ax.invert_xaxis()
 
     plt.show()
     plt.close()
