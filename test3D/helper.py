@@ -4,11 +4,12 @@ import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-def kickstart():
+def kickstart(random_points=[300,300]):
 
     d,s = airsim.read_pfm("type_0_time_0.pfm")
 
     width, height = d.shape
+    print(f"Image size: width:{width} -- height:{height}")
     halfWidth = width/2
     halfHeight= height/2
 
@@ -17,7 +18,7 @@ def kickstart():
 
     FoV = (np.pi/2)
 
-    randomPointsSize = 300*300
+    randomPointsSize = random_points[0]*random_points[1]
     points = np.random.randint(width,size=(2,randomPointsSize))
 
     pixelPitch = ((points[0,:]-halfHeight)/halfHeight) * (FoV/2)
@@ -28,7 +29,7 @@ def kickstart():
     phi = pixelYaw + camYaw
 
     r = d[ points[0,:] , points[1,:] ]
-    r[r>100] = 100
+    idx = np.where(r<100)
 
     x = r*np.sin(theta)*np.cos(phi)
     y = r*np.sin(theta)*np.sin(phi)
@@ -37,12 +38,11 @@ def kickstart():
     img = getColorPerPixel()
     colors = img[points[0,:] , points[1,:]]
 
-    return x,y,z,colors
+    return x[idx],y[idx],z[idx],colors[idx]
 
 def getColorPerPixel():
     img = cv2.imread("type_1_time_0.png")
-    imgRes = cv2.resize(img,(300,300))
-    return imgRes
+    return img
 
 
 def plot3d(x,y,z,size):
