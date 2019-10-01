@@ -3,6 +3,7 @@ import airsim
 import os
 import cv2
 import numpy as np
+import time
 
 class controller:
 
@@ -64,10 +65,75 @@ class controller:
             cv2.imwrite(os.path.normpath(filenameScene + '.png'), img_rgb) # write to png
             self.imageScene = img_rgb
 
-
-
         return responses
 
+
+
+    def getDepthFront(self):
+
+        responses = self.client.simGetImages([
+            airsim.ImageRequest("1", airsim.ImageType.DepthPerspective, True)],
+            vehicle_name = self.name)  #scene vision image in uncompressed RGB array
+
+        self.imageDepthFront = responses[0]
+
+
+    def stabilize(self):
+
+        task = self.client.moveByVelocityAsync(0,0,0,4,vehicle_name=self.name)
+
+        return task
+
+
+    def moveToZ(self, targetZ, speedClim=3.0):
+
+        task = self.client.moveToZAsync(targetZ,speedClim,vehicle_name=self.name)
+
+        return task
+
+
+    def randomMoveZ(self):
+
+        minThreshold = 20
+        axiZ = -10
+        pixeSquare = 50
+        speedScalar = 2
+
+        while True:
+
+            # yawRandom = np.random.ranf()*np.pi
+            yawRandom = np.random.randint(0,360)
+            # self.client.rotateToYawAsync(yawRandom,vehicle_name=self.name).join()
+            self.client.rotateByYawRateAsync(yawRandom,1,vehicle_name=self.name).join()
+
+            self.getDepthFront()
+            imageDepth = airsim.list_to_2d_float_array(self.imageDepthFront.image_data_float,
+                                                       self.imageDepthFront.width,
+                                                       self.imageDepthFront.height)
+
+            # midVertical = np.vsplit(imageDepth,3)[1]
+            # mid = np.hsplit(midVertical,3)[1]
+            midW = self.imageDepthFront.width/2
+            midH = self.imageDepthFront.width/2
+            imageDepthTarget = imageDepth[int(midW-pixeSquare):int(midW+pixeSquare),
+                                          int(midH-pixeSquare):int(midH+pixeSquare)]
+
+            current = np.min(imageDepthTarget)
+            # print(f"\ndistance current:{current}")
+            # print(f"yawRandom:{yawRandom}")
+            if current>minThreshold:
+
+                vx = np.cos(np.radians(yawRandom))
+                vy = np.sin(np.radians(yawRandom))
+
+                task = self.client.moveByVelocityZAsync(speedScalar*vx, speedScalar*vy,axiZ, 5,
+                                            airsim.DrivetrainType.ForwardOnly,
+                                            airsim.YawMode(False, 0),
+                                            vehicle_name=self.name)
+
+                break
+
+        return task
 
     def updateState(self, posIdx, timeStep):
 

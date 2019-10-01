@@ -107,7 +107,7 @@ def detectObjects(detector, responses, ctrl, subdir=None):
     return (abs_x, abs_y, abs_z, labels)
 
 
-def monitor(droneList, posInd, timeInterval = 1, totalTime = 3):
+def monitor(droneList, posInd, timeInterval = 1, totalTime = 10):
 
     print(f"[MONITORING] position {posInd}")
 
@@ -124,7 +124,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 3):
             responses = ctrl.getImages(save_raw=True)
             detections = ctrl.detectObjects(detector, save_detected=True)
 
-            print(detections)
+            # print(detections)
             # absoluteCoordinates.append(detectObjects(detector, responses, ctrl, detectedDir))
 
         # fig = plt.figure()
@@ -187,7 +187,13 @@ tasks = []
 for ctrl in controllers:
     t = ctrl.takeOff()
     tasks.append(t)
+for t in tasks: t.join()
 
+print("Lifting all drones to specified Z altitude")
+tasks = []
+for ctrl in controllers:
+    t = ctrl.moveToZ(-10,2)
+    tasks.append(t)
 for t in tasks: t.join()
 
 for positionIdx in range(0,wayPointsSize):
@@ -195,11 +201,20 @@ for positionIdx in range(0,wayPointsSize):
     tasks = []
     for ctrl in controllers:
         x, y, z, speed = PATH[ctrl.getName()].pop(0)
-        print(f"{2*' '}[MOVING] {ctrl.getName()} to ({x}, {y}, {z}) at {speed} m/s")
+        # print(f"{2*' '}[MOVING] {ctrl.getName()} to ({x}, {y}, {z}) at {speed} m/s")
+        print(f"{2*' '}[MOVING] {ctrl.getName()} to position {positionIdx}")
         # client.moveToPositionAsync(x, y, z, speed, vehicle_name=drone).join()
-        t = ctrl.moveToPostion(x,y,z,speed)
+        # t = ctrl.moveToPostion(x,y,z,speed)
+        t = ctrl.randomMoveZ()
         tasks.append(t)
 
+    for t in tasks: t.join()
+
+    # Stabilizing the drones for better images
+    tasks = []
+    for ctrl in controllers:
+        t = ctrl.stabilize()
+        tasks.append(t)
     for t in tasks: t.join()
 
     # print(f"{2*' '}[WAITING] drones to reach their positions")
