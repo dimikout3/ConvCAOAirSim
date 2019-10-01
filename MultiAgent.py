@@ -11,7 +11,7 @@ import yoloDetector
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-CAM_YAW = -1.5
+CAM_YAW = -0.5
 CAM_PITCH = 0.
 CAM_ROOL = 0.
 
@@ -122,7 +122,9 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 3):
 
             ctrl.updateState(posInd, timeStep)
             responses = ctrl.getImages(save_raw=True)
+            detections = ctrl.detectObjects(detector, save_detected=True)
 
+            print(detections)
             # absoluteCoordinates.append(detectObjects(detector, responses, ctrl, detectedDir))
 
         # fig = plt.figure()
