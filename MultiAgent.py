@@ -107,7 +107,7 @@ def detectObjects(detector, responses, ctrl, subdir=None):
     return (abs_x, abs_y, abs_z, labels)
 
 
-def monitor(droneList, posInd, parentRaw, parentDetect, timeInterval = 1, totalTime = 3):
+def monitor(droneList, posInd, timeInterval = 1, totalTime = 3):
 
     print(f"[MONITORING] position {posInd}")
 
@@ -120,16 +120,8 @@ def monitor(droneList, posInd, parentRaw, parentDetect, timeInterval = 1, totalT
 
         for ctrl in controllers:
 
-            subdir = os.path.join(parentRaw, ctrl.getName(), f"position_{posInd}")
-            if not os.path.isdir(subdir):
-                os.makedirs(subdir)
-
-            detectedDir = os.path.join(parentDetect, ctrl.getName(), f"position_{posInd}")
-            if not os.path.isdir(detectedDir):
-                os.makedirs(detectedDir)
-            detectedDir = os.path.join(detectedDir, f"detected_time{timeStep}.png")
-
-            responses = ctrl.getImages(save_raw=[subdir,timeStep])
+            ctrl.updateState(posInd, timeStep)
+            responses = ctrl.getImages(save_raw=True)
 
             # absoluteCoordinates.append(detectObjects(detector, responses, ctrl, detectedDir))
 
@@ -196,20 +188,6 @@ for ctrl in controllers:
 
 for t in tasks: t.join()
 
-parentRaw = os.path.join(os.getcwd(), "swarm_raw_output")
-try:
-    os.makedirs(parentRaw)
-except OSError:
-    if not os.path.isdir(parentRaw):
-        raise
-
-parentDetect = os.path.join(os.getcwd(), "swarm_detected")
-try:
-    os.makedirs(parentDetect)
-except OSError:
-    if not os.path.isdir(parentDetect):
-        raise
-
 for positionIdx in range(0,wayPointsSize):
     # airsim.wait_key(f"\nPress any key to move drones to position {positionIdx}")
     tasks = []
@@ -226,7 +204,7 @@ for positionIdx in range(0,wayPointsSize):
     # TODO: why this fail ? (check inheritance)
     # client.waitOnLastTask()
     # time.sleep(10)
-    monitor(dronesID, positionIdx, parentRaw, parentDetect)
+    monitor(dronesID, positionIdx)
 
 print("\n[RESETING] to original state ....")
 for ctrl in controllers: ctrl.quit()

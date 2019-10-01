@@ -14,6 +14,20 @@ class controller:
         self.client.enableApiControl(True, self.name)
         self.client.armDisarm(True, self.name)
 
+        self.parentRaw = os.path.join(os.getcwd(), "swarm_raw_output")
+        try:
+            os.makedirs(self.parentRaw)
+        except OSError:
+            if not os.path.isdir(self.parentRaw):
+                raise
+
+        self.parentDetect = os.path.join(os.getcwd(), "swarm_detected")
+        try:
+            os.makedirs(self.parentDetect)
+        except OSError:
+            if not os.path.isdir(self.parentDetect):
+                raise
+
     def takeOff(self):
 
         return self.client.takeoffAsync(vehicle_name = self.name)
@@ -41,13 +55,10 @@ class controller:
 
         if save_raw != None:
 
-            subDir = save_raw[0]
-            timeStep = save_raw[1]
-
-            filenameDepth = os.path.join(subDir, f"depth_time_{timeStep}" )
+            filenameDepth = os.path.join(self.raw_dir, f"depth_time_{self.timeStep}" )
             airsim.write_pfm(os.path.normpath(filenameDepth + '.pfm'), airsim.get_pfm_array(responses[0]))
 
-            filenameScene = os.path.join(subDir, f"scene_time_{timeStep}" )
+            filenameScene = os.path.join(self.raw_dir, f"scene_time_{self.timeStep}" )
             img1d = np.frombuffer(responses[1].image_data_uint8, dtype=np.uint8) #get numpy array
             img_rgb = img1d.reshape(responses[1].height, responses[1].width, 3) #reshape array to 3 channel image array H X W X 3
             cv2.imwrite(os.path.normpath(filenameScene + '.png'), img_rgb) # write to png
@@ -55,6 +66,20 @@ class controller:
 
 
         return responses
+
+
+    def updateState(self, posIdx, timeStep):
+
+        self.posIdx = posIdx
+        self.timeStep = timeStep
+
+        self.raw_dir = os.path.join(self.parentRaw, self.name, f"position_{self.posIdx}")
+        if not os.path.isdir(self.raw_dir):
+            os.makedirs(self.raw_dir)
+
+        self.detected_dir = os.path.join(self.parentDetect, self.name, f"position_{self.posIdx}")
+        if not os.path.isdir(self.detected_dir):
+            os.makedirs(self.detected_dir)
 
     def getPose(self):
         return self.client.simGetVehiclePose(vehicle_name=self.name)
