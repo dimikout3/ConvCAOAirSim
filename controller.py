@@ -62,6 +62,7 @@ class controller:
             img1d = np.frombuffer(responses[1].image_data_uint8, dtype=np.uint8) #get numpy array
             img_rgb = img1d.reshape(responses[1].height, responses[1].width, 3) #reshape array to 3 channel image array H X W X 3
             cv2.imwrite(os.path.normpath(filenameScene + '.png'), img_rgb) # write to png
+            self.imageScene = img_rgb
 
 
 
@@ -80,6 +81,18 @@ class controller:
         self.detected_dir = os.path.join(self.parentDetect, self.name, f"position_{self.posIdx}")
         if not os.path.isdir(self.detected_dir):
             os.makedirs(self.detected_dir)
+
+
+    def detectObjects(self, detector, save_detected=False):
+
+        detected_file_name = None
+        if save_detected:
+            detected_file_name = os.path.join(self.detected_dir,
+                                              f"detected_time_{self.timeStep}.png")
+
+        detections = detector.detect(self.imageScene, display=False, save=detected_file_name)
+
+        return detections
 
     def getPose(self):
         return self.client.simGetVehiclePose(vehicle_name=self.name)
