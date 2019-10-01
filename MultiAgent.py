@@ -11,7 +11,7 @@ import yoloDetector
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-CAM_YAW = -0.5
+CAM_YAW = -1.5
 CAM_PITCH = 0.
 CAM_ROOL = 0.
 
@@ -106,24 +106,8 @@ def detectObjects(detector, responses, ctrl, subdir=None):
     abs_x, abs_y, abs_z, labels = Estimator(depthResponse, detections, ctrl)
     return (abs_x, abs_y, abs_z, labels)
 
-def saveImagesRaw(subDir, timeStep, responses):
 
-    for idx, response in enumerate(responses):
-
-        filename = os.path.join(subDir, f"type_{idx}_time_{timeStep}" )
-
-        if response.pixels_as_float:
-            airsim.write_pfm(os.path.normpath(filename + '.pfm'), airsim.get_pfm_array(response))
-        elif response.compress: #png format
-            airsim.write_file(os.path.normpath(filename + '.png'), response.image_data_uint8)
-        else: #uncompressed array
-            # img1d = np.fromstring(response.image_data_uint8, dtype=np.uint8) #get numpy array
-            img1d = np.frombuffer(response.image_data_uint8, dtype=np.uint8) #get numpy array
-            img_rgb = img1d.reshape(response.height, response.width, 3) #reshape array to 3 channel image array H X W X 3
-            cv2.imwrite(os.path.normpath(filename + '.png'), img_rgb) # write to png
-
-
-def monitor(droneList, posInd, parentRaw, parentDetect, timeInterval = 1, totalTime = 1):
+def monitor(droneList, posInd, parentRaw, parentDetect, timeInterval = 1, totalTime = 3):
 
     print(f"[MONITORING] position {posInd}")
 
@@ -145,9 +129,8 @@ def monitor(droneList, posInd, parentRaw, parentDetect, timeInterval = 1, totalT
                 os.makedirs(detectedDir)
             detectedDir = os.path.join(detectedDir, f"detected_time{timeStep}.png")
 
-            responses = ctrl.getImages()
+            responses = ctrl.getImages(save_raw=[subdir,timeStep])
 
-            saveImagesRaw(subdir, timeStep, responses)
             # absoluteCoordinates.append(detectObjects(detector, responses, ctrl, detectedDir))
 
         # fig = plt.figure()
