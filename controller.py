@@ -4,6 +4,7 @@ import os
 import cv2
 import numpy as np
 import time
+import pickle
 
 class controller:
 
@@ -14,6 +15,9 @@ class controller:
 
         self.client.enableApiControl(True, self.name)
         self.client.armDisarm(True, self.name)
+
+        self.state = self.getState()
+        self.cameraInfo = self.getCameraInfo()
 
         self.parentRaw = os.path.join(os.getcwd(), "swarm_raw_output")
         try:
@@ -69,6 +73,10 @@ class controller:
             img_rgb = img1d.reshape(responses[1].height, responses[1].width, 3) #reshape array to 3 channel image array H X W X 3
             cv2.imwrite(os.path.normpath(filenameScene + '.png'), img_rgb) # write to png
             self.imageScene = img_rgb
+
+            # TODO: this slows down our programm, consider creating a list of states and save it only one time at the end (before quiting...) 
+            filenameState = os.path.join(self.raw_dir, f"state_time_{self.timeStep}" )
+            pickle.dump([self.state,self.cameraInfo], open(os.path.normpath(filenameState + '.pickle'),"wb"))
 
         return responses
 
@@ -153,6 +161,9 @@ class controller:
 
     def updateState(self, posIdx, timeStep):
 
+        self.state = self.getState()
+        self.cameraInfo = self.getCameraInfo()
+
         self.posIdx = posIdx
         self.timeStep = timeStep
 
@@ -183,6 +194,10 @@ class controller:
 
     def getState(self):
         return self.client.getMultirotorState(vehicle_name=self.name)
+
+
+    def getCameraInfo(self, cam="0"):
+        return self.client.simGetCameraInfo(cam,vehicle_name=self.name)
 
 
     def quit(self):
