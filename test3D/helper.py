@@ -6,6 +6,30 @@ from mpl_toolkits.mplot3d import Axes3D
 
 plt.style.use('ggplot')
 
+def translation(x,y,z,t):
+
+    positions = np.stack((x,y,z), axis=1)
+    out = position + t
+    return out[:,0], out[:,1], out[:,2]
+
+
+def rotate(x,y,z,theta):
+
+    tx,ty,tz = theta
+
+    Rx = np.array([[1,0,0], [0, np.cos(tx), -np.sin(tx)], [0, np.sin(tx), np.cos(tx)]])
+    Ry = np.array([[np.cos(ty), 0, -np.sin(ty)], [0, 1, 0], [np.sin(ty), 0, np.cos(ty)]])
+    Rz = np.array([[np.cos(tz), -np.sin(tz), 0], [np.sin(tz), np.cos(tz), 0], [0,0,1]])
+
+    R = np.dot(Rx, np.dot(Ry, Rz))
+
+    positions = np.stack((x,y,z),axis=1)
+
+    rotated = positions.dot(R)
+
+    return rotated[:,0],rotated[:,1],rotated[:,2]
+
+
 def kickstart(random_points=[300,300]):
 
     d,s = airsim.read_pfm("depth_time_4.pfm")
@@ -24,9 +48,11 @@ def kickstart(random_points=[300,300]):
     # points = np.random.randint(width,size=(2,randomPointsSize))
     pointsH = np.random.randint(height,size=(randomPointsSize))
     pointsW = np.random.randint(width,size=(randomPointsSize))
-
-    pixelPitch = ((pointsH-halfHeight)/halfHeight) * (FoV/2)
-    pixelYaw = ((pointsW-halfWidth)/halfWidth) * (FoV/2)
+    diagonal = np.sqrt((width*width + height*height))
+    # pixelPitch = ((pointsH-halfHeight)/halfHeight) * (FoV/2) * (height/width)
+    # pixelYaw = ((pointsW-halfWidth)/halfWidth) * (FoV/2) * (width/height) /2
+    pixelPitch = ((pointsH-halfHeight)/halfHeight) * (FoV/2) * (height/diagonal) /2
+    pixelYaw = ((pointsW-halfWidth)/halfWidth) * (FoV/2) * (width/diagonal) /2
 
     theta = (np.pi/2) - pixelPitch + camPitch
     # turn
@@ -81,9 +107,7 @@ def plot3dColor(x,y,z,size,colors):
 
     # ax.view_init(elev=0,azim=180)
 
-    # ax.set_zlim()
-    ax.set_xlim(100,0)
-    # ax.set_ylim(-55,55)
+    # ax.set_xlim(100,0)
     plt.show()
     # plt.savefig("test.png")
     plt.close()
