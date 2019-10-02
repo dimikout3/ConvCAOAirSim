@@ -4,11 +4,13 @@ import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+plt.style.use('ggplot')
+
 def kickstart(random_points=[300,300]):
 
-    d,s = airsim.read_pfm("type_0_time_0.pfm")
+    d,s = airsim.read_pfm("depth_time_4.pfm")
 
-    width, height = d.shape
+    height, width = d.shape
     print(f"Image size: width:{width} -- height:{height}")
     halfWidth = width/2
     halfHeight= height/2
@@ -19,16 +21,18 @@ def kickstart(random_points=[300,300]):
     FoV = (np.pi/2)
 
     randomPointsSize = random_points[0]*random_points[1]
-    points = np.random.randint(width,size=(2,randomPointsSize))
+    # points = np.random.randint(width,size=(2,randomPointsSize))
+    pointsH = np.random.randint(height,size=(randomPointsSize))
+    pointsW = np.random.randint(width,size=(randomPointsSize))
 
-    pixelPitch = ((points[0,:]-halfHeight)/halfHeight) * (FoV/2)
-    pixelYaw = ((points[1,:]-halfWidth)/halfWidth) * (FoV/2)
+    pixelPitch = ((pointsH-halfHeight)/halfHeight) * (FoV/2)
+    pixelYaw = ((pointsW-halfWidth)/halfWidth) * (FoV/2)
 
-    theta = +(np.pi/2) - pixelPitch + camPitch
+    theta = (np.pi/2) - pixelPitch + camPitch
     # turn
     phi = pixelYaw + camYaw
 
-    r = d[ points[0,:] , points[1,:] ]
+    r = d[ pointsH , pointsW ]
     idx = np.where(r<100)
 
     x = r*np.sin(theta)*np.cos(phi)
@@ -36,12 +40,12 @@ def kickstart(random_points=[300,300]):
     z = r*np.cos(theta)
 
     img = getColorPerPixel()
-    colors = img[points[0,:] , points[1,:]]
+    colors = img[ pointsH , pointsW ]
 
     return x[idx],y[idx],z[idx],colors[idx]
 
 def getColorPerPixel():
-    img = cv2.imread("type_1_time_0.png")
+    img = cv2.imread("scene_time_4.png")
     imgRGB = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     return imgRGB
 
@@ -73,6 +77,13 @@ def plot3dColor(x,y,z,size,colors):
     ax.set_zlabel('Z Label')
 
     ax.invert_zaxis()
+    ax.invert_yaxis()
 
+    # ax.view_init(elev=0,azim=180)
+
+    # ax.set_zlim()
+    ax.set_xlim(100,0)
+    # ax.set_ylim(-55,55)
     plt.show()
+    # plt.savefig("test.png")
     plt.close()
