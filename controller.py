@@ -29,13 +29,16 @@ class controller:
             if not os.path.isdir(self.parentDetect):
                 raise
 
+
     def takeOff(self):
 
         return self.client.takeoffAsync(vehicle_name = self.name)
 
+
     def moveToPostion(self, x, y, z, speed):
 
         return self.client.moveToPositionAsync(x,y,z,speed,vehicle_name=self.name)
+
 
     def setCameraOrientation(self, cam_yaw, cam_pitch, cam_roll):
 
@@ -43,9 +46,11 @@ class controller:
                                             airsim.to_quaternion(cam_yaw, cam_pitch, cam_roll),
                                             vehicle_name = self.name)
 
+
     def getName(self):
 
         return self.name
+
 
     def getImages(self, save_raw=None):
 
@@ -66,7 +71,6 @@ class controller:
             self.imageScene = img_rgb
 
         return responses
-
 
 
     def getDepthFront(self):
@@ -96,15 +100,19 @@ class controller:
 
         minThreshold = 20
         axiZ = -10
-        pixeSquare = 50
+        pixeSquare = 150
         speedScalar = 2
 
+        tries = 0
+
         while True:
+
+            tries += 1
 
             # yawRandom = np.random.ranf()*np.pi
             yawRandom = np.random.randint(0,360)
             # self.client.rotateToYawAsync(yawRandom,vehicle_name=self.name).join()
-            self.client.rotateByYawRateAsync(yawRandom,1,vehicle_name=self.name).join()
+            self.client.rotateByYawRateAsync(yawRandom,1,vehicle_name=self.name)
 
             self.getDepthFront()
             imageDepth = airsim.list_to_2d_float_array(self.imageDepthFront.image_data_float,
@@ -113,6 +121,7 @@ class controller:
 
             # midVertical = np.vsplit(imageDepth,3)[1]
             # mid = np.hsplit(midVertical,3)[1]
+            time.sleep(5)
             midW = self.imageDepthFront.width/2
             midH = self.imageDepthFront.width/2
             imageDepthTarget = imageDepth[int(midW-pixeSquare):int(midW+pixeSquare),
@@ -132,8 +141,15 @@ class controller:
                                             vehicle_name=self.name)
 
                 break
+            elif tries >= 5:
+                # if drone is stucked in tree or building send it to initial position
+                # TODO: keep track of position and send it to previous position (it can surely access it).
+                task = self.client.moveToPositionAsync(0,0,-10,3)
+            else:
+                print(f"[WARNING] {self.name} changing yaw due to imminent collision ...")
 
         return task
+
 
     def updateState(self, posIdx, timeStep):
 
@@ -159,6 +175,7 @@ class controller:
         detections = detector.detect(self.imageScene, display=False, save=detected_file_name)
 
         return detections
+
 
     def getPose(self):
         return self.client.simGetVehiclePose(vehicle_name=self.name)
