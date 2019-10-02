@@ -10,6 +10,7 @@ from controller import controller
 import yoloDetector
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import pickle
 
 CAM_YAW = -0.5
 CAM_PITCH = 0.
@@ -107,7 +108,7 @@ def detectObjects(detector, responses, ctrl, subdir=None):
     return (abs_x, abs_y, abs_z, labels)
 
 
-def monitor(droneList, posInd, timeInterval = 1, totalTime = 10):
+def monitor(droneList, posInd, timeInterval = 1, totalTime = 5):
 
     print(f"[MONITORING] position {posInd}")
 
@@ -196,13 +197,15 @@ for ctrl in controllers:
     tasks.append(t)
 for t in tasks: t.join()
 
+stateList = []
+wayPointsSize = 100
 for positionIdx in range(0,wayPointsSize):
     # airsim.wait_key(f"\nPress any key to move drones to position {positionIdx}")
     tasks = []
     for ctrl in controllers:
-        x, y, z, speed = PATH[ctrl.getName()].pop(0)
+        # x, y, z, speed = PATH[ctrl.getName()].pop(0)
         # print(f"{2*' '}[MOVING] {ctrl.getName()} to ({x}, {y}, {z}) at {speed} m/s")
-        print(f"{2*' '}[MOVING] {ctrl.getName()} to position {positionIdx}")
+        # print(f"{2*' '}[MOVING] {ctrl.getName()} to position {positionIdx}")
         # client.moveToPositionAsync(x, y, z, speed, vehicle_name=drone).join()
         # t = ctrl.moveToPostion(x,y,z,speed)
         t = ctrl.randomMoveZ()
@@ -217,6 +220,16 @@ for positionIdx in range(0,wayPointsSize):
         tasks.append(t)
     for t in tasks: t.join()
 
+    for ctrl in controllers:
+        state = ctrl.getState()
+
+        x = state.kinematics_estimated.position.x_val
+        y = state.kinematics_estimated.position.y_val
+        z = state.kinematics_estimated.position.z_val
+        _,_,yaw = airsim.to_eularian_angles(state.kinematics_estimated.orientation)
+
+        stateList.append([x,y,z,yaw])
+        print(f"{2*' '}[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{yaw:.2f})")
     # print(f"{2*' '}[WAITING] drones to reach their positions")
     # TODO: why this fail ? (check inheritance)
     # client.waitOnLastTask()
@@ -226,3 +239,4 @@ for positionIdx in range(0,wayPointsSize):
 print("\n[RESETING] to original state ....")
 for ctrl in controllers: ctrl.quit()
 client.reset()
+pickle.dump(stateList, open("State.pickle","wb"))
