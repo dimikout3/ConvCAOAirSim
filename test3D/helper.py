@@ -30,9 +30,9 @@ def rotate(x,y,z,theta):
     return rotated[:,0],rotated[:,1],rotated[:,2]
 
 
-def kickstart(random_points=[300,300]):
+def kickstart(random_points=[300,300],file_pfm="_"):
 
-    d,s = airsim.read_pfm("depth_time_4.pfm")
+    d,s = airsim.read_pfm(file_pfm)
 
     height, width = d.shape
     print(f"Image size: width:{width} -- height:{height}")
@@ -42,17 +42,15 @@ def kickstart(random_points=[300,300]):
     camPitch = -0.5
     camYaw = 0.0
 
-    FoV = (np.pi/2)
+    hFoV = (np.pi/2)
+    vFoV = (height/width)*hFoV
 
     randomPointsSize = random_points[0]*random_points[1]
-    # points = np.random.randint(width,size=(2,randomPointsSize))
     pointsH = np.random.randint(height,size=(randomPointsSize))
     pointsW = np.random.randint(width,size=(randomPointsSize))
-    diagonal = np.sqrt((width*width + height*height))
-    # pixelPitch = ((pointsH-halfHeight)/halfHeight) * (FoV/2) * (height/width)
-    # pixelYaw = ((pointsW-halfWidth)/halfWidth) * (FoV/2) * (width/height) /2
-    pixelPitch = ((pointsH-halfHeight)/halfHeight) * (FoV/2) * (height/diagonal) /2
-    pixelYaw = ((pointsW-halfWidth)/halfWidth) * (FoV/2) * (width/diagonal) /2
+
+    pixelPitch = ((pointsH-halfHeight)/halfHeight) * (vFoV/2)
+    pixelYaw = ((pointsW-halfWidth)/halfWidth) * (hFoV/2)
 
     theta = (np.pi/2) - pixelPitch + camPitch
     # turn
@@ -65,12 +63,14 @@ def kickstart(random_points=[300,300]):
     y = r*np.sin(theta)*np.sin(phi)
     z = r*np.cos(theta)
 
-    img = getColorPerPixel()
+    img = getColorPerPixel(file_pfm)
     colors = img[ pointsH , pointsW ]
 
     return x[idx],y[idx],z[idx],colors[idx]
 
-def getColorPerPixel():
+def getColorPerPixel(file_name):
+    file_name.replace("pfm","png")
+    file_name.replace("scene","depth")
     img = cv2.imread("scene_time_4.png")
     imgRGB = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     return imgRGB
@@ -92,7 +92,7 @@ def plot3d(x,y,z,size):
     plt.show()
     plt.close()
 
-def plot3dColor(x,y,z,size,colors):
+def plot3dColor(x,y,z,size,colors,x_lim=None):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
@@ -107,7 +107,9 @@ def plot3dColor(x,y,z,size,colors):
 
     # ax.view_init(elev=0,azim=180)
 
-    # ax.set_xlim(100,0)
+    if x_lim!=None:
+        ax.set_xlim(100,0)
+
     plt.show()
     # plt.savefig("test.png")
     plt.close()
