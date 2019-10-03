@@ -16,7 +16,7 @@ def to_absolute_coordinates(x,y,z,file_state):
     pitch,roll,yaw = airsim.to_eularian_angles(camInfo.pose.orientation)
 
     # in AirSim rotation to X-axis -> roll, Y-axis -> pitch, Z-axis -> yaw
-    theta = [roll,pitch,yaw]
+    theta = [roll,pitch,-yaw]
 
     xRotated, yRotated, zRotated = rotate(x,y,z,theta)
 
