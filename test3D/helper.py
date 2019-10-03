@@ -3,13 +3,34 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import pickle
 
 plt.style.use('ggplot')
+
+
+def to_absolute_coordinates(x,y,z,file_state):
+    stateList = pickle.load(open(file_state,"rb"))
+
+    camInfo = stateList[1]
+
+    pitch,roll,yaw = airsim.to_eularian_angles(camInfo.pose.orientation)
+
+    # in AirSim rotation to X-axis -> roll, Y-axis -> pitch, Z-axis -> yaw
+    theta = [roll,pitch,yaw]
+
+    xRotated, yRotated, zRotated = rotate(x,y,z,theta)
+
+    pos = camInfo.pose.position
+    t = [pos.x_val, pos.y_val, pos.z_val]
+    xOut,yOut,zOut = translation(xRotated,yRotated,zRotated,t)
+
+    return xOut, yOut, zOut
+
 
 def translation(x,y,z,t):
 
     positions = np.stack((x,y,z), axis=1)
-    out = position + t
+    out = positions + t
     return out[:,0], out[:,1], out[:,2]
 
 
@@ -18,7 +39,9 @@ def rotate(x,y,z,theta):
     tx,ty,tz = theta
 
     Rx = np.array([[1,0,0], [0, np.cos(tx), -np.sin(tx)], [0, np.sin(tx), np.cos(tx)]])
+    # we are using different minus sign because we rotated counter-clockwise
     Ry = np.array([[np.cos(ty), 0, -np.sin(ty)], [0, 1, 0], [np.sin(ty), 0, np.cos(ty)]])
+    # Ry = np.array([[np.cos(ty), 0, -np.sin(ty)], [0, 1, 0], [np.sin(ty), 0, np.cos(ty)]])
     Rz = np.array([[np.cos(tz), -np.sin(tz), 0], [np.sin(tz), np.cos(tz), 0], [0,0,1]])
 
     R = np.dot(Rx, np.dot(Ry, Rz))
@@ -30,7 +53,7 @@ def rotate(x,y,z,theta):
     return rotated[:,0],rotated[:,1],rotated[:,2]
 
 
-def kickstart(random_points=[300,300],file_pfm="_"):
+def kickstart(random_points=[300,300],file_pfm="_",cam_pitch=0.0):
 
     d,s = airsim.read_pfm(file_pfm)
 
@@ -39,7 +62,7 @@ def kickstart(random_points=[300,300],file_pfm="_"):
     halfWidth = width/2
     halfHeight= height/2
 
-    camPitch = -0.5
+    camPitch = cam_pitch
     camYaw = 0.0
 
     hFoV = (np.pi/2)
@@ -69,9 +92,10 @@ def kickstart(random_points=[300,300],file_pfm="_"):
     return x[idx],y[idx],z[idx],colors[idx]
 
 def getColorPerPixel(file_name):
-    file_name.replace("pfm","png")
-    file_name.replace("scene","depth")
-    img = cv2.imread("scene_time_4.png")
+    file_name = file_name.replace("pfm","png")
+    file_name = file_name.replace("depth","scene")
+    print(f"loading image {file_name} ...")
+    img = cv2.imread(file_name)
     imgRGB = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     return imgRGB
 
