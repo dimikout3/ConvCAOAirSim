@@ -132,7 +132,7 @@ def plot3d(x,y,z,size):
     plt.show()
     plt.close()
 
-def plot3dColor(x,y,z,colors,size="0.3",x_lim=None, show=False):
+def plot3dColor(x,y,z,colors,size=0.3,x_lim=None, show=False):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
@@ -154,6 +154,6 @@ def plot3dColor(x,y,z,colors,size="0.3",x_lim=None, show=False):
         plt.show()
         # plt.savefig("test.png")
         plt.close()
-        return _
+        return ax
     else:
         return ax
