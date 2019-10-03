@@ -53,7 +53,7 @@ def rotate(x,y,z,theta):
     return rotated[:,0],rotated[:,1],rotated[:,2]
 
 
-def kickstart(random_points=[300,300],file_pfm="_",cam_pitch=0.0):
+def kickstart(random_points=[300,300,"square"],file_pfm="_",cam_pitch=0.0):
 
     d,s = airsim.read_pfm(file_pfm)
 
@@ -69,8 +69,24 @@ def kickstart(random_points=[300,300],file_pfm="_",cam_pitch=0.0):
     vFoV = (height/width)*hFoV
 
     randomPointsSize = random_points[0]*random_points[1]
-    pointsH = np.random.randint(height,size=(randomPointsSize))
-    pointsW = np.random.randint(width,size=(randomPointsSize))
+    if random_points[2] == "square":
+
+        pointsH = np.random.randint(height,size=(randomPointsSize))
+        pointsW = np.random.randint(width,size=(randomPointsSize))
+
+    elif random_points[2] == "circle":
+
+        r = np.random.uniform(0,halfHeight,randomPointsSize)
+        thetas = np.random.uniform(0,2*np.pi,randomPointsSize)
+
+        pointsH = r*np.sin(thetas)
+        pointsW = r*np.cos(thetas)
+
+        centerH = int(halfHeight)
+        centerW = int(halfWidth)
+
+        pointsH = centerH + pointsH.astype(int)
+        pointsW = centerW + pointsW.astype(int)
 
     pixelPitch = ((pointsH-halfHeight)/halfHeight) * (vFoV/2)
     pixelYaw = ((pointsW-halfWidth)/halfWidth) * (hFoV/2)
