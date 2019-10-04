@@ -146,6 +146,8 @@ def plot3dColor(x,y,z,colors,size=0.3,x_lim=None, pose=None, y_lim=None,
     ax.invert_zaxis()
     ax.invert_yaxis()
 
+    plt.tight_layout()
+
     if pose!=None:
         ax.view_init(elev=pose[0],azim=pose[1])
         ax.set_xlim(x_lim[0],x_lim[1])
@@ -155,7 +157,7 @@ def plot3dColor(x,y,z,colors,size=0.3,x_lim=None, pose=None, y_lim=None,
         plt.show()
 
     if save_path!=None:
-        plt.savefig(save_path,facecolor="white")
+        plt.savefig(save_path)
 
     plt.close()
 
