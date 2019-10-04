@@ -132,28 +132,31 @@ def plot3d(x,y,z,size):
     plt.show()
     plt.close()
 
-def plot3dColor(x,y,z,colors,size=0.3,x_lim=None, show=False):
+def plot3dColor(x,y,z,colors,size=0.3,x_lim=None, pose=None, y_lim=None,
+                show=False, save_path=None):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
     ax.scatter(x, y, z,c=colors/255.0, s=size)
 
-    ax.set_xlabel('X Label')
-    ax.set_ylabel('Y Label')
-    ax.set_zlabel('Z Label')
+    ax.set_xlabel('X Axis')
+    ax.set_ylabel('Y Axis')
+    ax.set_zlabel('Z Axis')
 
     ax.invert_zaxis()
     ax.invert_yaxis()
 
-    # ax.view_init(elev=0,azim=180)
-
-    if x_lim!=None:
-        ax.set_xlim(100,0)
+    if pose!=None:
+        ax.view_init(elev=pose[0],azim=pose[1])
+        ax.set_xlim(x_lim[0],x_lim[1])
+        ax.set_ylim(y_lim[0],y_lim[1])
 
     if show:
         plt.show()
-        # plt.savefig("test.png")
-        plt.close()
-        return ax
-    else:
-        return ax
+
+    if save_path!=None:
+        plt.savefig(save_path,facecolor="white")
+
+    plt.close()
+
+    return ax
