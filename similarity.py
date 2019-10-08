@@ -31,17 +31,13 @@ def compareImages(image1, image2):
 raw_output_dir = os.path.join(os.getcwd(), "swarm_raw_output")
 detected_output_dir = os.path.join(os.getcwd(), "swarm_detected")
 
-dronesID = os.listdir(raw_output_dir)
-wayPointsID = os.listdir(os.path.join(raw_output_dir, dronesID[0]))
+dronesID = os.listdir(detected_output_dir)
+wayPointsID = os.listdir(os.path.join(detected_output_dir, dronesID[0]))
 wayPointsSize = len(wayPointsID)
-timeStepsID = os.listdir(os.path.join(raw_output_dir, dronesID[0],wayPointsID[0]))
+timeStepsID = os.listdir(os.path.join(detected_output_dir, dronesID[0],wayPointsID[0]))
 timeStepsSize = len(timeStepsID)
 
 report_file = open(os.path.join(detected_output_dir, "report_similarity.txt"),"w+")
-
-image1 = cv2.imread(os.path.join(raw_output_dir, dronesID[0], wayPointsID[0], timeStepsID[0]))
-image2 = cv2.imread(os.path.join(raw_output_dir, dronesID[0], wayPointsID[0], timeStepsID[0]))
-good_points_max = compareImages(image1, image2)
 
 for positionInx, position in enumerate(tqdm(wayPointsID, desc="Postion")):
     print(f"[POSITION]: {position}", file=report_file)
@@ -57,6 +53,6 @@ for positionInx, position in enumerate(tqdm(wayPointsID, desc="Postion")):
 
             good_points = compareImages(image1, image2)
 
-            print(f"{4*' '} {dronesComb[0]} - {dronesComb[1]} have {good_points/good_points_max}[%] similarity", file=report_file)
+            print(f"{4*' '} {dronesComb[0]} - {dronesComb[1]} have {good_points}[#] similarity", file=report_file)
 
 report_file.close()
