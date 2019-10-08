@@ -129,7 +129,7 @@ class controller:
             # changeYaw = np.random.uniform(0,180)
             # self.client.rotateToYawAsync(yawRandom,vehicle_name=self.name).join()
             self.client.rotateByYawRateAsync(np.degrees(randomYaw),1,vehicle_name=self.name).join()
-            # time.sleep(10)
+            # .join() seems not to work correctly when using python scripts (works on interpreter)
             self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
 
             self.getDepthFront()

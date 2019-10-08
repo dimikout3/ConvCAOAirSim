@@ -2,3 +2,4 @@ swarm_detected/
 swarm_raw_output/
 results/
 yolo-coco/
+__pycache__/

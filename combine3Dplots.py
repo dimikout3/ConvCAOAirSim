@@ -37,7 +37,8 @@ if __name__ == "__main__":
             zAggregated = np.concatenate((zAggregated,coordinates[5]))
             colorsAggregated = np.concatenate((colorsAggregated,coordinates[6]))
 
-            utils.plot3dColor(xAggregated,yAggregated,zAggregated,colorsAggregated[1:],size=0.3,show=True)
+            # utils.plot3dColor(xAggregated,yAggregated,zAggregated,colorsAggregated[1:],
+            #                   size=0.3,pose=[30,-60],save_path=)
 
     coordinates_aggregated = os.path.join(parent_dir, "coordinates3D_Aggregated.pickle")
     coordinates_data = [xAggregated, yAggregated, zAggregated, colorsAggregated[1:]]
