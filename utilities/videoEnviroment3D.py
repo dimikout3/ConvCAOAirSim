@@ -5,16 +5,16 @@ import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import pickle
-import test3D.utils as utils
+import utils
 
 POSE_INITIAL = [60, -30]
 # Enters all directories and creates 3d plots (saves them as pickle objects)
 
 if __name__ == "__main__":
 
-    parent_dir = os.path.join(os.getcwd(), "swarm_raw_output")
+    parent_dir = os.path.join(os.getcwd(),"..", "swarm_raw_output")
 
-    results_dir = os.path.join(os.getcwd(), "results")
+    results_dir = os.path.join(os.getcwd(),"..", "results")
     try:
         os.makedirs(results_dir)
     except OSError:

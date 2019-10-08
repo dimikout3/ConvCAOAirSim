@@ -5,15 +5,22 @@ import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import pickle
-import test3D.utils as utils
+import utils
 
 # Enters all directories and creates 3d plots (saves them as pickle objects)
 # and pickle object with the x,y,z,colors data (relative and absolute)
 
 if __name__ == "__main__":
 
-    parent_dir = os.path.join(os.getcwd(), "swarm_raw_output")
-    detected_dir = os.path.join(os.getcwd(), "swarm_detected")
+    parent_dir = os.path.join(os.getcwd(),"..", "swarm_raw_output")
+    detected_dir = os.path.join(os.getcwd(),"..", "swarm_detected")
+
+    results_dir = os.path.join(os.getcwd(),"..", "results")
+    try:
+        os.makedirs(results_dir)
+    except OSError:
+        if not os.path.isdir(results_dir):
+            raise
 
     dronesID = os.listdir(parent_dir)
     wayPointsID = os.listdir(os.path.join(parent_dir, dronesID[0]))
@@ -23,7 +30,8 @@ if __name__ == "__main__":
     for droneIdx, drone in enumerate(dronesID):
         print(f"\n[DRONE]: {drone}")
 
-        out = cv2.VideoWriter(f"{drone}_perspective_depth.avi", fourcc, 1.0, (2048,1024))
+        file_out = os.path.join(results_dir,f"{drone}_perspective_depth.avi")
+        out = cv2.VideoWriter(file_out, fourcc, 1.0, (2048,1024))
 
         for positionIdx, position in enumerate(wayPointsID):
             print(f"{4*' '}[POSITION]: {position}")
