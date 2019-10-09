@@ -36,8 +36,8 @@ if __name__ == "__main__":
         for positionIdx, position in enumerate(wayPointsID):
             print(f"{4*' '}[POSITION]: position_{positionIdx}")
 
-            current_raw_dir = os.path.join(parent_dir, drone, position)
-            current_detected_dir = os.path.join(detected_dir, drone, position)
+            current_raw_dir = os.path.join(parent_dir, drone, f"position_{positionIdx}")
+            current_detected_dir = os.path.join(detected_dir, drone, f"position_{positionIdx}")
 
             time_steps = os.listdir(current_detected_dir)
 

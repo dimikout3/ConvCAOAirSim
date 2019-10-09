@@ -21,7 +21,7 @@ if __name__ == "__main__":
         print(f"\n[DRONE]: {drone}")
 
         for positionIdx, position in enumerate(wayPointsID):
-            print(f"{4*' '}[POSITION]: {position}")
+            print(f"{4*' '}[POSITION]: position_{positionIdx}")
 
             current_dir = os.path.join(parent_dir, drone, f"position_{positionIdx}")
 
