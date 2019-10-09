@@ -104,6 +104,10 @@ class controller:
         return task
 
 
+    def rotateToYaw(self, yaw):
+        task = self.client.rotateToYawAsync(yaw,vehicle_name=self.name)
+        return task
+
     def randomMoveZ(self):
 
         minThreshold = 20
@@ -122,7 +126,7 @@ class controller:
             tries += 1
 
             # changeYaw = np.random.ranf()*np.pi
-            if "1" in self.name:
+            if ("1" in self.name) or ("2" in self.name):
                 randomYaw = np.random.uniform(0,np.pi/6)
             else:
                 randomYaw = np.random.uniform(-np.pi/6,0)
