@@ -34,7 +34,7 @@ if __name__ == "__main__":
         out = cv2.VideoWriter(file_out, fourcc, 1.0, (3*1024,1024))
 
         for positionIdx, position in enumerate(wayPointsID):
-            print(f"{4*' '}[POSITION]: {position}")
+            print(f"{4*' '}[POSITION]: position_{positionIdx}")
 
             current_raw_dir = os.path.join(parent_dir, drone, position)
             current_detected_dir = os.path.join(detected_dir, drone, position)
