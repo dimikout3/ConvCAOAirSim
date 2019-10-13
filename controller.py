@@ -74,7 +74,7 @@ class controller:
             cv2.imwrite(os.path.normpath(filenameScene + '.png'), img_rgb) # write to png
             self.imageScene = img_rgb
 
-            # TODO: this slows down our programm, consider creating a list of states and save it only one time at the end (before quiting...) 
+            # TODO: this slows down our programm, consider creating a list of states and save it only one time at the end (before quiting...)
             filenameState = os.path.join(self.raw_dir, f"state_time_{self.timeStep}" )
             pickle.dump([self.state,self.cameraInfo], open(os.path.normpath(filenameState + '.pickle'),"wb"))
 
