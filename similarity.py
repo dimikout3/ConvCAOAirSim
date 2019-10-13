@@ -11,6 +11,7 @@ import pickle
 import matplotlib.pyplot as plt
 import time
 import sys
+from scipy.spatial import Delaunay
 
 def compareImages(image1, image2):
 
@@ -175,6 +176,31 @@ def compareSingleVector(cloud1, cloud2):
     return magnitude
 
 
+def compareConvexHull(cloud1, cloud2):
+    x1,y1,z1 = cloud1[3], cloud1[4], cloud1[5]
+    x2,y2,z2 = cloud2[3], cloud2[4], cloud2[5]
+
+    if x1.size < x2.size:
+        minSize = x1.size
+        x2 = x2[0:minSize]
+        y2 = y2[0:minSize]
+        z2 = z2[0:minSize]
+    else:
+        minSize = x2.size
+        x1 = x1[0:minSize]
+        y1 = y1[0:minSize]
+        z1 = z1[0:minSize]
+
+    hullPoints = np.stack((x1,y1,z1),axis=1)
+    checkPoints = np.stack((x2,y2,z2),axis=1)
+
+    hull = Delaunay(hullPoints)
+
+    insidePoints = sum(hull.find_simplex(checkPoints)>=0)
+
+    return insidePoints
+
+
 raw_output_dir = os.path.join(os.getcwd(), "swarm_raw_output")
 detected_output_dir = os.path.join(os.getcwd(), "swarm_detected")
 
@@ -193,6 +219,8 @@ distSumIdealAggregated = np.zeros((combinationsSize,wayPointsSize,timeStepsSize)
 distAvgIdealAggregated = np.zeros((combinationsSize,wayPointsSize,timeStepsSize))
 divergenceAggregated =  np.zeros((combinationsSize,wayPointsSize,timeStepsSize))
 singleVectorAggregated =  np.zeros((combinationsSize,wayPointsSize,timeStepsSize))
+convexHullAggregated =  np.zeros((combinationsSize,wayPointsSize,timeStepsSize))
+
 
 report_file = open(os.path.join(os.getcwd(),"results", "report_similarity.txt"),"w+")
 
@@ -258,6 +286,13 @@ for positionIdx, position in enumerate(tqdm(wayPointsID, desc="Postion")):
                 print(f"{4*' '} {8*' '} cloud's divergence {singleVector:.2f}, {timeSingleVector:.4f}[sec]", file=report_file)
                 singleVectorAggregated[comboIdx,positionIdx,imageIdx] = singleVector
 
+            if not ("--noConvexHull" in sys.argv):
+                start_time = time.time()
+                pointsInHull = compareConvexHull(pointCloud1, pointCloud2)
+                timeHull = time.time() - start_time
+                print(f"{4*' '} {8*' '} points in hull {pointsInHull:.2f}, {timeHull:.4f}[sec]", file=report_file)
+                convexHullAggregated[comboIdx,positionIdx,imageIdx] = pointsInHull
+
 
 report_file.close()
 
@@ -284,3 +319,7 @@ if not ("--noDivergence" in sys.argv):
 if not ("--noSingleVector" in sys.argv):
     plotKPI(singleVectorAggregated,title="SingleVector")
     np.save(os.path.join(os.getcwd(),"results", "singleVector.npy"),singleVectorAggregated)
+
+if not ("--noConvexHull" in sys.argv):
+    plotKPI(convexHullAggregated,title="ConvexHull")
+    np.save(os.path.join(os.getcwd(),"results", "convexHull.npy"),convexHullAggregated)
