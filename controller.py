@@ -104,6 +104,10 @@ class controller:
         return task
 
 
+    def rotateToYaw(self, yaw):
+        task = self.client.rotateToYawAsync(yaw,vehicle_name=self.name)
+        return task
+
     def randomMoveZ(self):
 
         minThreshold = 20
@@ -111,16 +115,26 @@ class controller:
         pixeSquare = 150
         speedScalar = 2
 
+        _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
+        # currentYaw = np.degrees(currentYaw)
+        changeYaw = 0.0
+
         tries = 0
 
         while True:
 
             tries += 1
 
-            # yawRandom = np.random.ranf()*np.pi
-            yawRandom = np.random.randint(0,360)
+            # changeYaw = np.random.ranf()*np.pi
+            if ("1" in self.name) or ("2" in self.name):
+                randomYaw = np.random.uniform(0,np.pi/6)
+            else:
+                randomYaw = np.random.uniform(-np.pi/6,0)
+            # changeYaw = np.random.uniform(0,180)
             # self.client.rotateToYawAsync(yawRandom,vehicle_name=self.name).join()
-            self.client.rotateByYawRateAsync(yawRandom,1,vehicle_name=self.name)
+            self.client.rotateByYawRateAsync(np.degrees(randomYaw),1,vehicle_name=self.name).join()
+            # .join() seems not to work correctly when using python scripts (works on interpreter)
+            self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
 
             self.getDepthFront()
             imageDepth = airsim.list_to_2d_float_array(self.imageDepthFront.image_data_float,
@@ -129,19 +143,24 @@ class controller:
 
             # midVertical = np.vsplit(imageDepth,3)[1]
             # mid = np.hsplit(midVertical,3)[1]
-            time.sleep(5)
             midW = self.imageDepthFront.width/2
             midH = self.imageDepthFront.width/2
             imageDepthTarget = imageDepth[int(midW-pixeSquare):int(midW+pixeSquare),
                                           int(midH-pixeSquare):int(midH+pixeSquare)]
 
+            changeYaw += randomYaw
             current = np.min(imageDepthTarget)
-            # print(f"\ndistance current:{current}")
-            # print(f"yawRandom:{yawRandom}")
+            print(f"\n {self.name} currentYaw:{np.degrees(currentYaw)}")
+            print(f"{self.name} randomYaw:{np.degrees(randomYaw)}")
+            print(f"{self.name} changeYaw:{np.degrees(changeYaw)}")
             if current>minThreshold:
 
-                vx = np.cos(np.radians(yawRandom))
-                vy = np.sin(np.radians(yawRandom))
+                anglesSpeed = changeYaw + currentYaw
+                print(f"{self.name} anglesSpeed:{np.degrees(anglesSpeed)}")
+
+                vx = np.cos(anglesSpeed)
+                vy = np.sin(anglesSpeed)
+                print(f"{self.name} has Vx:{vx} Vy:{vy}")
 
                 task = self.client.moveByVelocityZAsync(speedScalar*vx, speedScalar*vy,axiZ, 5,
                                             airsim.DrivetrainType.ForwardOnly,
@@ -149,7 +168,7 @@ class controller:
                                             vehicle_name=self.name)
 
                 break
-            elif tries >= 5:
+            elif tries >= 10:
                 # if drone is stucked in tree or building send it to initial position
                 # TODO: keep track of position and send it to previous position (it can surely access it).
                 task = self.client.moveToPositionAsync(0,0,-10,3)

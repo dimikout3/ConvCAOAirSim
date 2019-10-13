@@ -133,7 +133,7 @@ def plot3d(x,y,z,size):
     plt.close()
 
 def plot3dColor(x,y,z,colors,size=0.3,x_lim=None, pose=None, y_lim=None,
-                show=False, save_path=None):
+                z_lim=None, show=False, save_path=None):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
@@ -150,8 +150,15 @@ def plot3dColor(x,y,z,colors,size=0.3,x_lim=None, pose=None, y_lim=None,
 
     if pose!=None:
         ax.view_init(elev=pose[0],azim=pose[1])
+
+    if x_lim!=None:
         ax.set_xlim(x_lim[0],x_lim[1])
+
+    if y_lim!=None:
         ax.set_ylim(y_lim[0],y_lim[1])
+
+    if z_lim!=None:
+        ax.set_zlim(z_lim[0],z_lim[1])
 
     if show:
         plt.show()

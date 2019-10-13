@@ -16,7 +16,7 @@ CAM_YAW = -0.5
 CAM_PITCH = 0.
 CAM_ROOL = 0.
 
-def monitor(droneList, posInd, timeInterval = 1, totalTime = 5):
+def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
     print(f"[MONITORING] position {posInd}")
 
@@ -35,8 +35,11 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 5):
         time.sleep(timeInterval)
 
 # path expressed as x, y, z and speed
-PATH = {"Drone1":[(10,0,-10,5), (30,0,-10,5),(50,0,-10,5)],
-        "Drone2":[(0,10,-10,5), (0,30,-10,5),(0,50,-10,5)],
+# PATH = {"Drone1":[(10,0,-10,5), (30,0,-10,5),(50,0,-10,5)],
+#         "Drone2":[(0,10,-10,5), (0,30,-10,5),(0,50,-10,5)],
+#         }
+PATH = {"Drone1":[(x,-7.5,-12,5) for x in range(50,-50,-2)],
+        "Drone2":[(x,-7.5,-8,5) for x in range(-50,50,2)],
         }
 
 dronesID = list(PATH.keys())
@@ -61,18 +64,29 @@ for ctrl in controllers:
     tasks.append(t)
 for t in tasks: t.join()
 
-print("Lifting all drones to specified Z altitude")
+# print("Lifting all drones to specified Z altitude")
+# tasks = []
+# for ctrl in controllers:
+#     t = ctrl.moveToZ(-10,2)
+#     tasks.append(t)
+# for t in tasks: t.join()
+
+# Setting same yaw
 tasks = []
 for ctrl in controllers:
-    t = ctrl.moveToZ(-10,2)
+    t = ctrl.rotateToYaw(90)
     tasks.append(t)
-for t in tasks: t.join()
-
-wayPointsSize = 100
+print("Rotated succesfully")
+# It does not work with .join() ... 
+# for t in tasks: t.join()
+time.sleep(10)
+# wayPointsSize = 100
 for positionIdx in range(0,wayPointsSize):
     tasks = []
     for ctrl in controllers:
-        t = ctrl.randomMoveZ()
+        # t = ctrl.randomMoveZ()
+        x,y,z,speed = PATH[ctrl.getName()][positionIdx]
+        t = ctrl.moveToPostion(x,y,z,speed)
         tasks.append(t)
 
     for t in tasks: t.join()

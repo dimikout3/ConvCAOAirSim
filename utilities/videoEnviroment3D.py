@@ -5,16 +5,16 @@ import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import pickle
-import test3D.utils as utils
+import utils
 
 POSE_INITIAL = [60, -30]
 # Enters all directories and creates 3d plots (saves them as pickle objects)
 
 if __name__ == "__main__":
 
-    parent_dir = os.path.join(os.getcwd(), "swarm_raw_output")
+    parent_dir = os.path.join(os.getcwd(),"..", "swarm_raw_output")
 
-    results_dir = os.path.join(os.getcwd(), "results")
+    results_dir = os.path.join(os.getcwd(),"..", "results")
     try:
         os.makedirs(results_dir)
     except OSError:
@@ -38,12 +38,12 @@ if __name__ == "__main__":
     colorsAggregated = np.array([[0,0,0]])
 
     for positionIdx, position in enumerate(wayPointsID):
-        print(f"{4*' '}[POSITION]: {position}")
+        print(f"{4*' '}[POSITION]: position_{positionIdx}")
 
         for droneIdx, drone in enumerate(dronesID):
             print(f"[DRONE]: {drone}")
 
-            current_dir = os.path.join(parent_dir, drone, position)
+            current_dir = os.path.join(parent_dir, drone, f"position_{positionIdx}")
             coordinates_pickle = os.path.join(current_dir, "coordinates3D.pickle")
 
             coordinates = pickle.load(open(coordinates_pickle,"rb"))
@@ -55,8 +55,8 @@ if __name__ == "__main__":
 
             image_name = os.path.join(imagesEnv3D_dir, f"image_{imageIndex}.png")
             utils.plot3dColor(xAggregated,yAggregated,zAggregated,colorsAggregated[1:],
-                              x_lim=[150,-150], pose=[POSE_INITIAL[0],POSE_INITIAL[1]],
-                              y_lim=[-150,150], save_path=image_name)
+                              x_lim=[200,-200], pose=[POSE_INITIAL[0],POSE_INITIAL[1]],
+                              y_lim=[-200,250], save_path=image_name, z_lim=[0,-100])
             imageIndex += 1
 
     #rotate azimuth
@@ -64,18 +64,18 @@ if __name__ == "__main__":
     for i in range(POSE_INITIAL[1],POSE_INITIAL[1]+180,10):
         image_name = os.path.join(imagesEnv3D_dir, f"image_{imageIndex}.png")
         utils.plot3dColor(xAggregated,yAggregated,zAggregated,colorsAggregated[1:],
-                          x_lim=[150,-150], pose=[POSE_INITIAL[0],i],
-                          y_lim=[-150,150], save_path=image_name)
+                          x_lim=[200,-200], pose=[POSE_INITIAL[0],i],
+                          y_lim=[-200,250], save_path=image_name,z_lim=[0,-100])
         imageIndex += 1
     #rotate elevation
     print("Rotaing by elevation")
     for i in range(POSE_INITIAL[0],90,10):
         image_name = os.path.join(imagesEnv3D_dir, f"image_{imageIndex}.png")
         utils.plot3dColor(xAggregated,yAggregated,zAggregated,colorsAggregated[1:],
-                          x_lim=[150,-150], pose=[i,POSE_INITIAL[1]],
-                          y_lim=[-150,150], save_path=image_name)
+                          x_lim=[200,-200], pose=[i,POSE_INITIAL[1]],
+                          y_lim=[-200,250], save_path=image_name, z_lim=[0,-100])
         imageIndex += 1
-        
+
     image_random_path = os.path.join(imagesEnv3D_dir, "image_0.png")
     image_random = cv2.imread(image_random_path)
     w,h,_ = image_random.shape

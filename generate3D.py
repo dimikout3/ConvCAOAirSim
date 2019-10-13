@@ -5,9 +5,10 @@ import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import pickle
-import test3D.utils as utils
+import utilities.utils as utils
 
 # Enters all directories and creates 3d plots (saves them as pickle objects)
+# and pickle object with the x,y,z,colors data (relative and absolute)
 
 if __name__ == "__main__":
 
@@ -20,9 +21,9 @@ if __name__ == "__main__":
         print(f"\n[DRONE]: {drone}")
 
         for positionIdx, position in enumerate(wayPointsID):
-            print(f"{4*' '}[POSITION]: {position}")
+            print(f"{4*' '}[POSITION]: position_{positionIdx}")
 
-            current_dir = os.path.join(parent_dir, drone, position)
+            current_dir = os.path.join(parent_dir, drone, f"position_{positionIdx}")
 
             depth_image = os.path.join(current_dir, "depth_time_0.pfm")
             state_pickle = os.path.join(current_dir, "state_time_0.pickle")
