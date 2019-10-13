@@ -6,12 +6,15 @@ import numpy as np
 import time
 import pickle
 
+WEIGHTS = {"cars":1.0, "persons":0.5 , "trafficLights":2.0}
+
 class controller:
 
     def __init__(self, clientIn, droneName):
 
         self.client = clientIn
         self.name = droneName
+        self.scoreDetections = []
 
         self.client.enableApiControl(True, self.name)
         self.client.armDisarm(True, self.name)
@@ -204,6 +207,17 @@ class controller:
 
         detections = detector.detect(self.imageScene, display=False, save=detected_file_name)
 
+        # detections = {'cars':[(pixel_x,pixel_y,detecions_id,confidece),(pixel_x,pixel_y,detecions_id,confidece), ...]}
+        # val[4] -> confidence of each detections
+        # score = sum([val[4]*WEIGHTS[key] for key,val in detections.items()])
+        score = 0.0
+        for detectionClass, objects in detections.items():
+            for object in objects:
+                # object = (pixel_x,pixel_y,detecions_id,confidece)
+                score += object[3]*WEIGHTS[detectionClass]
+
+        self.scoreDetections.append(score)
+
         return detections
 
 
@@ -223,3 +237,9 @@ class controller:
 
         self.client.armDisarm(False, self.name)
         self.client.enableApiControl(False, self.name)
+
+        # TODO: possible np.save() instead of pickle ...
+        score_detections_file = os.path.join(os.getcwd(), "swarm_raw_output",
+                                             f"score_detections_{self.name}.pickle")
+
+        pickle.dump(self.scoreDetections,open(score_detections_file,"wb"))
