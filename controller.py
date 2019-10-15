@@ -5,6 +5,8 @@ import cv2
 import numpy as np
 import time
 import pickle
+import utilities.utils as utils
+import matplotlib.pyplot as plt
 
 WEIGHTS = {"cars":1.0, "persons":0.5 , "trafficLights":2.0}
 
@@ -84,6 +86,8 @@ class controller:
         return responses
 
 
+    # TODO: getDepth() -> from camera "0", similar to rgb
+
     def getDepthFront(self):
 
         responses = self.client.simGetImages([
@@ -91,6 +95,16 @@ class controller:
             vehicle_name = self.name)  #scene vision image in uncompressed RGB array
 
         self.imageDepthFront = responses[0]
+
+    def getDepthImage(self):
+
+        responses = self.client.simGetImages([
+            airsim.ImageRequest("0", airsim.ImageType.DepthPerspective, True)],
+            vehicle_name = self.name)  #scene vision image in uncompressed RGB array
+
+        self.imageDepthImage = responses[0]
+
+        return responses[0]
 
 
     def stabilize(self):
@@ -211,14 +225,34 @@ class controller:
         # val[4] -> confidence of each detections
         # score = sum([val[4]*WEIGHTS[key] for key,val in detections.items()])
         score = 0.0
+        pixelX = []
+        pixelY = []
         for detectionClass, objects in detections.items():
             for object in objects:
                 # object = (pixel_x,pixel_y,detecions_id,confidece)
                 score += object[3]*WEIGHTS[detectionClass]
+                pixelX.append(object[0])
+                pixelY.append(object[1])
+
+        depthImage = self.getDepthImage()
+
+        xRelative, yRelative, zRelative = utils.to3D(pixelX, pixelY,
+                                          self.cameraInfo, depthImage)
+        x, y, z = utils.to_absolute_coordinates(xRelative, yRelative, zRelative,
+                                                self.cameraInfo)
+
+        detectionsCoordinates = np.stack((x,y,z), axis=1)
+
+        detectionsInfo = []
+        for detectionClass, objects in detections.items():
+            for object in objects:
+                # x,y,z are full lista, use x[i], y[i], z[i]
+                detectionsInfo.append([object[2], object[3]])
 
         self.scoreDetections.append(score)
 
-        return detections
+        # print(f"info: {detectionsInfo} \ncoordinates: {detectionsCoordinates}")
+        return detectionsInfo, detectionsCoordinates
 
 
     def getPose(self):
