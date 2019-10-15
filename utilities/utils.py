@@ -8,10 +8,13 @@ import pickle
 plt.style.use('ggplot')
 
 
-def to_absolute_coordinates(x,y,z,file_state):
-    stateList = pickle.load(open(file_state,"rb"))
+def to_absolute_coordinates(x,y,z,cameraInfo):
 
-    camInfo = stateList[1]
+    if type(cameraInfo) == str:
+        stateList = pickle.load(open(cameraInfo,"rb"))
+        camInfo = stateList[1]
+    else:
+        camInfo = cameraInfo
 
     pitch,roll,yaw = airsim.to_eularian_angles(camInfo.pose.orientation)
 
@@ -51,6 +54,47 @@ def rotate(x,y,z,theta):
     rotated = positions.dot(R)
 
     return rotated[:,0],rotated[:,1],rotated[:,2]
+
+
+def to3D(pixelX, pixelY, camInfo, depthImage):
+    """From image pixels (2D) to relative(!) 3D coordinates"""
+
+    if type(depthImage) == str:
+        depth,s = airsim.read_pfm(depthImage)
+    else:
+        depthData = depthImage.image_data_float
+        depthArray = np.array(depthData)
+        depth = np.reshape(depthArray, (depthImage.height, depthImage.width))
+
+    height, width = depth.shape
+    print(f"Image size: width:{width} -- height:{height}")
+    halfWidth = width/2
+    halfHeight= height/2
+
+    camPitch, camRoll,camYaw = airsim.to_eularian_angles(camInfo.pose.orientation)
+
+    # to rads (its on degrees now)
+    hFoV = np.radians(camInfo.fov)
+    vFoV = (height/width)*hFoV
+
+    pointsH = np.array(pixelY, dtype=int)
+    pointsW = np.array(pixelX, dtype=int)
+
+    pixelPitch = ((pointsH-halfHeight)/halfHeight) * (vFoV/2)
+    pixelYaw = ((pointsW-halfWidth)/halfWidth) * (hFoV/2)
+
+    theta = (np.pi/2) - pixelPitch
+    # turn
+    phi = pixelYaw
+
+    r = depth[ pointsH , pointsW ]
+    idx = np.where(r<100)
+
+    x = r*np.sin(theta)*np.cos(phi)
+    y = r*np.sin(theta)*np.sin(phi)
+    z = r*np.cos(theta)
+
+    return x[idx],y[idx],z[idx]
 
 
 def kickstart(random_points=[300,300,"square"],file_pfm="_",cam_pitch=0.0):
