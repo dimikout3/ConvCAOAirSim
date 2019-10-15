@@ -17,6 +17,7 @@ class controller:
         self.client = clientIn
         self.name = droneName
         self.scoreDetections = []
+        self.detections = []
 
         self.client.enableApiControl(True, self.name)
         self.client.armDisarm(True, self.name)
@@ -250,6 +251,7 @@ class controller:
                 detectionsInfo.append([object[2], object[3]])
 
         self.scoreDetections.append(score)
+        self.detections.append([detectionsInfo, detectionsCoordinates])
 
         # print(f"info: {detectionsInfo} \ncoordinates: {detectionsCoordinates}")
         return detectionsInfo, detectionsCoordinates
@@ -275,5 +277,10 @@ class controller:
         # TODO: possible np.save() instead of pickle ...
         score_detections_file = os.path.join(os.getcwd(), "swarm_raw_output",
                                              f"score_detections_{self.name}.pickle")
-
         pickle.dump(self.scoreDetections,open(score_detections_file,"wb"))
+
+        detections_file = os.path.join(os.getcwd(), "swarm_raw_output",
+                                       self.getName(), f"detections_{self.name}.pickle")
+        pickle.dump(self.detections,open(detections_file,"wb"))
+
+        # TODO: create a lista and svae the output for [multiCopterState, cameraInfo]

@@ -67,7 +67,7 @@ def to3D(pixelX, pixelY, camInfo, depthImage):
         depth = np.reshape(depthArray, (depthImage.height, depthImage.width))
 
     height, width = depth.shape
-    print(f"Image size: width:{width} -- height:{height}")
+    # print(f"Image size: width:{width} -- height:{height}")
     halfWidth = width/2
     halfHeight= height/2
 
