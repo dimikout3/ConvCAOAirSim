@@ -26,6 +26,7 @@ class controller:
 
         self.state = self.getState()
         self.cameraInfo = self.getCameraInfo()
+        self.stateList = [[self.state,self.cameraInfo]]
 
         self.parentRaw = os.path.join(os.getcwd(), "swarm_raw_output")
         try:
@@ -83,8 +84,8 @@ class controller:
             self.imageScene = img_rgb
 
             # TODO: this slows down our programm, consider creating a list of states and save it only one time at the end (before quiting...)
-            filenameState = os.path.join(self.raw_dir, f"state_time_{self.timeStep}" )
-            pickle.dump([self.state,self.cameraInfo], open(os.path.normpath(filenameState + '.pickle'),"wb"))
+            # filenameState = os.path.join(self.raw_dir, f"state_time_{self.timeStep}" )
+            # pickle.dump([self.state,self.cameraInfo], open(os.path.normpath(filenameState + '.pickle'),"wb"))
 
         return responses
 
@@ -313,6 +314,7 @@ class controller:
 
         self.scoreDetections.append(score)
         self.detections.append([detectionsInfo, detectionsCoordinates])
+        self.stateList.append([self.getState(), self.getCameraInfo()])
 
         # print(f"info: {detectionsInfo} \ncoordinates: {detectionsCoordinates}")
         return detectionsInfo, detectionsCoordinates
@@ -337,11 +339,15 @@ class controller:
 
         # TODO: possible np.save() instead of pickle ...
         score_detections_file = os.path.join(os.getcwd(), "swarm_raw_output",
-                                             f"score_detections_{self.name}.pickle")
+                                        self.getName(), f"score_detections_{self.name}.pickle")
         pickle.dump(self.scoreDetections,open(score_detections_file,"wb"))
 
         detections_file = os.path.join(os.getcwd(), "swarm_raw_output",
                                        self.getName(), f"detections_{self.name}.pickle")
         pickle.dump(self.detections,open(detections_file,"wb"))
+
+        state_file = os.path.join(os.getcwd(), "swarm_raw_output",
+                                  self.getName(), f"state_{self.name}.pickle")
+        pickle.dump(self.stateList,open(state_file,"wb"))
 
         # TODO: create a lista and svae the output for [multiCopterState, cameraInfo]
