@@ -151,6 +151,7 @@ def kickstart(random_points=[300,300,"square"],file_pfm="_",cam_pitch=0.0):
 
     return x[idx],y[idx],z[idx],colors[idx]
 
+
 def getColorPerPixel(file_name):
     file_name = file_name.replace("pfm","png")
     file_name = file_name.replace("depth","scene")
@@ -175,6 +176,7 @@ def plot3d(x,y,z,size):
 
     plt.show()
     plt.close()
+
 
 def plot3dColor(x,y,z,colors,size=0.3,x_lim=None, pose=None, y_lim=None,
                 z_lim=None, show=False, save_path=None):

@@ -8,6 +8,8 @@ import pickle
 import utilities.utils as utils
 import matplotlib.pyplot as plt
 
+DEBUG_GEOFENCE = True
+DEBUG_RANDOMZ = True
 WEIGHTS = {"cars":1.0, "persons":0.5 , "trafficLights":2.0}
 
 class controller:
@@ -97,6 +99,7 @@ class controller:
 
         self.imageDepthFront = responses[0]
 
+
     def getDepthImage(self):
 
         responses = self.client.simGetImages([
@@ -126,15 +129,65 @@ class controller:
         task = self.client.rotateToYawAsync(yaw,vehicle_name=self.name)
         return task
 
+
+    def setGeoFence(self, x=20, y=30, z=-10, r=15):
+        """Applying geo fence as a sphere (x,y,z) spheres center, r-> diameter"""
+
+        self.fenceX = x
+        self.fenceY = y
+        self.fenceZ = z
+        self.fenceR = r
+
+
+    def applyGeoFence(self):
+
+        if DEBUG_GEOFENCE:
+            print(f"\n-- Checking Geo Fence for {self.getName()}")
+
+        droneX = self.state.kinematics_estimated.position.x_val
+        droneY = self.state.kinematics_estimated.position.y_val
+        droneZ = self.state.kinematics_estimated.position.z_val
+
+        dist = np.sqrt( (self.fenceX - droneX)**2 + (self.fenceY - droneY)**2
+                    + (self.fenceZ - droneZ)**2)
+
+        if DEBUG_GEOFENCE:
+            print(f"   Sphere (x:{self.fenceX:.2f}, y:{self.fenceY:.2f}, z:{self.fenceZ:.2f}, R:{self.fenceR:.2f}) ")
+            print(f"   {self.getName()} (x:{droneX:.2f}, y:{droneY:.2f}, z:{droneZ:.2f}, dist:{dist:.2f}) ")
+
+        if dist >= self.fenceR:
+
+            # OA -> X-Y origin to drone position
+            # OC -> X-Y origin to sphere center
+            # AC -> Drone to sphere
+
+            acX = self.fenceX - droneX
+            acY = self.fenceY - droneY
+
+            acYaw = np.arctan2(acY, acX)
+
+            _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
+
+            # turn -> how much the drone must turn in order to orient itself towards the speher's  center
+            turn = acYaw - currentYaw
+
+            if DEBUG_GEOFENCE:
+                print(f"   Applying Geo Fence yaw:{np.degrees(currentYaw):.2f} acYaw:{np.degrees(acYaw):.2f} turn:{np.degrees(turn):.2f}")
+
+            # XXX: airsim function rotateToYaw seems not to perform correctly ...
+            self.client.rotateByYawRateAsync(np.degrees(turn),1,vehicle_name=self.name).join()
+            self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
+
+            self.state = self.getState()
+
+
     def randomMoveZ(self):
 
         minThreshold = 20
-        axiZ = -10
+        axiZ = -15
         pixeSquare = 150
         speedScalar = 2
 
-        _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
-        # currentYaw = np.degrees(currentYaw)
         changeYaw = 0.0
 
         tries = 0
@@ -143,11 +196,11 @@ class controller:
 
             tries += 1
 
-            # changeYaw = np.random.ranf()*np.pi
-            if ("1" in self.name) or ("2" in self.name):
-                randomYaw = np.random.uniform(0,np.pi/6)
-            else:
-                randomYaw = np.random.uniform(-np.pi/6,0)
+            self.applyGeoFence()
+
+            _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
+
+            randomYaw = np.random.uniform(-np.pi/6, np.pi/6)
             # changeYaw = np.random.uniform(0,180)
             # self.client.rotateToYawAsync(yawRandom,vehicle_name=self.name).join()
             self.client.rotateByYawRateAsync(np.degrees(randomYaw),1,vehicle_name=self.name).join()
@@ -166,32 +219,40 @@ class controller:
             imageDepthTarget = imageDepth[int(midW-pixeSquare):int(midW+pixeSquare),
                                           int(midH-pixeSquare):int(midH+pixeSquare)]
 
-            changeYaw += randomYaw
             current = np.min(imageDepthTarget)
-            print(f"\n {self.name} currentYaw:{np.degrees(currentYaw)}")
-            print(f"{self.name} randomYaw:{np.degrees(randomYaw)}")
-            print(f"{self.name} changeYaw:{np.degrees(changeYaw)}")
+
+            if DEBUG_RANDOMZ:
+                print(f"\n {self.name} currentYaw:{np.degrees(currentYaw)}")
+                print(f"{self.name} randomYaw:{np.degrees(randomYaw)}")
+
             if current>minThreshold:
 
-                anglesSpeed = changeYaw + currentYaw
-                print(f"{self.name} anglesSpeed:{np.degrees(anglesSpeed)}")
+                anglesSpeed = currentYaw + randomYaw
+                if DEBUG_RANDOMZ:
+                    print(f"{self.name} anglesSpeed:{np.degrees(anglesSpeed)}")
 
                 vx = np.cos(anglesSpeed)
                 vy = np.sin(anglesSpeed)
-                print(f"{self.name} has Vx:{vx} Vy:{vy}")
+                if DEBUG_RANDOMZ:
+                    print(f"{self.name} has Vx:{vx} Vy:{vy}")
 
                 task = self.client.moveByVelocityZAsync(speedScalar*vx, speedScalar*vy,axiZ, 5,
                                             airsim.DrivetrainType.ForwardOnly,
                                             airsim.YawMode(False, 0),
-                                            vehicle_name=self.name)
+                                            vehicle_name=self.name).join()
+                self.stabilize().join()
 
                 break
             elif tries >= 10:
                 # if drone is stucked in tree or building send it to initial position
                 # TODO: keep track of position and send it to previous position (it can surely access it).
                 task = self.client.moveToPositionAsync(0,0,-10,3)
+                print(f"[WARNING] Drone {self.getName()} reached max tries {tries} ...")
+                break
             else:
                 print(f"[WARNING] {self.name} changing yaw due to imminent collision ...")
+
+            self.state = self.getState()
 
         return task
 
