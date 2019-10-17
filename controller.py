@@ -8,8 +8,8 @@ import pickle
 import utilities.utils as utils
 import matplotlib.pyplot as plt
 
-DEBUG_GEOFENCE = True
-DEBUG_RANDOMZ = True
+DEBUG_GEOFENCE = False
+DEBUG_RANDOMZ = False
 WEIGHTS = {"cars":1.0, "persons":0.5 , "trafficLights":2.0}
 
 class controller:
@@ -131,7 +131,7 @@ class controller:
         return task
 
 
-    def setGeoFence(self, x=20, y=30, z=-10, r=15):
+    def setGeoFence(self, x=0, y=0, z=-10, r=20):
         """Applying geo fence as a sphere (x,y,z) spheres center, r-> diameter"""
 
         self.fenceX = x
@@ -320,6 +320,16 @@ class controller:
         return detectionsInfo, detectionsCoordinates
 
 
+    def getScore(self, index = None):
+
+        if index == None:
+            # if no index is specified the whole list will be returned
+            return self.scoreDetections
+        else:
+            # usually used with index -1
+            return self.scoreDetections[index]
+
+            
     def getPose(self):
         return self.client.simGetVehiclePose(vehicle_name=self.name)
 
