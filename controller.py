@@ -329,7 +329,7 @@ class controller:
             # usually used with index -1
             return self.scoreDetections[index]
 
-            
+
     def getPose(self):
         return self.client.simGetVehiclePose(vehicle_name=self.name)
 
@@ -351,9 +351,15 @@ class controller:
         score_detections_file = os.path.join(os.getcwd(), "swarm_raw_output",
                                         self.getName(), f"score_detections_{self.name}.pickle")
         pickle.dump(self.scoreDetections,open(score_detections_file,"wb"))
+        score_detections_file = os.path.join(os.getcwd(), "results","information",
+                                        f"score_detections_{self.name}.pickle")
+        pickle.dump(self.scoreDetections,open(score_detections_file,"wb"))
 
         detections_file = os.path.join(os.getcwd(), "swarm_raw_output",
                                        self.getName(), f"detections_{self.name}.pickle")
+        pickle.dump(self.detections,open(detections_file,"wb"))
+        detections_file = os.path.join(os.getcwd(), "results","detected_objects",
+                                       f"detections_{self.name}.pickle")
         pickle.dump(self.detections,open(detections_file,"wb"))
 
         state_file = os.path.join(os.getcwd(), "swarm_raw_output",
