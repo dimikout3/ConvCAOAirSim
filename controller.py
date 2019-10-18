@@ -19,7 +19,8 @@ class controller:
         self.client = clientIn
         self.name = droneName
         self.scoreDetections = []
-        self.detections = []
+        self.detectionsInfo = []
+        self.detectionsCoordinates = []
 
         self.client.enableApiControl(True, self.name)
         self.client.armDisarm(True, self.name)
@@ -313,7 +314,8 @@ class controller:
                 detectionsInfo.append([object[2], object[3]])
 
         self.scoreDetections.append(score)
-        self.detections.append([detectionsInfo, detectionsCoordinates])
+        self.detectionsInfo.append(detectionsInfo)
+        self.detectionsCoordinates.append(detectionsCoordinates)
         self.stateList.append([self.getState(), self.getCameraInfo()])
 
         # print(f"info: {detectionsInfo} \ncoordinates: {detectionsCoordinates}")
@@ -356,14 +358,19 @@ class controller:
         pickle.dump(self.scoreDetections,open(score_detections_file,"wb"))
 
         detections_file = os.path.join(os.getcwd(), "swarm_raw_output",
-                                       self.getName(), f"detections_{self.name}.pickle")
-        pickle.dump(self.detections,open(detections_file,"wb"))
+                                       self.getName(), f"detectionsInfo_{self.name}.pickle")
+        pickle.dump(self.detectionsInfo,open(detections_file,"wb"))
         detections_file = os.path.join(os.getcwd(), "results","detected_objects",
-                                       f"detections_{self.name}.pickle")
-        pickle.dump(self.detections,open(detections_file,"wb"))
+                                       f"detectionsInfo_{self.name}.pickle")
+        pickle.dump(self.detectionsInfo,open(detections_file,"wb"))
+
+        detections_file = os.path.join(os.getcwd(), "swarm_raw_output",
+                                       self.getName(), f"detectionsCoordinates_{self.name}.pickle")
+        pickle.dump(self.detectionsCoordinates,open(detections_file,"wb"))
+        detections_file = os.path.join(os.getcwd(), "results","detected_objects",
+                                       f"detectionsCoordinates_{self.name}.pickle")
+        pickle.dump(self.detectionsCoordinates,open(detections_file,"wb"))
 
         state_file = os.path.join(os.getcwd(), "swarm_raw_output",
                                   self.getName(), f"state_{self.name}.pickle")
         pickle.dump(self.stateList,open(state_file,"wb"))
-
-        # TODO: create a lista and svae the output for [multiCopterState, cameraInfo]
