@@ -248,8 +248,17 @@ class controller:
             elif tries >= 10:
                 # if drone is stucked in tree or building send it to initial position
                 # TODO: keep track of position and send it to previous position (it can surely access it).
-                task = self.client.moveToPositionAsync(0,0,-10,3)
-                print(f"[WARNING] Drone {self.getName()} reached max tries {tries} ...")
+                pose = self.client.simGetVehiclePose()
+                pose.position.x_val = 0
+                pose.position.y_val = 0
+                pose.position.z_val = -15
+
+                # task = self.client.moveToPositionAsync(0,0,-10,3)
+                # QUESTION: Ignore collision -> what it does ? (now its True)
+                task = self.client.simSetVehiclePose(pose, True, self.getName())
+                self.stabilize().join()
+
+                print(f"[WARNING] {self.getName()} reached max tries {tries} ...")
                 break
             else:
                 print(f"[WARNING] {self.name} changing yaw due to imminent collision ...")
