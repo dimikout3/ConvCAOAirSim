@@ -28,9 +28,8 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
     global similarityList, informationScoreList, costJ
 
-    for timeStep in tqdm(range(0,totalTime,timeInterval)):
+    for timeStep in range(0,totalTime,timeInterval):
 
-        # dataPoints = {}
         cloudPoints = {}
         informationScore = 0.0
 
@@ -43,23 +42,15 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
             pointCloud = np.stack((x,y,z), axis=1)
 
-            # dataPoints[ctrl.getName()] = [detectionsInfo, detectionsCoordinates]
             cloudPoints[ctrl.getName()] = pointCloud
 
             informationScore += ctrl.getScore(index=-1)
-
-        # TODO: similarity and score(information) should be averaged for a position,
-        # (taking multiple images from one position -average the information-)
-
-        # sum, avg = similarityOut(dataPoints, similarityKPI="DistExhaustive")
-        # print(f"Similarity avg:{avg:.3f} sum:{sum:.3f}")
 
         sum, avg = similarityOut(cloudPoints, similarityKPI="DistRandom")
         # Apply boundaries
         avg = NORM['mutualLow'] if avg<NORM['mutualLow'] else avg
         similarityAvgNorm = 1/avg
         print(f"\nSimilarity avg:{avg:.3f}, norm:{similarityAvgNorm:.3f}")
-        # sumSimilarityList.append(sum)
         similarityList.append(similarityAvgNorm)
 
         informationScoreNorm = informationScore/NORM["information"]
@@ -67,8 +58,42 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         informationScoreList.append(informationScoreNorm)
 
         J = informationScoreNorm*WEIGHT['information'] - similarityAvgNorm*WEIGHT['similarity']
-        costJ.append(j)
+        costJ.append(J)
         print(f"\nCost J:{J:.3f}")
+
+        for ctrl in controllers:
+
+            if posInd<1: break
+
+            information = []
+            similarity = []
+            cloudPoints = {}
+
+            for other in controllers:
+
+                if other.getName() != ctrl.getName():
+
+                    information.append(other.getScore(index=-1))
+                    x,y,z,c = other.getPointCloudList(index=-1)
+                    pointCloud = np.stack((x,y,z), axis=1)
+                    cloudPoints[other.getName()] = pointCloud
+
+                else:
+
+                    information.append(other.getScore(index=-2))
+                    x,y,z,c = other.getPointCloudList(index=-2)
+                    pointCloud = np.stack((x,y,z), axis=1)
+                    cloudPoints[other.getName()] = pointCloud
+
+            _, avg = similarityOut(cloudPoints, similarityKPI="DistRandom")
+            avg = NORM['mutualLow'] if avg<NORM['mutualLow'] else avg
+            similarityAvgNorm = 1/avg
+            informationScoreNorm = np.sum(information)/NORM['information']
+
+            tempJ = informationScoreNorm*WEIGHT['information'] - similarityAvgNorm*WEIGHT['similarity']
+            contribution = costJ[-1] - tempJ
+
+            print(f"{ctrl.getName()} has contribution of {contribution:.4f}")
 
         time.sleep(timeInterval)
 
