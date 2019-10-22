@@ -125,6 +125,14 @@ class controller:
         return x,y,z,colors
     # TODO: getDepth() -> from camera "0", similar to rgb
 
+
+    def getPointCloudList(self, index=-1):
+
+        x,y,z,colors = self.pointCloud[index]
+
+        return x,y,z,colors
+
+
     def getDepthFront(self):
 
         responses = self.client.simGetImages([
