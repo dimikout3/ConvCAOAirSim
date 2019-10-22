@@ -56,7 +56,7 @@ def rotate(x,y,z,theta):
     return rotated[:,0],rotated[:,1],rotated[:,2]
 
 
-def to3D(pixelX, pixelY, camInfo, depthImage):
+def to3D(pixelX, pixelY, camInfo, depthImage, color=[]):
     """From image pixels (2D) to relative(!) 3D coordinates"""
 
     if type(depthImage) == str:
@@ -94,7 +94,10 @@ def to3D(pixelX, pixelY, camInfo, depthImage):
     y = r*np.sin(theta)*np.sin(phi)
     z = r*np.cos(theta)
 
-    return x[idx],y[idx],z[idx]
+    if len(color) != 0:
+        return x[idx],y[idx],z[idx],color[idx]
+    else:
+        return x[idx],y[idx],z[idx]
 
 
 def kickstart(random_points=[300,300,"square"],file_pfm="_",cam_pitch=0.0):

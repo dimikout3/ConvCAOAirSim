@@ -18,9 +18,11 @@ class controller:
 
         self.client = clientIn
         self.name = droneName
+
         self.scoreDetections = []
         self.detectionsInfo = []
         self.detectionsCoordinates = []
+        self.pointCloud = []
 
         self.client.enableApiControl(True, self.name)
         self.client.armDisarm(True, self.name)
@@ -84,13 +86,43 @@ class controller:
             cv2.imwrite(os.path.normpath(filenameScene + '.png'), img_rgb) # write to png
             self.imageScene = img_rgb
 
-            # TODO: this slows down our programm, consider creating a list of states and save it only one time at the end (before quiting...)
-            # filenameState = os.path.join(self.raw_dir, f"state_time_{self.timeStep}" )
-            # pickle.dump([self.state,self.cameraInfo], open(os.path.normpath(filenameState + '.pickle'),"wb"))
-
         return responses
 
 
+    def getPointCloud(self, x=50, y=50):
+
+        randomPointsSize = x*y
+
+        height, width, _ = self.imageScene.shape
+        halfWidth = width/2
+        halfHeight= height/2
+
+        r = np.random.uniform(0,halfHeight,randomPointsSize)
+        thetas = np.random.uniform(0,2*np.pi,randomPointsSize)
+
+        pointsH = r*np.sin(thetas)
+        pointsW = r*np.cos(thetas)
+
+        centerH = int(halfHeight)
+        centerW = int(halfWidth)
+
+        pointsH = centerH + pointsH.astype(int)
+        pointsW = centerW + pointsW.astype(int)
+
+        colors = self.imageScene[pointsH, pointsW]
+
+        xRelative, yRelative, zRelative, colors = utils.to3D(pointsW, pointsH,
+                                          self.cameraInfo, self.imageDepthCamera,
+                                          color = colors)
+        x, y, z = utils.to_absolute_coordinates(xRelative, yRelative, zRelative,
+                                                self.cameraInfo)
+
+
+        utils.plot3dColor(x,y,z,colors,show=True)
+
+        self.pointCloud.append([x,y,z,colors])
+
+        return x,y,z,colors
     # TODO: getDepth() -> from camera "0", similar to rgb
 
     def getDepthFront(self):
@@ -108,7 +140,7 @@ class controller:
             airsim.ImageRequest("0", airsim.ImageType.DepthPerspective, True)],
             vehicle_name = self.name)  #scene vision image in uncompressed RGB array
 
-        self.imageDepthImage = responses[0]
+        self.imageDepthCamera = responses[0]
 
         return responses[0]
 
@@ -383,3 +415,7 @@ class controller:
         state_file = os.path.join(os.getcwd(), "swarm_raw_output",
                                   self.getName(), f"state_{self.name}.pickle")
         pickle.dump(self.stateList,open(state_file,"wb"))
+
+        pointCloud_file = os.path.join(os.getcwd(), "swarm_raw_output",
+                                  self.getName(), f"pointCloud_{self.name}.pickle")
+        pickle.dump(self.pointCloud,open(pointCloud_file,"wb"))
