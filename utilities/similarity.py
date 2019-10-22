@@ -95,6 +95,33 @@ def compareExhaustiveDuplicates(cloud1, cloud2):
     return np.sum(sumMin), np.average(sumMin)
 
 
+def compareRandomDist(cloud1, cloud2):
+
+    x1,y1,z1 = cloud1[0], cloud1[1], cloud1[2]
+    x2,y2,z2 = cloud2[0], cloud2[1], cloud2[2]
+
+    if x1.size < x2.size:
+
+        minSize = x1.size
+        x2 = x2[0:minSize]
+        y2 = y2[0:minSize]
+        z2 = z2[0:minSize]
+
+    else:
+        
+        minSize = x2.size
+        x1 = x1[0:minSize]
+        y1 = y1[0:minSize]
+        z1 = z1[0:minSize]
+
+    dist_array = np.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
+
+    dist_sum = np.sum(dist_array)
+    dist_average = np.average(dist_array)
+
+    return dist_sum, dist_average
+
+
 def similarityOut(dataPoints, similarityKPI = None):
 
     report_file = open(os.path.join(os.getcwd(),"results", "report_similarity.txt"),"w+")
@@ -117,6 +144,21 @@ def similarityOut(dataPoints, similarityKPI = None):
 
             start_time = time.time()
             clouds_dist_sum_ideal, clouds_dist_average_ideal = compareExhaustiveDuplicates(pointCloud1, pointCloud2)
+            timeDistIdeal = time.time() - start_time
+
+            simSum.append(clouds_dist_sum_ideal)
+            simAvg.append(clouds_dist_average_ideal)
+
+            print(f"{4*' '} {8*' '} objects dist aggregated exhuastive {clouds_dist_sum_ideal:.2f}, {timeDistIdeal:.4f}[sec]", file=report_file)
+            print(f"{4*' '} {8*' '} objects dist average exhuastive {clouds_dist_average_ideal:.2f}, {timeDistIdeal:.4f}[sec]", file=report_file)
+
+        if similarityKPI == "DistRandom":
+
+            pointCloud1 = dataPoints[dronesComb[0]]
+            pointCloud2 = dataPoints[dronesComb[1]]
+
+            start_time = time.time()
+            clouds_dist_sum_ideal, clouds_dist_average_ideal = compareRandomDist(pointCloud1, pointCloud2)
             timeDistIdeal = time.time() - start_time
 
             simSum.append(clouds_dist_sum_ideal)

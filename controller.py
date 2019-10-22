@@ -118,7 +118,7 @@ class controller:
                                                 self.cameraInfo)
 
 
-        utils.plot3dColor(x,y,z,colors,show=True)
+        # utils.plot3dColor(x,y,z,colors,show=True)
 
         self.pointCloud.append([x,y,z,colors])
 
