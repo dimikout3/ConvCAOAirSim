@@ -11,40 +11,119 @@ import yoloDetector
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import pickle
+from utilities.similarity import similarityOut
 
 CAM_YAW = -0.5
 CAM_PITCH = 0.
 CAM_ROOL = 0.
 
+NORM = {'information':30.0, 'mutualLow':1.0}
+WEIGHT = {'information':1.0, 'similarity':2.0}
+
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
-    print(f"[MONITORING] position {posInd}")
+    print(f"\n[MONITORING] position {posInd}")
 
     detector = yoloDetector.yoloDetector()
 
+    global similarityList, informationScoreList, costJ
+
     for timeStep in tqdm(range(0,totalTime,timeInterval)):
 
-        absoluteCoordinates = []
+        # dataPoints = {}
+        cloudPoints = {}
+        informationScore = 0.0
 
-        for ctrl in controllers:
+        for i,ctrl in enumerate(controllers):
 
             ctrl.updateState(posInd, timeStep)
             responses = ctrl.getImages(save_raw=True)
-            detections = ctrl.detectObjects(detector, save_detected=True)
+            detectionsInfo, detectionsCoordinates = ctrl.detectObjects(detector, save_detected=True)
+            x,y,z,c = ctrl.getPointCloud()
+
+            pointCloud = np.stack((x,y,z), axis=1)
+
+            # dataPoints[ctrl.getName()] = [detectionsInfo, detectionsCoordinates]
+            cloudPoints[ctrl.getName()] = pointCloud
+
+            informationScore += ctrl.getScore(index=-1)
+
+        # TODO: similarity and score(information) should be averaged for a position,
+        # (taking multiple images from one position -average the information-)
+
+        # sum, avg = similarityOut(dataPoints, similarityKPI="DistExhaustive")
+        # print(f"Similarity avg:{avg:.3f} sum:{sum:.3f}")
+
+        sum, avg = similarityOut(cloudPoints, similarityKPI="DistRandom")
+        # Apply boundaries
+        avg = NORM['mutualLow'] if avg<NORM['mutualLow'] else avg
+        similarityAvgNorm = 1/avg
+        print(f"\nSimilarity avg:{avg:.3f}, norm:{similarityAvgNorm:.3f}")
+        # sumSimilarityList.append(sum)
+        similarityList.append(similarityAvgNorm)
+
+        informationScoreNorm = informationScore/NORM["information"]
+        print(f"Information Score combined:{informationScore:.3f}, norm:{informationScoreNorm:.3f}")
+        informationScoreList.append(informationScoreNorm)
+
+        J = informationScoreNorm*WEIGHT['information'] - similarityAvgNorm*WEIGHT['similarity']
+        costJ.append(j)
+        print(f"\nCost J:{J:.3f}")
 
         time.sleep(timeInterval)
+
+
+# TODO: move it to utilities.utils
+def generatingResultsFolders():
+
+    result_folder = os.path.join(os.getcwd(), "results")
+    try:
+        os.makedirs(result_folder)
+    except OSError:
+        if not os.path.isdir(result_folder):
+            raise
+
+    detected_objects_folder = os.path.join(result_folder, "detected_objects")
+    try:
+        os.makedirs(detected_objects_folder)
+    except OSError:
+        if not os.path.isdir(detected_objects_folder):
+            raise
+
+    similarity_objects_folder = os.path.join(result_folder, "similarity_objects")
+    try:
+        os.makedirs(similarity_objects_folder)
+    except OSError:
+        if not os.path.isdir(similarity_objects_folder):
+            raise
+
+    information_folder = os.path.join(result_folder, "information")
+    try:
+        os.makedirs(information_folder)
+    except OSError:
+        if not os.path.isdir(information_folder):
+            raise
+
+    costJ_folder = os.path.join(result_folder, "costJ")
+    try:
+        os.makedirs(costJ_folder)
+    except OSError:
+        if not os.path.isdir(costJ_folder):
+            raise
 
 # path expressed as x, y, z and speed
 # PATH = {"Drone1":[(10,0,-10,5), (30,0,-10,5),(50,0,-10,5)],
 #         "Drone2":[(0,10,-10,5), (0,30,-10,5),(0,50,-10,5)],
 #         }
-PATH = {"Drone1":[(x,-7.5,-12,5) for x in range(50,-50,-2)],
-        "Drone2":[(x,-7.5,-8,5) for x in range(-50,50,2)],
+PATH = {"Drone1":[(x,-10,-12,5) for x in range(100,-100,-5)],
+        "Drone2":[(0.0,y,-8,5) for y in range(100,-100,-5)],
         }
 
 dronesID = list(PATH.keys())
 wayPointsSize = len(PATH[dronesID[0]])
 print(f"Detected {dronesID} with {wayPointsSize} positions")
+
+generatingResultsFolders()
 
 # connect to the AirSim simulator
 client = airsim.MultirotorClient()
@@ -64,32 +143,33 @@ for ctrl in controllers:
     tasks.append(t)
 for t in tasks: t.join()
 
-# print("Lifting all drones to specified Z altitude")
-# tasks = []
-# for ctrl in controllers:
-#     t = ctrl.moveToZ(-10,2)
-#     tasks.append(t)
-# for t in tasks: t.join()
-
-# Setting same yaw
+print("\nLifting all drones to specified Z altitude")
 tasks = []
 for ctrl in controllers:
-    t = ctrl.rotateToYaw(90)
+    t = ctrl.moveToZ(-15,2)
     tasks.append(t)
-print("Rotated succesfully")
-# It does not work with .join() ... 
-# for t in tasks: t.join()
-time.sleep(10)
-# wayPointsSize = 100
-for positionIdx in range(0,wayPointsSize):
-    tasks = []
-    for ctrl in controllers:
-        # t = ctrl.randomMoveZ()
-        x,y,z,speed = PATH[ctrl.getName()][positionIdx]
-        t = ctrl.moveToPostion(x,y,z,speed)
-        tasks.append(t)
+for t in tasks: t.join()
 
-    for t in tasks: t.join()
+print("\nSetting Geo Fence for all drones")
+for ctrl in controllers:
+    # no need for task list (just setting values here)
+    ctrl.setGeoFence(x=10, y=10, z=-10, r=100)
+
+wayPointsSize = 500
+
+startTime = time.time()
+
+global similarityList, informationScoreList, costJ
+similarityList = []
+informationScoreList = []
+costJ = []
+
+for positionIdx in range(0,wayPointsSize):
+
+    for ctrl in controllers:
+        ctrl.randomMoveZ()
+        # x,y,z,speed = PATH[ctrl.getName()][positionIdx]
+        # ctrl.moveToPostion(x,y,z,speed)
 
     # Stabilizing the drones for better images
     tasks = []
@@ -106,10 +186,23 @@ for positionIdx in range(0,wayPointsSize):
         z = state.kinematics_estimated.position.z_val
         _,_,yaw = airsim.to_eularian_angles(state.kinematics_estimated.orientation)
 
-        print(f"{2*' '}[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{yaw:.2f})")
+        print(f"{2*' '}[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{np.degrees(yaw):.2f})")
 
     monitor(dronesID, positionIdx)
+
+file_out = os.path.join(os.getcwd(),"results", "similarity_objects",
+                        f"similarityList.pickle")
+pickle.dump(similarityList,open(file_out,"wb"))
+
+file_out = os.path.join(os.getcwd(),"results", "information",
+                        f"scoreAggregated.pickle")
+pickle.dump(informationScoreList,open(file_out,"wb"))
+
+file_out = os.path.join(os.getcwd(),"results", "information",
+                        f"costJ.pickle")
+pickle.dump(costJ,open(file_out,"wb"))
 
 print("\n[RESETING] to original state ....")
 for ctrl in controllers: ctrl.quit()
 client.reset()
+print(f"\n --- elapsed time:{startTime - time.time():.2f} [sec] ---")
