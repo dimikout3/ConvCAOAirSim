@@ -31,6 +31,10 @@ class controller:
         self.cameraInfo = self.getCameraInfo()
         self.stateList = [[self.state,self.cameraInfo]]
 
+        # initial contibution is 0.0
+        # how much vehicles currrent movement affected the cost Function (delta)
+        self.contribution = [0.0]
+
         self.parentRaw = os.path.join(os.getcwd(), "swarm_raw_output")
         try:
             os.makedirs(self.parentRaw)
@@ -131,6 +135,10 @@ class controller:
         x,y,z,colors = self.pointCloud[index]
 
         return x,y,z,colors
+
+    def appendContribution(self, contrib):
+
+        self.contribution.append(contrib)
 
 
     def getDepthFront(self):
@@ -427,3 +435,7 @@ class controller:
         pointCloud_file = os.path.join(os.getcwd(), "swarm_raw_output",
                                   self.getName(), f"pointCloud_{self.name}.pickle")
         pickle.dump(self.pointCloud,open(pointCloud_file,"wb"))
+
+        contribution_file = os.path.join(os.getcwd(), "swarm_raw_output",
+                                  self.getName(), f"contribution_{self.name}.pickle")
+        pickle.dump(self.contribution,open(contribution_file,"wb"))
