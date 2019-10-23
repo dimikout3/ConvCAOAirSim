@@ -47,8 +47,8 @@ if __name__ == "__main__":
 
         plt.plot(x,yAggregated,label="Aggregated")
 
-        for scoreIdx,score in enumerate(scoreDrones):
-            plt.plot(x,score[0:(image+1)], label=f"Drone{scoreIdx}")
+        # for scoreIdx,score in enumerate(scoreDrones):
+        #     plt.plot(x,score[0:(image+1)], label=f"Drone{scoreIdx}")
 
         plt.xlabel("Time")
         plt.ylabel("Weighted Information")
