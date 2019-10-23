@@ -9,7 +9,7 @@ import utilities.utils as utils
 import matplotlib.pyplot as plt
 
 DEBUG_GEOFENCE = False
-DEBUG_RANDOMZ = False
+DEBUG_RANDOMZ = True
 WEIGHTS = {"cars":1.0, "persons":0.5 , "trafficLights":2.0}
 
 class controller:
@@ -136,6 +136,7 @@ class controller:
 
         return x,y,z,colors
 
+
     def appendContribution(self, contrib):
 
         self.contribution.append(contrib)
@@ -233,10 +234,10 @@ class controller:
 
     def randomMoveZ(self):
 
-        minThreshold = 20
+        minThreshold = 5
         axiZ = -15
         pixeSquare = 150
-        speedScalar = 2
+        speedScalar = 3
 
         changeYaw = 0.0
 
@@ -250,11 +251,19 @@ class controller:
 
             _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
 
-            randomYaw = np.random.uniform(-np.pi/6, np.pi/6)
-            # changeYaw = np.random.uniform(0,180)
-            # self.client.rotateToYawAsync(yawRandom,vehicle_name=self.name).join()
+            # restint the seed for more random results (if it is not included it yawRandom
+            # is not random anymore ... )
+            np.random.seed()
+
+            if tries >=5:
+                # if stuck drone should rotatte only towards one side (clockwise)
+                # otherwise it will constantly orient towards the obstackel (mean value
+                # of many different randomYaw will be 0
+                randomYaw = np.random.uniform(0, np.pi/4)
+            else:
+                randomYaw = np.random.uniform(-np.pi/4, np.pi/4)
+
             self.client.rotateByYawRateAsync(np.degrees(randomYaw),1,vehicle_name=self.name).join()
-            # .join() seems not to work correctly when using python scripts (works on interpreter)
             self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
 
             self.getDepthFront()
@@ -262,8 +271,6 @@ class controller:
                                                        self.imageDepthFront.width,
                                                        self.imageDepthFront.height)
 
-            # midVertical = np.vsplit(imageDepth,3)[1]
-            # mid = np.hsplit(midVertical,3)[1]
             midW = self.imageDepthFront.width/2
             midH = self.imageDepthFront.width/2
             imageDepthTarget = imageDepth[int(midW-pixeSquare):int(midW+pixeSquare),
@@ -271,22 +278,32 @@ class controller:
 
             current = np.min(imageDepthTarget)
 
-            if DEBUG_RANDOMZ:
-                print(f"\n {self.name} currentYaw:{np.degrees(currentYaw)}")
-                print(f"{self.name} randomYaw:{np.degrees(randomYaw)}")
+            travelTime = np.random.uniform(5.,10.)
 
-            if current>minThreshold:
+            if (current - travelTime*speedScalar)<minThreshold:
+                travelTime = (current - (minThreshold-2))/speedScalar
+            if travelTime<5.0: travelTime = 5.
+
+            if DEBUG_RANDOMZ:
+                print(f"\n[DEBUG][RANDOM_MOVE_Z] ----- {self.name} -----")
+                print(f"[DEBUG][RANDOM_MOVE_Z] currentYaw:{np.degrees(currentYaw):.4f} [deg]")
+                print(f"[DEBUG][RANDOM_MOVE_Z] randomYaw:{np.degrees(randomYaw):.4f} [deg]")
+                print(f"[DEBUG][RANDOM_MOVE_Z] available current distance:{current:.2f} [m]")
+                print(f"[DEBUG][RANDOM_MOVE_Z] suggested travel time:{travelTime:.2f} [sec]")
+                print(f"[DEBUG][RANDOM_MOVE_Z] expected travel dist:{travelTime*speedScalar:.2f} [m]")
+
+            if (current - travelTime*speedScalar)>minThreshold:
 
                 anglesSpeed = currentYaw + randomYaw
                 if DEBUG_RANDOMZ:
-                    print(f"{self.name} anglesSpeed:{np.degrees(anglesSpeed)}")
+                    print(f"[DEBUG][RANDOM_MOVE_Z] anglesSpeed:{np.degrees(anglesSpeed):.4f} [deg]")
 
                 vx = np.cos(anglesSpeed)
                 vy = np.sin(anglesSpeed)
                 if DEBUG_RANDOMZ:
-                    print(f"{self.name} has Vx:{vx} Vy:{vy}")
+                    print(f"[DEBUG][RANDOM_MOVE_Z] has Vx:{vx*speedScalar:.3f} Vy:{vy*speedScalar:.3f} [m/s]")
 
-                task = self.client.moveByVelocityZAsync(speedScalar*vx, speedScalar*vy,axiZ, 5,
+                task = self.client.moveByVelocityZAsync(speedScalar*vx, speedScalar*vy, axiZ, travelTime,
                                             airsim.DrivetrainType.ForwardOnly,
                                             airsim.YawMode(False, 0),
                                             vehicle_name=self.name).join()
