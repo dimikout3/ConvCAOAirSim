@@ -22,7 +22,7 @@ WEIGHT = {'information':1.0, 'similarity':2.0}
 
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
-    print(f"\n[MONITORING] position {posInd}")
+    print(f"[MONITORING] position {posInd}")
 
     detector = yoloDetector.yoloDetector()
 
@@ -50,17 +50,18 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         # Apply boundaries
         avg = NORM['mutualLow'] if avg<NORM['mutualLow'] else avg
         similarityAvgNorm = 1/avg
-        print(f"\nSimilarity avg:{avg:.3f}, norm:{similarityAvgNorm:.3f}")
+        print(f"[INFO] Similarity avg:{avg:.3f}, norm:{similarityAvgNorm:.3f}")
         similarityList.append(similarityAvgNorm)
 
         informationScoreNorm = informationScore/NORM["information"]
-        print(f"Information Score combined:{informationScore:.3f}, norm:{informationScoreNorm:.3f}")
+        print(f"[INFO] Information Score combined:{informationScore:.3f}, norm:{informationScoreNorm:.3f}")
         informationScoreList.append(informationScoreNorm)
 
         J = informationScoreNorm*WEIGHT['information'] - similarityAvgNorm*WEIGHT['similarity']
         costJ.append(J)
-        print(f"\nCost J:{J:.3f}")
+        print(f"[INFO] Cost J:{J:.3f}")
 
+        # TODO: computational complex ... simplify
         for ctrl in controllers:
 
             if posInd<1: break
@@ -91,11 +92,15 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
             informationScoreNorm = np.sum(information)/NORM['information']
 
             tempJ = informationScoreNorm*WEIGHT['information'] - similarityAvgNorm*WEIGHT['similarity']
-            contribution = costJ[-1] - tempJ
+            delta = costJ[-1] - tempJ
 
-            print(f"{ctrl.getName()} has contribution of {contribution:.4f}")
+            print(f"[INFO] {ctrl.getName()} has contribution of {delta:.4f}")
+            ctrl.appendContribution(delta)
 
         time.sleep(timeInterval)
+
+    print(f"[MONITORING] finished position {posInd}" )
+    print("-------------------------------\n")
 
 
 # TODO: move it to utilities.utils
@@ -178,9 +183,9 @@ for t in tasks: t.join()
 print("\nSetting Geo Fence for all drones")
 for ctrl in controllers:
     # no need for task list (just setting values here)
-    ctrl.setGeoFence(x=10, y=10, z=-10, r=100)
+    ctrl.setGeoFence(x=15, y=-20, z=-10, r=50)
 
-wayPointsSize = 500
+wayPointsSize = 700
 
 startTime = time.time()
 
@@ -196,13 +201,6 @@ for positionIdx in range(0,wayPointsSize):
         # x,y,z,speed = PATH[ctrl.getName()][positionIdx]
         # ctrl.moveToPostion(x,y,z,speed)
 
-    # Stabilizing the drones for better images
-    tasks = []
-    for ctrl in controllers:
-        t = ctrl.stabilize()
-        tasks.append(t)
-    for t in tasks: t.join()
-
     for ctrl in controllers:
         state = ctrl.getState()
 
@@ -211,7 +209,7 @@ for positionIdx in range(0,wayPointsSize):
         z = state.kinematics_estimated.position.z_val
         _,_,yaw = airsim.to_eularian_angles(state.kinematics_estimated.orientation)
 
-        print(f"{2*' '}[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{np.degrees(yaw):.2f})")
+        print(f"[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{np.degrees(yaw):.2f})")
 
     monitor(dronesID, positionIdx)
 
