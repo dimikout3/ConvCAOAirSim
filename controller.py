@@ -153,6 +153,7 @@ class controller:
 
     def getDepthImage(self):
 
+        #TODO: replace simGetImages with self.getImages -> save depth image
         responses = self.client.simGetImages([
             airsim.ImageRequest("0", airsim.ImageType.DepthPerspective, True)],
             vehicle_name = self.name)  #scene vision image in uncompressed RGB array
@@ -303,6 +304,8 @@ class controller:
                 if DEBUG_RANDOMZ:
                     print(f"[DEBUG][RANDOM_MOVE_Z] has Vx:{vx*speedScalar:.3f} Vy:{vy*speedScalar:.3f} [m/s]")
 
+                #BUG: huge bug, duration drone will move after the execution of the duration ....
+                #TODO: Find a walk around
                 task = self.client.moveByVelocityZAsync(speedScalar*vx, speedScalar*vy, axiZ, travelTime,
                                             airsim.DrivetrainType.ForwardOnly,
                                             airsim.YawMode(False, 0),
@@ -320,18 +323,81 @@ class controller:
 
                 # task = self.client.moveToPositionAsync(0,0,-10,3)
                 # QUESTION: Ignore collision -> what it does ? (now its True)
-                task = self.client.simSetVehiclePose(pose, True, self.getName())
+                self.client.simSetVehiclePose(pose, True, self.getName())
                 self.stabilize().join()
 
-                print(f"[WARNING] {self.getName()} reached max tries {tries} ...")
-                break
+                print(f"[WARNING] Reached max tries:{tries} ... teleporting to initial position")
+                tries = 0
             else:
                 print(f"[WARNING] {self.name} changing yaw due to imminent collision ...")
 
             self.state = self.getState()
 
-        return task
 
+    def move(self, slices=5):
+
+        axiZ = -15
+        speedScalar = 2
+
+        _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
+
+        self.getDepthFront()
+        imageDepth = airsim.list_to_2d_float_array(self.imageDepthFront.image_data_float,
+                                                   self.imageDepthFront.width,
+                                                   self.imageDepthFront.height)
+
+        # camera field of view (degrees)
+        camFOV = self.cameraInfo.fov
+        leftDeg, rightDeg = -camFOV/2 , camFOV/2
+
+        height, width = self.imageDepthFront.height, self.imageDepthFront.width
+        lowHeight, highHeight = int(height/2-100), int(height/2+100)
+        # how many pixels each slice has
+        sliceWidth = width/slices
+
+        # an image with 500 pixels width and 5 slices
+        # indexes=[(0,100),(100,200),(200,300) ... (400,500)]
+        slicesIndex = [[ int(i*sliceWidth), int( (i+1)*sliceWidth - 1) ] for i in range(slices)]
+
+        # current indicates the closest point to a specific slice
+        # current = [np.min(imageDepth[wLow:wHigh, lowHeight:highHeight]) for wLow, wHigh in slicesIndex]
+        # XXX: depth images have reveresed width and height ?!
+        current = [np.min(imageDepth[lowHeight:highHeight, wLow:wHigh]) for wLow, wHigh in slicesIndex]
+
+        print(f"\n[DEBUG][MOVE] ----- {self.getName()} -----")
+        print(f"[DEBUG][MOVE]Current distances: {current}")
+        # move towards the farest obstacle
+        canditate = np.argmax(current)
+        print(f"[DEBUG][MOVE]Canditate: {canditate}")
+
+        # slices on boundaries should be avoided for collision avoidance (thats what +/- 3 degrees do ...)
+        degreesIndexes = np.linspace(leftDeg, rightDeg, slices  + 1)
+        degreesList = [ [degreesIndexes[i] + 3, degreesIndexes[i+1] - 3] for i in range(degreesIndexes.size - 1)]
+
+        np.random.seed()
+        print(f"[DEBUG][MOVE]radians low: {np.radians(degreesList[canditate][0])}")
+        print(f"[DEBUG][MOVE]radians high: {np.radians(degreesList[canditate][1])}")
+
+        randomYaw = np.random.uniform(np.radians(degreesList[canditate][0]), np.radians(degreesList[canditate][1]))
+        print(f"[DEBUG][MOVE]RandomYaw: {np.degrees(randomYaw)} [deg]")
+
+        # for wl, wh in slicesIndex:
+        #     plt.imshow(imageDepth[lowHeight:highHeight,wl:wh])
+        #     plt.show()
+        #     plt.close()
+
+        anglesSpeed = currentYaw + randomYaw
+
+        vx = np.cos(anglesSpeed)
+        vy = np.sin(anglesSpeed)
+
+        travelTime = 5
+
+        task = self.client.moveByVelocityZAsync(speedScalar*vx, speedScalar*vy, axiZ, travelTime,
+                                    airsim.DrivetrainType.ForwardOnly,
+                                    airsim.YawMode(False, 0),
+                                    vehicle_name=self.name).join()
+        self.stabilize().join()
 
     def updateState(self, posIdx, timeStep):
 
