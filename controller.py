@@ -9,7 +9,8 @@ import utilities.utils as utils
 import matplotlib.pyplot as plt
 
 DEBUG_GEOFENCE = False
-DEBUG_RANDOMZ = True
+DEBUG_RANDOMZ = False
+DEBUG_MOVE = True
 WEIGHTS = {"cars":1.0, "persons":0.5 , "trafficLights":2.0}
 
 class controller:
@@ -191,6 +192,13 @@ class controller:
         self.fenceR = r
 
 
+    def insideGeoFence(self, d=5., c=[]):
+
+        x,y,z = c
+        dist = np.sqrt( (self.fenceX-x)**2 + (self.fenceY-y)**2 + (self.fenceZ-z)**2)
+
+        return (dist+d) < self.fenceR
+
     def applyGeoFence(self):
 
         if DEBUG_GEOFENCE:
@@ -334,70 +342,105 @@ class controller:
             self.state = self.getState()
 
 
-    def move(self, slices=5):
+    def move(self, randomPointsSize=5, maxTravelTime=10., minDist=5.):
 
         axiZ = -15
         speedScalar = 2
-
-        _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
-
-        self.getDepthFront()
-        imageDepth = airsim.list_to_2d_float_array(self.imageDepthFront.image_data_float,
-                                                   self.imageDepthFront.width,
-                                                   self.imageDepthFront.height)
+        np.random.seed()
 
         # camera field of view (degrees)
         camFOV = self.cameraInfo.fov
         leftDeg, rightDeg = -camFOV/2 , camFOV/2
 
-        height, width = self.imageDepthFront.height, self.imageDepthFront.width
-        lowHeight, highHeight = int(height/2-100), int(height/2+100)
-        # how many pixels each slice has
-        sliceWidth = width/slices
+        maxTries = 12
+        availablePosition = False
+        
+        for i in range(maxTries):
 
-        # an image with 500 pixels width and 5 slices
-        # indexes=[(0,100),(100,200),(200,300) ... (400,500)]
-        slicesIndex = [[ int(i*sliceWidth), int( (i+1)*sliceWidth - 1) ] for i in range(slices)]
+            self.state = self.getState()
+            _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
 
-        # current indicates the closest point to a specific slice
-        # current = [np.min(imageDepth[wLow:wHigh, lowHeight:highHeight]) for wLow, wHigh in slicesIndex]
-        # XXX: depth images have reveresed width and height ?!
-        current = [np.min(imageDepth[lowHeight:highHeight, wLow:wHigh]) for wLow, wHigh in slicesIndex]
+            self.getDepthFront()
+            imageDepth = airsim.list_to_2d_float_array(self.imageDepthFront.image_data_float,
+                                                       self.imageDepthFront.width,
+                                                       self.imageDepthFront.height)
 
-        print(f"\n[DEBUG][MOVE] ----- {self.getName()} -----")
-        print(f"[DEBUG][MOVE]Current distances: {current}")
-        # move towards the farest obstacle
-        canditate = np.argmax(current)
-        print(f"[DEBUG][MOVE]Canditate: {canditate}")
+            height, width = self.imageDepthFront.height, self.imageDepthFront.width
+            pixel10H = height*0.1
+            lowHeight, highHeight = int(height/2-pixel10H), int(height/2+pixel10H)
+            wLow, wHigh = int(width*0.1) ,int(width*0.1)
 
-        # slices on boundaries should be avoided for collision avoidance (thats what +/- 3 degrees do ...)
-        degreesIndexes = np.linspace(leftDeg, rightDeg, slices  + 1)
-        degreesList = [ [degreesIndexes[i] + 3, degreesIndexes[i+1] - 3] for i in range(degreesIndexes.size - 1)]
+            # boundaries should be avoided for collision avoidance (thats what +/- 3 degrees do ...)
+            randomOrientation = np.random.uniform(np.radians(leftDeg+3), np.radians(rightDeg-3), randomPointsSize)
+            # travelTime = np.random.uniform(0, maxTravelTime, randomPointsSize)
+            travelTime = np.random.uniform(5, maxTravelTime, randomPointsSize)
 
-        np.random.seed()
-        print(f"[DEBUG][MOVE]radians low: {np.radians(degreesList[canditate][0])}")
-        print(f"[DEBUG][MOVE]radians high: {np.radians(degreesList[canditate][1])}")
+            # validPoint = []
+            jPoint = []
+            for i in range(randomPointsSize):
 
-        randomYaw = np.random.uniform(np.radians(degreesList[canditate][0]), np.radians(degreesList[canditate][1]))
-        print(f"[DEBUG][MOVE]RandomYaw: {np.degrees(randomYaw)} [deg]")
+                wCenter = int(  width * ( ( np.degrees(randomOrientation[i]) + camFOV/2 ) / camFOV ) )
+                if wCenter - wLow < 0: wCenter = wLow + 1
+                if wCenter + wHigh> (width-1): wCenter = wHigh + 1
+                # print(f"{self.getName()} wCenter:{wCenter}")
 
-        # for wl, wh in slicesIndex:
-        #     plt.imshow(imageDepth[lowHeight:highHeight,wl:wh])
-        #     plt.show()
-        #     plt.close()
+                dist = np.min(imageDepth[ (wCenter-wLow) : (wCenter+wHigh), lowHeight:highHeight])
 
-        anglesSpeed = currentYaw + randomYaw
+                safeDist = dist>(travelTime[i]*speedScalar + minDist)
+
+                xCurrent = self.state.kinematics_estimated.position.x_val
+                yCurrent = self.state.kinematics_estimated.position.y_val
+                zCurrent = self.state.kinematics_estimated.position.z_val
+
+                xCanditate = xCurrent + np.cos(randomOrientation[i] + currentYaw)*speedScalar*travelTime[i]
+                yCanditate = yCurrent + np.sin(randomOrientation[i] + currentYaw)*speedScalar*travelTime[i]
+                zCanditate = zCurrent
+
+                canditates = [xCanditate,yCanditate,zCanditate]
+
+                inGeoFence = self.insideGeoFence(c = canditates, d = minDist)
+
+                # if not inGeoFence:
+                #     print(f"{self.getName()} (x:{xCanditate:.3f} y:{yCanditate:.3f}) is breaking the geofence")
+                # validPoint.append(safeDist and inGeoFence)
+
+                # the estimated score each canditate point has
+                if safeDist and inGeoFence:
+                    jPoint.append(dist)
+                    availablePosition = True
+                else:
+                    jPoint.append(-10.)
+
+            if availablePosition:
+                break
+            else:
+                # there is no avaoilable point tin the current orientation, change it
+                print(f"\n[WARNING][MOVE] There is no available position for{self.getName()}, changing orientation")
+                # rotateByYawRateAsync takes as input degres
+                self.client.rotateByYawRateAsync(30,1,vehicle_name=self.name).join()
+                self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
+
+        tartgetPointIndex = np.argmax(jPoint)
+
+        anglesSpeed = currentYaw + randomOrientation[tartgetPointIndex]
 
         vx = np.cos(anglesSpeed)
         vy = np.sin(anglesSpeed)
 
-        travelTime = 5
+        # travelTime = np.random.uniform(maxTravelTime)
 
-        task = self.client.moveByVelocityZAsync(speedScalar*vx, speedScalar*vy, axiZ, travelTime,
+        task = self.client.moveByVelocityZAsync(speedScalar*vx, speedScalar*vy, axiZ, travelTime[tartgetPointIndex],
                                     airsim.DrivetrainType.ForwardOnly,
                                     airsim.YawMode(False, 0),
                                     vehicle_name=self.name).join()
         self.stabilize().join()
+
+        if DEBUG_MOVE:
+            print(f"\n[DEBUG][MOVE] ----- {self.getName()} -----")
+            print(f"[DEBUG][MOVE] randomOrientation: {np.degrees(randomOrientation)}")
+            print(f"[DEBUG][MOVE] travelTime: {travelTime}")
+            print(f"[DEBUG][MOVE] jPoint: {jPoint}")
+            print(f"[DEBUG][MOVE] tartgetPointIndex: {tartgetPointIndex}")
 
     def updateState(self, posIdx, timeStep):
 
