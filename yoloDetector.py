@@ -113,7 +113,11 @@ class yoloDetector:
                 text = f"{self.LABELS[classIDs[i]]}_{i}: {confidences[i]:.4f} "
                 cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,0.5, color, 2)
 
-                if "car" in self.LABELS[classIDs[i]]:
+                car = ("car" in self.LABELS[classIDs[i]])
+                bus = ("bus" in self.LABELS[classIDs[i]])
+                truck = ("truck" in self.LABELS[classIDs[i]])
+                
+                if car or bus or truck:
                     detections['cars'].append( (x+w/2,y+h/2, f"car_{i}",confidences[i]) )
                 elif "person" in self.LABELS[classIDs[i]]:
                     detections['persons'].append( (x+w/2,y+h/2, f"person_{i}",confidences[i]) )
