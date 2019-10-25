@@ -12,6 +12,7 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import pickle
 from utilities.similarity import similarityOut
+from threading import Thread
 
 CAM_YAW = -0.5
 CAM_PITCH = 0.
@@ -64,7 +65,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         # TODO: computational complex ... simplify
         for ctrl in controllers:
 
-            if posInd<1: break
+            # if posInd<1: break
 
             information = []
             similarity = []
@@ -100,7 +101,6 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         time.sleep(timeInterval)
 
     print(f"[MONITORING] finished position {posInd}" )
-    print("-------------------------------\n")
 
 
 # TODO: move it to utilities.utils
@@ -155,7 +155,6 @@ print(f"Detected {dronesID} with {wayPointsSize} positions")
 
 generatingResultsFolders()
 
-# connect to the AirSim simulator
 client = airsim.MultirotorClient()
 client.confirmConnection()
 
@@ -175,17 +174,19 @@ for t in tasks: t.join()
 
 print("\nLifting all drones to specified Z altitude")
 tasks = []
-for ctrl in controllers:
-    t = ctrl.moveToZ(-15,2)
+intialAlt = -14
+stepAlt = -0.5
+for i,ctrl in enumerate(controllers):
+    t = ctrl.moveToZ(intialAlt + stepAlt*i,2)
     tasks.append(t)
 for t in tasks: t.join()
 
 print("\nSetting Geo Fence for all drones")
 for ctrl in controllers:
     # no need for task list (just setting values here)
-    ctrl.setGeoFence(x=15, y=-20, z=-10, r=50)
+    ctrl.setGeoFence(x=10, y=20, z=-10, r=50)
 
-wayPointsSize = 700
+wayPointsSize = 900
 
 startTime = time.time()
 
@@ -196,8 +197,13 @@ costJ = []
 
 for positionIdx in range(0,wayPointsSize):
 
+    ptime = time.time()
+
     for ctrl in controllers:
-        ctrl.randomMoveZ()
+        # ctrl.randomMoveZ()
+        ctrl.move()
+        # t = Thread(target = ctrl.randomMoveZ)
+        # t.start()
         # x,y,z,speed = PATH[ctrl.getName()][positionIdx]
         # ctrl.moveToPostion(x,y,z,speed)
 
@@ -213,6 +219,19 @@ for positionIdx in range(0,wayPointsSize):
 
     monitor(dronesID, positionIdx)
 
+    for ctrl in controllers: ctrl.updateEstimator()
+
+    print(f"----- elapsed time: {time.time() - ptime:.3f} ------")
+    print("-------------------------------\n")
+
+    if (positionIdx % 3) == 0:
+        plt.plot(costJ)
+        plt.xlabel("Time")
+        plt.ylabel("CostJ")
+        plt.show(block=False)
+        plt.pause(10)
+        plt.close()
+
 file_out = os.path.join(os.getcwd(),"results", "similarity_objects",
                         f"similarityList.pickle")
 pickle.dump(similarityList,open(file_out,"wb"))
@@ -221,7 +240,7 @@ file_out = os.path.join(os.getcwd(),"results", "information",
                         f"scoreAggregated.pickle")
 pickle.dump(informationScoreList,open(file_out,"wb"))
 
-file_out = os.path.join(os.getcwd(),"results", "information",
+file_out = os.path.join(os.getcwd(),"results", "costJ",
                         f"costJ.pickle")
 pickle.dump(costJ,open(file_out,"wb"))
 

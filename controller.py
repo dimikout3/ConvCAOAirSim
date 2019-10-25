@@ -8,9 +8,13 @@ import pickle
 import utilities.utils as utils
 import matplotlib.pyplot as plt
 
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import Pipeline
+
 DEBUG_GEOFENCE = False
 DEBUG_RANDOMZ = False
-DEBUG_MOVE = True
+DEBUG_MOVE = False
 WEIGHTS = {"cars":1.0, "persons":0.5 , "trafficLights":2.0}
 
 class controller:
@@ -31,6 +35,11 @@ class controller:
         self.state = self.getState()
         self.cameraInfo = self.getCameraInfo()
         self.stateList = [[self.state,self.cameraInfo]]
+
+        self.model = Pipeline([('poly', PolynomialFeatures(degree=3)),
+                               ('linear', LinearRegression(fit_intercept=False))])
+
+        self.estimator = self.model.fit([np.random.uniform(0,1,3)],[[np.random.uniform(0,1)]])
 
         # initial contibution is 0.0
         # how much vehicles currrent movement affected the cost Function (delta)
@@ -133,7 +142,10 @@ class controller:
 
     def getPointCloudList(self, index=-1):
 
-        x,y,z,colors = self.pointCloud[index]
+        if abs(index) > len(self.pointCloud):
+            x,y,z,colors = self.pointCloud[-1]
+        else:
+            x,y,z,colors = self.pointCloud[index]
 
         return x,y,z,colors
 
@@ -173,6 +185,7 @@ class controller:
 
     def moveToZ(self, targetZ, speedClim=3.0):
 
+        self.altitude = targetZ
         task = self.client.moveToZAsync(targetZ,speedClim,vehicle_name=self.name)
 
         return task
@@ -191,6 +204,11 @@ class controller:
         self.fenceZ = z
         self.fenceR = r
 
+        self.maxX = x + r
+        self.minX = x - r
+        self.maxY = y + r
+        self.minY = y - r
+
 
     def insideGeoFence(self, d=5., c=[]):
 
@@ -198,6 +216,7 @@ class controller:
         dist = np.sqrt( (self.fenceX-x)**2 + (self.fenceY-y)**2 + (self.fenceZ-z)**2)
 
         return (dist+d) < self.fenceR
+
 
     def applyGeoFence(self):
 
@@ -342,9 +361,10 @@ class controller:
             self.state = self.getState()
 
 
-    def move(self, randomPointsSize=5, maxTravelTime=10., minDist=5.):
+    def move(self, randomPointsSize=50, maxTravelTime=10., minDist=5.):
 
-        axiZ = -15
+        axiZ = self.altitude
+
         speedScalar = 2
         np.random.seed()
 
@@ -354,7 +374,7 @@ class controller:
 
         maxTries = 12
         availablePosition = False
-        
+
         for i in range(maxTries):
 
             self.state = self.getState()
@@ -373,7 +393,8 @@ class controller:
             # boundaries should be avoided for collision avoidance (thats what +/- 3 degrees do ...)
             randomOrientation = np.random.uniform(np.radians(leftDeg+3), np.radians(rightDeg-3), randomPointsSize)
             # travelTime = np.random.uniform(0, maxTravelTime, randomPointsSize)
-            travelTime = np.random.uniform(5, maxTravelTime, randomPointsSize)
+            travelTime = np.random.uniform(0., maxTravelTime, randomPointsSize)
+            yawCanditate = np.random.uniform(-180,180,randomPointsSize)
 
             # validPoint = []
             jPoint = []
@@ -400,22 +421,20 @@ class controller:
 
                 inGeoFence = self.insideGeoFence(c = canditates, d = minDist)
 
-                # if not inGeoFence:
-                #     print(f"{self.getName()} (x:{xCanditate:.3f} y:{yCanditate:.3f}) is breaking the geofence")
-                # validPoint.append(safeDist and inGeoFence)
-
                 # the estimated score each canditate point has
                 if safeDist and inGeoFence:
-                    jPoint.append(dist)
+                    # jPoint.append(dist)
+                    jPoint.append(self.estimate(xCanditate, yCanditate, np.radians(yawCanditate[i]) + currentYaw))
                     availablePosition = True
                 else:
-                    jPoint.append(-10.)
+                    # canditate position is outside geo-fence or on collision
+                    jPoint.append(-1000.)
 
             if availablePosition:
                 break
             else:
                 # there is no avaoilable point tin the current orientation, change it
-                print(f"\n[WARNING][MOVE] There is no available position for{self.getName()}, changing orientation")
+                print(f"\n[WARNING][MOVE] There is no available position for {self.getName()}, changing orientation")
                 # rotateByYawRateAsync takes as input degres
                 self.client.rotateByYawRateAsync(30,1,vehicle_name=self.name).join()
                 self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
@@ -429,18 +448,43 @@ class controller:
 
         # travelTime = np.random.uniform(maxTravelTime)
 
-        task = self.client.moveByVelocityZAsync(speedScalar*vx, speedScalar*vy, axiZ, travelTime[tartgetPointIndex],
+        self.client.moveByVelocityZAsync(speedScalar*vx, speedScalar*vy, axiZ, travelTime[tartgetPointIndex],
                                     airsim.DrivetrainType.ForwardOnly,
                                     airsim.YawMode(False, 0),
                                     vehicle_name=self.name).join()
         self.stabilize().join()
 
+        self.client.rotateByYawRateAsync(yawCanditate[tartgetPointIndex] + np.degrees(currentYaw),1,vehicle_name=self.name).join()
+        self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
+
         if DEBUG_MOVE:
             print(f"\n[DEBUG][MOVE] ----- {self.getName()} -----")
             print(f"[DEBUG][MOVE] randomOrientation: {np.degrees(randomOrientation)}")
             print(f"[DEBUG][MOVE] travelTime: {travelTime}")
+            print(f"[DEBUG][MOVE] yawCanditate: {yawCanditate}")
             print(f"[DEBUG][MOVE] jPoint: {jPoint}")
             print(f"[DEBUG][MOVE] tartgetPointIndex: {tartgetPointIndex}")
+
+
+    def estimate(self,x,y,yaw):
+
+        return float(self.estimator.predict([[x,y,np.radians(yaw)]]))
+
+    def updateEstimator(self):
+
+        xList = [state[0].kinematics_estimated.position.x_val for state in self.stateList]
+        yList = [state[0].kinematics_estimated.position.y_val for state in self.stateList]
+        yawList = [airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2] for state in self.stateList]
+
+        contributionList = [[con] for con in self.contribution]
+
+        data = []
+        for i in range(len(xList)):
+            data.append([xList[i],yList[i],yawList[i]])
+
+        print(f" data:{data} contributionList:{contributionList}")
+        self.estimator = self.model.fit(data,contributionList)
+
 
     def updateState(self, posIdx, timeStep):
 
@@ -510,6 +554,8 @@ class controller:
         if index == None:
             # if no index is specified the whole list will be returned
             return self.scoreDetections
+        elif abs(index) > len(self.scoreDetections):
+            return 0.0
         else:
             # usually used with index -1
             return self.scoreDetections[index]
