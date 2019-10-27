@@ -15,7 +15,8 @@ from sklearn.pipeline import Pipeline
 DEBUG_GEOFENCE = False
 DEBUG_RANDOMZ = False
 DEBUG_MOVE = False
-WEIGHTS = {"cars":1.0, "persons":0.5 , "trafficLights":2.0}
+DEBUG_MOVE1DOF = True
+WEIGHTS = {"cars":1.0, "persons":1.0 , "trafficLights":1.0}
 
 class controller:
 
@@ -39,7 +40,20 @@ class controller:
         self.model = Pipeline([('poly', PolynomialFeatures(degree=3)),
                                ('linear', LinearRegression(fit_intercept=False))])
 
+        self.model1DoF = Pipeline([('poly', PolynomialFeatures(degree=2)),
+                               ('linear', LinearRegression(fit_intercept=False))])
+
+        self.model2DoF = Pipeline([('poly', PolynomialFeatures(degree=2)),
+                               ('linear', LinearRegression(fit_intercept=False))])
+
         self.estimator = self.model.fit([np.random.uniform(0,1,3)],[[np.random.uniform(0,1)]])
+
+        self.estimator1DoF = self.model1DoF.fit([np.random.uniform(0,1,1)],[[np.random.uniform(0,1)]])
+
+        self.estimator2DoF = self.model2DoF.fit([np.random.uniform(0,1,2)],[[np.random.uniform(0,1)]])
+
+        self.estimations = []
+        self.historyData = []
 
         # initial contibution is 0.0
         # how much vehicles currrent movement affected the cost Function (delta)
@@ -361,7 +375,53 @@ class controller:
             self.state = self.getState()
 
 
-    def move(self, randomPointsSize=50, maxTravelTime=10., minDist=5.):
+
+    def move1DoF(self, randomPointsSize=50):
+
+        np.random.seed()
+
+        # camera field of view (degrees)
+        camFOV = self.cameraInfo.fov
+        leftDeg, rightDeg = -camFOV/2 , camFOV/2
+
+        self.state = self.getState()
+        _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
+
+        self.getDepthFront()
+        imageDepth = airsim.list_to_2d_float_array(self.imageDepthFront.image_data_float,
+                                                   self.imageDepthFront.width,
+                                                   self.imageDepthFront.height)
+
+        height, width = self.imageDepthFront.height, self.imageDepthFront.width
+        pixel10H = height*0.1
+        lowHeight, highHeight = int(height/2-pixel10H), int(height/2+pixel10H)
+        wLow, wHigh = int(width*0.1) ,int(width*0.1)
+
+        yawCanditate = np.random.uniform(leftDeg/2, rightDeg/2, randomPointsSize)
+
+        # validPoint = []
+        jPoint = []
+        for i in range(len(yawCanditate)):
+
+            if (yawCanditate[i]+np.degrees(currentYaw))>180:yawCanditate[i] = 180 - currentYaw
+            if (yawCanditate[i]+np.degrees(currentYaw))<-180:yawCanditate[i] = -180 + currentYaw
+            jPoint.append(self.estimate1DoF(yawCanditate[i]+np.degrees(currentYaw)))
+
+        self.estimations.append(jPoint)
+
+        tartgetPointIndex = np.argmax(jPoint)
+
+        self.client.rotateByYawRateAsync(yawCanditate[tartgetPointIndex],1,vehicle_name=self.name).join()
+        self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
+
+        if DEBUG_MOVE1DOF:
+            print(f"\n[DEBUG][MOVE1DOF] ----- {self.getName()} -----")
+            print(f"[DEBUG][MOVE1DOF] yawCanditate: {yawCanditate[tartgetPointIndex]}")
+            print(f"[DEBUG][MOVE1DOF] jPoint: {jPoint[tartgetPointIndex]}")
+            print(f"[DEBUG][MOVE1DOF] tartgetPointIndex: {tartgetPointIndex}")
+
+
+    def move(self, randomPointsSize=50, maxTravelTime=15., minDist=5.):
 
         axiZ = self.altitude
 
@@ -394,7 +454,7 @@ class controller:
             randomOrientation = np.random.uniform(np.radians(leftDeg+3), np.radians(rightDeg-3), randomPointsSize)
             # travelTime = np.random.uniform(0, maxTravelTime, randomPointsSize)
             travelTime = np.random.uniform(0., maxTravelTime, randomPointsSize)
-            yawCanditate = np.random.uniform(-180,180,randomPointsSize)
+            yawCanditate = np.random.uniform(-30,30,randomPointsSize)
 
             # validPoint = []
             jPoint = []
@@ -424,7 +484,15 @@ class controller:
                 # the estimated score each canditate point has
                 if safeDist and inGeoFence:
                     # jPoint.append(dist)
-                    jPoint.append(self.estimate(xCanditate, yCanditate, np.radians(yawCanditate[i]) + currentYaw))
+                    angle =  np.radians(yawCanditate[i]) + currentYaw + randomOrientation[i]
+                    if angle>np.pi:
+                        angle=np.pi
+                        yawCanditate[i] = angle
+                    elif angle<-np.pi:
+                        angle=-np.pi
+                        yawCanditate[i] = angle
+
+                    jPoint.append(self.estimate(xCanditate, yCanditate, angle))
                     availablePosition = True
                 else:
                     # canditate position is outside geo-fence or on collision
@@ -470,11 +538,23 @@ class controller:
 
         return float(self.estimator.predict([[x,y,np.radians(yaw)]]))
 
+
+    def estimate1DoF(self,yaw):
+
+        yaw = (yaw - 180)/(180 + 180)
+        return float(self.estimator1DoF.predict([[yaw]]))
+
+
+    def estimate2Dof(self,x,y,yaw):
+
+        return float(self.estimator.predict([[x,y,np.radians(yaw)]]))
+
+
     def updateEstimator(self):
 
-        xList = [state[0].kinematics_estimated.position.x_val for state in self.stateList]
-        yList = [state[0].kinematics_estimated.position.y_val for state in self.stateList]
-        yawList = [airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2] for state in self.stateList]
+        xList = [(state[0].kinematics_estimated.position.x_val-self.minX)/(self.maxX - self.minX) for state in self.stateList]
+        yList = [(state[0].kinematics_estimated.position.y_val-self.minY)/(self.maxY-self.minY) for state in self.stateList]
+        yawList = [(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]-np.pi)/(np.pi+np.pi) for state in self.stateList]
 
         contributionList = [[con] for con in self.contribution]
 
@@ -482,8 +562,19 @@ class controller:
         for i in range(len(xList)):
             data.append([xList[i],yList[i],yawList[i]])
 
-        print(f" data:{data} contributionList:{contributionList}")
+        # print(f" data:{data} contributionList:{contributionList}")
         self.estimator = self.model.fit(data,contributionList)
+
+
+    def updateEstimator1DoF(self):
+
+        yawList = [[(np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2])-180)/(180+180)] for state in self.stateList]
+
+        contributionList = [[con] for con in self.contribution]
+
+        self.historyData.append([yawList,contributionList])
+
+        self.estimator1DoF = self.model1DoF.fit(yawList[-4:],contributionList[-4:])
 
 
     def updateState(self, posIdx, timeStep):
@@ -611,3 +702,11 @@ class controller:
         contribution_file = os.path.join(os.getcwd(), "swarm_raw_output",
                                   self.getName(), f"contribution_{self.name}.pickle")
         pickle.dump(self.contribution,open(contribution_file,"wb"))
+
+        estimations_file = os.path.join(os.getcwd(), "swarm_raw_output",
+                                  self.getName(), f"estimations_{self.name}.pickle")
+        pickle.dump(self.estimations,open(estimations_file,"wb"))
+
+        history_file = os.path.join(os.getcwd(), "swarm_raw_output",
+                                  self.getName(), f"history_{self.name}.pickle")
+        pickle.dump(self.historyData,open(history_file,"wb"))

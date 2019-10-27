@@ -18,8 +18,8 @@ CAM_YAW = -0.5
 CAM_PITCH = 0.
 CAM_ROOL = 0.
 
-NORM = {'information':30.0, 'mutualLow':1.0}
-WEIGHT = {'information':1.0, 'similarity':2.0}
+NORM = {'information':25.0, 'mutualLow':1.0}
+WEIGHT = {'information':1.0, 'similarity':10.0}
 
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
@@ -186,7 +186,7 @@ for ctrl in controllers:
     # no need for task list (just setting values here)
     ctrl.setGeoFence(x=10, y=20, z=-10, r=50)
 
-wayPointsSize = 900
+wayPointsSize = 50
 
 startTime = time.time()
 
@@ -201,7 +201,8 @@ for positionIdx in range(0,wayPointsSize):
 
     for ctrl in controllers:
         # ctrl.randomMoveZ()
-        ctrl.move()
+        # ctrl.move()
+        ctrl.move1DoF()
         # t = Thread(target = ctrl.randomMoveZ)
         # t.start()
         # x,y,z,speed = PATH[ctrl.getName()][positionIdx]
@@ -219,17 +220,18 @@ for positionIdx in range(0,wayPointsSize):
 
     monitor(dronesID, positionIdx)
 
-    for ctrl in controllers: ctrl.updateEstimator()
+    # for ctrl in controllers: ctrl.updateEstimator()
+    for ctrl in controllers: ctrl.updateEstimator1DoF()
 
     print(f"----- elapsed time: {time.time() - ptime:.3f} ------")
-    print("-------------------------------\n")
+    print("---------------------------------\n")
 
-    if (positionIdx % 3) == 0:
+    if (positionIdx % 5) == 0:
         plt.plot(costJ)
         plt.xlabel("Time")
         plt.ylabel("CostJ")
         plt.show(block=False)
-        plt.pause(10)
+        plt.pause(15)
         plt.close()
 
 file_out = os.path.join(os.getcwd(),"results", "similarity_objects",
