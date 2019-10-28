@@ -19,7 +19,7 @@ CAM_PITCH = 0.
 CAM_ROOL = 0.
 
 NORM = {'information':25.0, 'mutualLow':1.0}
-WEIGHT = {'information':1.0, 'similarity':10.0}
+WEIGHT = {'information':1.0, 'similarity':30.0}
 
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
@@ -65,7 +65,9 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         # TODO: computational complex ... simplify
         for ctrl in controllers:
 
-            # if posInd<1: break
+            if posInd == 0:
+                # the initial value for the output of the estimator is the overall J
+                ctrl.appendJi(J)
 
             information = []
             similarity = []
@@ -92,11 +94,12 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
             similarityAvgNorm = 1/avg
             informationScoreNorm = np.sum(information)/NORM['information']
 
-            tempJ = informationScoreNorm*WEIGHT['information'] - similarityAvgNorm*WEIGHT['similarity']
-            delta = costJ[-1] - tempJ
+            j_i = informationScoreNorm*WEIGHT['information'] - similarityAvgNorm*WEIGHT['similarity']
+            delta = costJ[-1] - j_i
 
-            print(f"[INFO] {ctrl.getName()} has contribution of {delta:.4f}")
+            print(f"[INFO] {ctrl.getName()} has delta:{delta:.4f} Ji:{j_i:.4f}")
             ctrl.appendContribution(delta)
+            ctrl.appendJi(j_i)
 
         time.sleep(timeInterval)
 
@@ -226,12 +229,12 @@ for positionIdx in range(0,wayPointsSize):
     print(f"----- elapsed time: {time.time() - ptime:.3f} ------")
     print("---------------------------------\n")
 
-    if (positionIdx % 5) == 0:
+    if (positionIdx % 3) == 0:
         plt.plot(costJ)
         plt.xlabel("Time")
         plt.ylabel("CostJ")
         plt.show(block=False)
-        plt.pause(15)
+        plt.pause(5)
         plt.close()
 
 file_out = os.path.join(os.getcwd(),"results", "similarity_objects",

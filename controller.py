@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
+from sklearn.svm import SVR
+
 
 DEBUG_GEOFENCE = False
 DEBUG_RANDOMZ = False
@@ -36,6 +38,7 @@ class controller:
         self.state = self.getState()
         self.cameraInfo = self.getCameraInfo()
         self.stateList = [[self.state,self.cameraInfo]]
+        self.stateList = []
 
         self.model = Pipeline([('poly', PolynomialFeatures(degree=3)),
                                ('linear', LinearRegression(fit_intercept=False))])
@@ -43,12 +46,15 @@ class controller:
         self.model1DoF = Pipeline([('poly', PolynomialFeatures(degree=2)),
                                ('linear', LinearRegression(fit_intercept=False))])
 
+        # self.model1DoF = SVR(gamma='scale', C=1.0, epsilon=0.2)
+
         self.model2DoF = Pipeline([('poly', PolynomialFeatures(degree=2)),
                                ('linear', LinearRegression(fit_intercept=False))])
 
         self.estimator = self.model.fit([np.random.uniform(0,1,3)],[[np.random.uniform(0,1)]])
 
         self.estimator1DoF = self.model1DoF.fit([np.random.uniform(0,1,1)],[[np.random.uniform(0,1)]])
+        # self.estimator1DoF = self.model1DoF.fit([np.random.uniform(0,1,1)],[[np.random.uniform(0,1)]])
 
         self.estimator2DoF = self.model2DoF.fit([np.random.uniform(0,1,2)],[[np.random.uniform(0,1)]])
 
@@ -57,7 +63,9 @@ class controller:
 
         # initial contibution is 0.0
         # how much vehicles currrent movement affected the cost Function (delta)
-        self.contribution = [0.0]
+        self.contribution = []
+
+        self.j_i = []
 
         self.parentRaw = os.path.join(os.getcwd(), "swarm_raw_output")
         try:
@@ -167,6 +175,11 @@ class controller:
     def appendContribution(self, contrib):
 
         self.contribution.append(contrib)
+
+
+    def appendJi(self, Ji):
+
+        self.j_i.append(Ji)
 
 
     def getDepthFront(self):
@@ -570,11 +583,12 @@ class controller:
 
         yawList = [[(np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2])-180)/(180+180)] for state in self.stateList]
 
-        contributionList = [[con] for con in self.contribution]
+        # Ji(k) = Ji(k-1) + delta(=contribution)
+        j_i_k = [[self.j_i[i-1] + self.contribution[i]] for i in range(len(self.contribution))]
 
-        self.historyData.append([yawList,contributionList])
+        self.historyData.append([yawList,j_i_k])
 
-        self.estimator1DoF = self.model1DoF.fit(yawList[-4:],contributionList[-4:])
+        self.estimator1DoF = self.model1DoF.fit(yawList[-6:],j_i_k[-6:])
 
 
     def updateState(self, posIdx, timeStep):
