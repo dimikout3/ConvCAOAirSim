@@ -18,7 +18,7 @@ DEBUG_GEOFENCE = False
 DEBUG_RANDOMZ = False
 DEBUG_MOVE = False
 DEBUG_MOVE1DOF = True
-WEIGHTS = {"cars":1.0, "persons":1.0 , "trafficLights":1.0}
+WEIGHTS = {"cars":1.0, "persons":0.0 , "trafficLights":1.0}
 
 class controller:
 
@@ -28,6 +28,7 @@ class controller:
         self.name = droneName
 
         self.scoreDetections = []
+        self.scoreDetectionsNum = []
         self.detectionsInfo = []
         self.detectionsCoordinates = []
         self.pointCloud = []
@@ -219,8 +220,8 @@ class controller:
 
 
     def rotateToYaw(self, yaw):
-        task = self.client.rotateToYawAsync(yaw,vehicle_name=self.name)
-        return task
+        self.client.rotateByYawRateAsync(float(yaw),1,vehicle_name=self.name).join()
+        self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
 
 
     def setGeoFence(self, x=0, y=0, z=-10, r=20):
@@ -388,8 +389,7 @@ class controller:
             self.state = self.getState()
 
 
-
-    def move1DoF(self, randomPointsSize=50):
+    def move1DoF(self, randomPointsSize=70):
 
         np.random.seed()
 
@@ -416,8 +416,6 @@ class controller:
         jPoint = []
         for i in range(len(yawCanditate)):
 
-            if (yawCanditate[i]+np.degrees(currentYaw))>180:yawCanditate[i] = 180 - currentYaw
-            if (yawCanditate[i]+np.degrees(currentYaw))<-180:yawCanditate[i] = -180 + currentYaw
             jPoint.append(self.estimate1DoF(yawCanditate[i]+np.degrees(currentYaw)))
 
         self.estimations.append(jPoint)
@@ -430,8 +428,9 @@ class controller:
         if DEBUG_MOVE1DOF:
             print(f"\n[DEBUG][MOVE1DOF] ----- {self.getName()} -----")
             print(f"[DEBUG][MOVE1DOF] yawCanditate: {yawCanditate[tartgetPointIndex]}")
+            print(f"[DEBUG][MOVE1DOF] currentYaw: {np.degrees(currentYaw):.3f}")
             print(f"[DEBUG][MOVE1DOF] jPoint: {jPoint[tartgetPointIndex]}")
-            print(f"[DEBUG][MOVE1DOF] tartgetPointIndex: {tartgetPointIndex}")
+            # print(f"[DEBUG][MOVE1DOF] tartgetsPointIndex: {tartgetPointIndex}")
 
 
     def move(self, randomPointsSize=50, maxTravelTime=15., minDist=5.):
@@ -554,7 +553,13 @@ class controller:
 
     def estimate1DoF(self,yaw):
 
+        if yaw > 180:
+            yaw = -360 + yaw
+        if yaw < -180:
+            yaw = 360 - yaw
+
         yaw = (yaw - 180)/(180 + 180)
+
         return float(self.estimator1DoF.predict([[yaw]]))
 
 
@@ -588,7 +593,7 @@ class controller:
 
         self.historyData.append([yawList,j_i_k])
 
-        self.estimator1DoF = self.model1DoF.fit(yawList[-6:],j_i_k[-6:])
+        self.estimator1DoF = self.model1DoF.fit(yawList[-4:],j_i_k[-4:])
 
 
     def updateState(self, posIdx, timeStep):
@@ -623,12 +628,15 @@ class controller:
         score = 0.0
         pixelX = []
         pixelY = []
+        # scoreNum -> number of detected objects (int)
+        scoreNum = 0
         for detectionClass, objects in detections.items():
             for object in objects:
                 # object = (pixel_x,pixel_y,detecions_id,confidece)
                 score += object[3]*WEIGHTS[detectionClass]
                 pixelX.append(object[0])
                 pixelY.append(object[1])
+                scoreNum += WEIGHTS[detectionClass]
 
         depthImage = self.getDepthImage()
 
@@ -646,6 +654,7 @@ class controller:
                 detectionsInfo.append([object[2], object[3]])
 
         self.scoreDetections.append(score)
+        self.scoreDetectionsNum.append(scoreNum)
         self.detectionsInfo.append(detectionsInfo)
         self.detectionsCoordinates.append(detectionsCoordinates)
         self.stateList.append([self.getState(), self.getCameraInfo()])
@@ -654,16 +663,28 @@ class controller:
         return detectionsInfo, detectionsCoordinates
 
 
-    def getScore(self, index = None):
+    def getScore(self, index = None, absolute = False):
 
-        if index == None:
-            # if no index is specified the whole list will be returned
-            return self.scoreDetections
-        elif abs(index) > len(self.scoreDetections):
-            return 0.0
+        # absolute -> return score as absolute number of detected objects
+
+        if not absolute:
+            if index == None:
+                # if no index is specified the whole list will be returned
+                return self.scoreDetections
+            elif abs(index) > len(self.scoreDetections):
+                return 0.0
+            else:
+                # usually used with index -1
+                return self.scoreDetections[index]
         else:
-            # usually used with index -1
-            return self.scoreDetections[index]
+            if index == None:
+                # if no index is specified the whole list will be returned
+                return self.scoreDetectionsNum
+            elif abs(index) > len(self.scoreDetectionsNum):
+                return 0.0
+            else:
+                # usually used with index -1
+                return self.scoreDetectionsNum[index]
 
 
     def getPose(self):

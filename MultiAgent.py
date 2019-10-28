@@ -18,8 +18,8 @@ CAM_YAW = -0.5
 CAM_PITCH = 0.
 CAM_ROOL = 0.
 
-NORM = {'information':25.0, 'mutualLow':1.0}
-WEIGHT = {'information':1.0, 'similarity':30.0}
+NORM = {'information':30.0, 'mutualLow':1.0}
+WEIGHT = {'information':1.0, 'similarity':.0}
 
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
@@ -45,7 +45,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
             cloudPoints[ctrl.getName()] = pointCloud
 
-            informationScore += ctrl.getScore(index=-1)
+            informationScore += ctrl.getScore(index=-1, absolute=True)
 
         sum, avg = similarityOut(cloudPoints, similarityKPI="DistRandom")
         # Apply boundaries
@@ -77,14 +77,14 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
                 if other.getName() != ctrl.getName():
 
-                    information.append(other.getScore(index=-1))
+                    information.append(other.getScore(index=-1, absolute=True))
                     x,y,z,c = other.getPointCloudList(index=-1)
                     pointCloud = np.stack((x,y,z), axis=1)
                     cloudPoints[other.getName()] = pointCloud
 
                 else:
 
-                    information.append(other.getScore(index=-2))
+                    information.append(other.getScore(index=-2, absolute=True))
                     x,y,z,c = other.getPointCloudList(index=-2)
                     pointCloud = np.stack((x,y,z), axis=1)
                     cloudPoints[other.getName()] = pointCloud
@@ -189,6 +189,12 @@ for ctrl in controllers:
     # no need for task list (just setting values here)
     ctrl.setGeoFence(x=10, y=20, z=-10, r=50)
 
+print("\nSetting random Yaw all drones")
+for ctrl in controllers:
+    np.random.seed()
+    yawRandom = np.random.uniform(-180,180,1)
+    ctrl.rotateToYaw(yawRandom)
+
 wayPointsSize = 50
 
 startTime = time.time()
@@ -230,9 +236,20 @@ for positionIdx in range(0,wayPointsSize):
     print("---------------------------------\n")
 
     if (positionIdx % 3) == 0:
-        plt.plot(costJ)
+
+        plt.plot(costJ, label="Cost J")
+
+        information = [info*WEIGHT["information"] for info in informationScoreList]
+        plt.plot(information, label="information")
+
+        similarity = [sim*WEIGHT["similarity"] for sim in similarityList]
+        plt.plot(similarity, label="similarity")
+
         plt.xlabel("Time")
-        plt.ylabel("CostJ")
+        plt.ylabel("Value")
+
+        plt.legend()
+
         plt.show(block=False)
         plt.pause(5)
         plt.close()
