@@ -12,7 +12,9 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVR
+from sklearn.neighbors import KNeighborsRegressor
 
+ESTIMATORWINDOW = 4
 
 DEBUG_GEOFENCE = False
 DEBUG_RANDOMZ = False
@@ -50,18 +52,19 @@ class controller:
         self.model = Pipeline([('poly', PolynomialFeatures(degree=3)),
                                ('linear', LinearRegression(fit_intercept=False))])
 
-        # self.model1DoF = Pipeline([('poly', PolynomialFeatures(degree=2)),
-        #                        ('linear', LinearRegression(fit_intercept=False))])
-
-        self.model1DoF = SVR(gamma='scale', C=1.0, epsilon=0.2)
+        self.model1DoF = Pipeline([('poly', PolynomialFeatures(degree=2)),
+                               ('linear', LinearRegression(fit_intercept=False))])
+        # self.model1DoF = SVR(gamma='scale', C=1.0, epsilon=0.2)
+        # self.model1DoF = KNeighborsRegressor(n_neighbors=2)
+        # self.model1DoF = LinearRegression()
 
         self.model2DoF = Pipeline([('poly', PolynomialFeatures(degree=2)),
                                ('linear', LinearRegression(fit_intercept=False))])
 
         self.estimator = self.model.fit([np.random.uniform(0,1,3)],[np.random.uniform(0,1)])
 
-        # self.estimator1DoF = self.model1DoF.fit([np.random.uniform(0,1,1)],[[np.random.uniform(0,1)]])
-        self.estimator1DoF = self.model1DoF.fit([np.random.uniform(0,1,1)],[np.random.uniform(0,1)])
+        self.estimator1DoF = self.model1DoF.fit([np.random.uniform(0,1,1)],[[np.random.uniform(0,1)]])
+        # self.estimator1DoF = self.model1DoF.fit([np.random.uniform(0,1,1)],[np.random.uniform(0,1)])
 
         self.estimator2DoF = self.model2DoF.fit([np.random.uniform(0,1,2)],[[np.random.uniform(0,1)]])
 
@@ -436,7 +439,7 @@ class controller:
             print(f"\n[DEBUG][MOVE1DOF] ----- {self.getName()} -----")
             print(f"[DEBUG][MOVE1DOF] yawCanditate: {yawCanditate[tartgetPointIndex]}")
             print(f"[DEBUG][MOVE1DOF] currentYaw: {np.degrees(currentYaw):.3f}")
-            print(f"[DEBUG][MOVE1DOF] jPoint: {jPoint[tartgetPointIndex]}")
+            # print(f"[DEBUG][MOVE1DOF] estimations: {jPoint}")
             # print(f"[DEBUG][MOVE1DOF] tartgetsPointIndex: {tartgetPointIndex}")
 
 
@@ -566,7 +569,7 @@ class controller:
         if yaw < -180:
             yaw = 360 - yaw
 
-        yaw = (yaw - 180)/(180 + 180)
+        yaw = (yaw + 180)/(180 + 180)
 
         return float(self.estimator1DoF.predict([[yaw]]))
 
@@ -594,16 +597,52 @@ class controller:
 
     def updateEstimator1DoF(self):
 
-        yawList = [[(np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2])-180)/(180+180)] for state in self.stateList]
+        yawList = [[(np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2])+180)/(180+180)] for state in self.stateList]
 
         # Ji(k) = Ji(k-1) + delta(=contribution)
-        # j_i_k = [[self.j_i[i-1] + self.contribution[i]] for i in range(len(self.contribution))]
-        j_i_k = [self.j_i[i-1] + self.contribution[i] for i in range(len(self.contribution))]
+        j_i_k = [[self.j_i[i-1] + self.contribution[i]] for i in range(len(self.contribution))]
+        # j_i_k = [self.j_i[i-1] + self.contribution[i] for i in range(len(self.contribution))]
 
         self.historyData.append([yawList,j_i_k])
+        # print(f"\n --- {self.getName()}")
+        # print(f"updating estimator ... yawList:{yawList[-ESTIMATORWINDOW:]}")
+        # print(f"updating estimator ... Ji(k):{j_i_k[-ESTIMATORWINDOW:]}")
 
-        self.estimator1DoF = self.model1DoF.fit(yawList[-4:],j_i_k[-4:])
+        self.estimator1DoF = self.model1DoF.fit(yawList[-ESTIMATORWINDOW:],j_i_k[-ESTIMATORWINDOW:])
 
+
+    def plotEstimator1DoF(self):
+
+        _,_,currentYaw = np.degrees(airsim.to_eularian_angles(self.state.kinematics_estimated.orientation))
+        x = np.linspace(currentYaw - 45/2,currentYaw + 45/2,100)
+
+        y = [self.estimate1DoF(yaw) for yaw in x]
+        x = [(i+180)/(180+180) for i in x]
+
+        yawList = [(np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2])+180)/(180+180) for state in self.stateList]
+        j_i_k = [self.j_i[i-1] + self.contribution[i] for i in range(len(self.contribution))]
+
+        report_estimator = os.path.join(os.getcwd(),"results", f"estimator_{self.getName()}")
+        try:
+            os.makedirs(report_estimator)
+        except OSError:
+            if not os.path.isdir(report_estimator):
+                raise
+
+        col = np.arange(len(yawList[-ESTIMATORWINDOW:]))
+        plt.scatter(yawList[-ESTIMATORWINDOW:], j_i_k[-ESTIMATORWINDOW:], c=col[-ESTIMATORWINDOW:], cmap=plt.cm.coolwarm)
+        plt.plot(x,y)
+        plt.title(self.getName())
+        plt.xlim(0,1)
+        plt.ylim(0.5,3)
+        plt.xlabel('yaw')
+        plt.ylabel('estimated val')
+
+        estimator_file = os.path.join(report_estimator, f"estimaton_{self.posIdx}.png")
+        plt.savefig(estimator_file)
+        # plt.show(block=False)
+        # plt.pause(5)
+        plt.close()
 
     def updateState(self, posIdx, timeStep):
 
@@ -709,6 +748,7 @@ class controller:
         self.updateMultirotorState()
         return self.state
 
+
     def updateMultirotorState(self):
 
         self.state = self.client.getMultirotorState(vehicle_name=self.name)
@@ -743,6 +783,7 @@ class controller:
     def getStateList(self):
 
         return self.stateList
+
 
     def getCameraInfo(self, cam="0"):
 

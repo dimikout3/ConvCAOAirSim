@@ -18,8 +18,8 @@ CAM_YAW = -0.5
 CAM_PITCH = 0.
 CAM_ROOL = 0.
 
-NORM = {'information':30.0, 'mutualLow':1.0}
-WEIGHT = {'information':1.0, 'similarity':40.0}
+NORM = {'information':30.0, 'similarity':50.0}
+WEIGHT = {'information':.0, 'similarity':1.0}
 
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
@@ -49,8 +49,8 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
         sum, avg = similarityOut(cloudPoints, similarityKPI="DistRandom")
         # Apply boundaries
-        avg = NORM['mutualLow'] if avg<NORM['mutualLow'] else avg
-        similarityAvgNorm = 1/avg
+        # avg = NORM['mutualLow'] if avg<NORM['mutualLow'] else avg
+        similarityAvgNorm = avg/NORM['similarity']
         print(f"[INFO] Similarity avg:{avg:.3f}, norm:{similarityAvgNorm:.3f}")
         similarityList.append(similarityAvgNorm)
 
@@ -58,7 +58,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         print(f"[INFO] Information Score combined:{informationScore:.3f}, norm:{informationScoreNorm:.3f}")
         informationScoreList.append(informationScoreNorm)
 
-        J = informationScoreNorm*WEIGHT['information'] - similarityAvgNorm*WEIGHT['similarity']
+        J = informationScoreNorm*WEIGHT['information'] + similarityAvgNorm*WEIGHT['similarity']
         costJ.append(J)
         print(f"[INFO] Cost J:{J:.3f}")
 
@@ -90,11 +90,11 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
                     cloudPoints[other.getName()] = pointCloud
 
             _, avg = similarityOut(cloudPoints, similarityKPI="DistRandom")
-            avg = NORM['mutualLow'] if avg<NORM['mutualLow'] else avg
-            similarityAvgNorm = 1/avg
+            # avg = NORM['mutualLow'] if avg<NORM['mutualLow'] else avg
+            similarityAvgNorm = avg/NORM["similarity"]
             informationScoreNorm = np.sum(information)/NORM['information']
 
-            j_i = informationScoreNorm*WEIGHT['information'] - similarityAvgNorm*WEIGHT['similarity']
+            j_i = informationScoreNorm*WEIGHT['information'] + similarityAvgNorm*WEIGHT['similarity']
             delta = costJ[-1] - j_i
 
             print(f"[INFO] {ctrl.getName()} has delta:{delta:.4f} Ji:{j_i:.4f}")
@@ -142,6 +142,13 @@ def generatingResultsFolders():
         os.makedirs(costJ_folder)
     except OSError:
         if not os.path.isdir(costJ_folder):
+            raise
+
+    report_folder = os.path.join(result_folder, "report")
+    try:
+        os.makedirs(report_folder)
+    except OSError:
+        if not os.path.isdir(report_folder):
             raise
 
 PATH = {"Drone1":[(x,-10,-12,5) for x in range(100,-100,-5)],
@@ -218,6 +225,8 @@ for positionIdx in range(0,wayPointsSize):
         # x,y,z,speed = PATH[ctrl.getName()][positionIdx]
         # ctrl.moveToPostion(x,y,z,speed)
 
+    monitor(dronesID, positionIdx)
+
     for ctrl in controllers:
 
         positions = ctrl.getPositions()
@@ -230,10 +239,11 @@ for positionIdx in range(0,wayPointsSize):
 
         print(f"[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{np.degrees(yaw):.2f})")
 
-    monitor(dronesID, positionIdx)
 
     # for ctrl in controllers: ctrl.updateEstimator()
     for ctrl in controllers: ctrl.updateEstimator1DoF()
+
+    for ctrl in controllers: ctrl.plotEstimator1DoF()
 
     print(f"----- elapsed time: {time.time() - ptime:.3f} ------")
     print("---------------------------------\n")
