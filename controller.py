@@ -22,7 +22,7 @@ WEIGHTS = {"cars":1.0, "persons":0.0 , "trafficLights":1.0}
 
 class controller:
 
-    def __init__(self, clientIn, droneName):
+    def __init__(self, clientIn, droneName, offSets):
 
         self.client = clientIn
         self.name = droneName
@@ -36,36 +36,40 @@ class controller:
         self.client.enableApiControl(True, self.name)
         self.client.armDisarm(True, self.name)
 
-        self.state = self.getState()
-        self.cameraInfo = self.getCameraInfo()
-        self.stateList = [[self.state,self.cameraInfo]]
+        self.offSetX = offSets[0]
+        self.offSetY = offSets[1]
+        self.offSetZ = offSets[2]
+
+        self.updateMultirotorState()
+        self.updateCameraInfo()
+        # self.state = self.getState()
+        # self.cameraInfo = self.getCameraInfo()
+
         self.stateList = []
 
         self.model = Pipeline([('poly', PolynomialFeatures(degree=3)),
                                ('linear', LinearRegression(fit_intercept=False))])
 
-        self.model1DoF = Pipeline([('poly', PolynomialFeatures(degree=2)),
-                               ('linear', LinearRegression(fit_intercept=False))])
+        # self.model1DoF = Pipeline([('poly', PolynomialFeatures(degree=2)),
+        #                        ('linear', LinearRegression(fit_intercept=False))])
 
-        # self.model1DoF = SVR(gamma='scale', C=1.0, epsilon=0.2)
+        self.model1DoF = SVR(gamma='scale', C=1.0, epsilon=0.2)
 
         self.model2DoF = Pipeline([('poly', PolynomialFeatures(degree=2)),
                                ('linear', LinearRegression(fit_intercept=False))])
 
-        self.estimator = self.model.fit([np.random.uniform(0,1,3)],[[np.random.uniform(0,1)]])
+        self.estimator = self.model.fit([np.random.uniform(0,1,3)],[np.random.uniform(0,1)])
 
-        self.estimator1DoF = self.model1DoF.fit([np.random.uniform(0,1,1)],[[np.random.uniform(0,1)]])
         # self.estimator1DoF = self.model1DoF.fit([np.random.uniform(0,1,1)],[[np.random.uniform(0,1)]])
+        self.estimator1DoF = self.model1DoF.fit([np.random.uniform(0,1,1)],[np.random.uniform(0,1)])
 
         self.estimator2DoF = self.model2DoF.fit([np.random.uniform(0,1,2)],[[np.random.uniform(0,1)]])
 
         self.estimations = []
         self.historyData = []
 
-        # initial contibution is 0.0
         # how much vehicles currrent movement affected the cost Function (delta)
         self.contribution = []
-
         self.j_i = []
 
         self.parentRaw = os.path.join(os.getcwd(), "swarm_raw_output")
@@ -285,7 +289,8 @@ class controller:
             self.client.rotateByYawRateAsync(np.degrees(turn),1,vehicle_name=self.name).join()
             self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
 
-            self.state = self.getState()
+            # self.state = self.getState()
+            self.updateMultirotorState()
 
 
     def randomMoveZ(self):
@@ -386,7 +391,8 @@ class controller:
             else:
                 print(f"[WARNING] {self.name} changing yaw due to imminent collision ...")
 
-            self.state = self.getState()
+            # self.state = self.getState()
+            self.updateMultirotorState()
 
 
     def move1DoF(self, randomPointsSize=70):
@@ -397,7 +403,8 @@ class controller:
         camFOV = self.cameraInfo.fov
         leftDeg, rightDeg = -camFOV/2 , camFOV/2
 
-        self.state = self.getState()
+        # self.state = self.getState()
+        self.updateMultirotorState()
         _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
 
         self.getDepthFront()
@@ -449,7 +456,8 @@ class controller:
 
         for i in range(maxTries):
 
-            self.state = self.getState()
+            # self.state = self.getState()
+            self.updateMultirotorState()
             _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
 
             self.getDepthFront()
@@ -589,7 +597,8 @@ class controller:
         yawList = [[(np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2])-180)/(180+180)] for state in self.stateList]
 
         # Ji(k) = Ji(k-1) + delta(=contribution)
-        j_i_k = [[self.j_i[i-1] + self.contribution[i]] for i in range(len(self.contribution))]
+        # j_i_k = [[self.j_i[i-1] + self.contribution[i]] for i in range(len(self.contribution))]
+        j_i_k = [self.j_i[i-1] + self.contribution[i] for i in range(len(self.contribution))]
 
         self.historyData.append([yawList,j_i_k])
 
@@ -598,8 +607,11 @@ class controller:
 
     def updateState(self, posIdx, timeStep):
 
-        self.state = self.getState()
-        self.cameraInfo = self.getCameraInfo()
+        # self.state = self.getState()
+        self.updateMultirotorState()
+
+        # self.cameraInfo = self.getCameraInfo()
+        self.updateCameraInfo()
 
         self.posIdx = posIdx
         self.timeStep = timeStep
@@ -657,7 +669,8 @@ class controller:
         self.scoreDetectionsNum.append(scoreNum)
         self.detectionsInfo.append(detectionsInfo)
         self.detectionsCoordinates.append(detectionsCoordinates)
-        self.stateList.append([self.getState(), self.getCameraInfo()])
+        # self.stateList.append([self.getState(), self.getCameraInfo()])
+        self.stateList.append([self.state, self.cameraInfo])
 
         # print(f"info: {detectionsInfo} \ncoordinates: {detectionsCoordinates}")
         return detectionsInfo, detectionsCoordinates
@@ -692,10 +705,47 @@ class controller:
 
 
     def getState(self):
-        return self.client.getMultirotorState(vehicle_name=self.name)
 
+        self.updateMultirotorState()
+        return self.state
+
+    def updateMultirotorState(self):
+
+        self.state = self.client.getMultirotorState(vehicle_name=self.name)
+
+        self.state.kinematics_estimated.position.x_val += self.offSetX
+        self.state.kinematics_estimated.position.y_val += self.offSetY
+        self.state.kinematics_estimated.position.z_val += self.offSetZ
+
+        self.orientation = self.state.kinematics_estimated.orientation
+        self.position  = self.state.kinematics_estimated.position
+
+
+    def updateCameraInfo(self, cam="0"):
+
+        self.cameraInfo = self.client.simGetCameraInfo(cam,vehicle_name=self.name)
+
+        self.cameraInfo.pose.position.x_val += self.offSetX
+        self.cameraInfo.pose.position.y_val += self.offSetY
+        self.cameraInfo.pose.position.z_val += self.offSetZ
+
+
+    def getPositions(self):
+
+        return self.position
+
+
+    def getOrientation(self):
+
+        return self.orientation
+
+
+    def getStateList(self):
+
+        return self.stateList
 
     def getCameraInfo(self, cam="0"):
+
         return self.client.simGetCameraInfo(cam,vehicle_name=self.name)
 
 

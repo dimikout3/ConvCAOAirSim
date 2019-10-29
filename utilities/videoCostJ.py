@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
-    file_out = os.path.join(results_dir,f"videoScoreSimilarity.avi")
+    file_out = os.path.join(results_dir,f"videoCostJ.avi")
     out = cv2.VideoWriter(file_out, fourcc, .5, (2000,2000))
 
     for positionIdx, position in enumerate(tqdm(wayPointsID)):

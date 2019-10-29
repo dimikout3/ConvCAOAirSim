@@ -19,7 +19,7 @@ CAM_PITCH = 0.
 CAM_ROOL = 0.
 
 NORM = {'information':30.0, 'mutualLow':1.0}
-WEIGHT = {'information':1.0, 'similarity':.0}
+WEIGHT = {'information':1.0, 'similarity':40.0}
 
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
@@ -144,13 +144,14 @@ def generatingResultsFolders():
         if not os.path.isdir(costJ_folder):
             raise
 
-# path expressed as x, y, z and speed
-# PATH = {"Drone1":[(10,0,-10,5), (30,0,-10,5),(50,0,-10,5)],
-#         "Drone2":[(0,10,-10,5), (0,30,-10,5),(0,50,-10,5)],
-#         }
 PATH = {"Drone1":[(x,-10,-12,5) for x in range(100,-100,-5)],
         "Drone2":[(0.0,y,-8,5) for y in range(100,-100,-5)],
         }
+
+OFFSETS = {"Drone1":[-25,0,0],
+           "Drone2":[80,0,0]
+          }
+
 
 dronesID = list(PATH.keys())
 wayPointsSize = len(PATH[dronesID[0]])
@@ -163,7 +164,7 @@ client.confirmConnection()
 
 controllers = []
 for drone in dronesID:
-    controllers.append(controller(client, drone))
+    controllers.append(controller(client, drone, OFFSETS[drone]))
 
 # Setting Camera Orientation
 for ctrl in controllers: ctrl.setCameraOrientation(CAM_YAW, CAM_PITCH, CAM_ROOL)
@@ -218,12 +219,14 @@ for positionIdx in range(0,wayPointsSize):
         # ctrl.moveToPostion(x,y,z,speed)
 
     for ctrl in controllers:
-        state = ctrl.getState()
 
-        x = state.kinematics_estimated.position.x_val
-        y = state.kinematics_estimated.position.y_val
-        z = state.kinematics_estimated.position.z_val
-        _,_,yaw = airsim.to_eularian_angles(state.kinematics_estimated.orientation)
+        positions = ctrl.getPositions()
+        orientation = ctrl.getOrientation()
+
+        x = positions.x_val
+        y = positions.y_val
+        z = positions.z_val
+        _,_,yaw = airsim.to_eularian_angles(orientation)
 
         print(f"[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{np.degrees(yaw):.2f})")
 
@@ -235,23 +238,40 @@ for positionIdx in range(0,wayPointsSize):
     print(f"----- elapsed time: {time.time() - ptime:.3f} ------")
     print("---------------------------------\n")
 
-    if (positionIdx % 3) == 0:
+    if (positionIdx % 1) == 0:
 
-        plt.plot(costJ, label="Cost J")
+        fig, (ax1, ax2) = plt.subplots(2)
+
+        ax1.plot(costJ, label="Cost J")
 
         information = [info*WEIGHT["information"] for info in informationScoreList]
-        plt.plot(information, label="information")
+        ax1.plot(information, label="information")
 
         similarity = [sim*WEIGHT["similarity"] for sim in similarityList]
-        plt.plot(similarity, label="similarity")
+        ax1.plot(similarity, label="similarity")
 
-        plt.xlabel("Time")
-        plt.ylabel("Value")
+        ax1.set_xlabel("Time")
+        ax1.set_ylabel("Value")
 
-        plt.legend()
+        ax1.legend()
 
-        plt.show(block=False)
-        plt.pause(5)
+        for ctrl in controllers:
+            stateList = ctrl.getStateList()
+            yawList = [np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]) for state in stateList]
+            ax2.plot(yawList, label=ctrl.getName())
+
+        ax2.set_ylim(-180,180)
+        ax2.set_xlabel("Time")
+        ax2.set_ylabel("Yaw [degrees]")
+        ax2.legend()
+
+        plt.tight_layout()
+
+        report_plot = os.path.join(os.getcwd(),"results", "report",
+                                f"report_{positionIdx}.png")
+        plt.savefig(report_plot)
+        # plt.show(block=False)
+        # plt.pause(5)
         plt.close()
 
 file_out = os.path.join(os.getcwd(),"results", "similarity_objects",
