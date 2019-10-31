@@ -19,7 +19,7 @@ CAM_PITCH = 0.
 CAM_ROOL = 0.
 
 NORM = {'information':30.0, 'similarity':50.0}
-WEIGHT = {'information':.0, 'similarity':1.0}
+WEIGHT = {'information':1.0, 'similarity':.7}
 
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
@@ -155,8 +155,8 @@ PATH = {"Drone1":[(x,-10,-12,5) for x in range(100,-100,-5)],
         "Drone2":[(0.0,y,-8,5) for y in range(100,-100,-5)],
         }
 
-OFFSETS = {"Drone1":[-25,0,0],
-           "Drone2":[80,0,0]
+OFFSETS = {"Drone1":[-25,-20,0],
+           "Drone2":[80,-20,0]
           }
 
 
@@ -203,7 +203,7 @@ for ctrl in controllers:
     yawRandom = np.random.uniform(-180,180,1)
     ctrl.rotateToYaw(yawRandom)
 
-wayPointsSize = 50
+wayPointsSize = 70
 
 startTime = time.time()
 

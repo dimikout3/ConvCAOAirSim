@@ -13,8 +13,9 @@ from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neural_network import MLPRegressor
 
-ESTIMATORWINDOW = 4
+ESTIMATORWINDOW = 18
 
 DEBUG_GEOFENCE = False
 DEBUG_RANDOMZ = False
@@ -57,14 +58,15 @@ class controller:
         # self.model1DoF = SVR(gamma='scale', C=1.0, epsilon=0.2)
         # self.model1DoF = KNeighborsRegressor(n_neighbors=2)
         # self.model1DoF = LinearRegression()
+        # self.model1DoF = MLPRegressor( hidden_layer_sizes=(10,),  activation='relu', solver='lbfgs', max_iter=10000)
 
         self.model2DoF = Pipeline([('poly', PolynomialFeatures(degree=2)),
                                ('linear', LinearRegression(fit_intercept=False))])
 
         self.estimator = self.model.fit([np.random.uniform(0,1,3)],[np.random.uniform(0,1)])
 
-        self.estimator1DoF = self.model1DoF.fit([np.random.uniform(0,1,1)],[[np.random.uniform(0,1)]])
-        # self.estimator1DoF = self.model1DoF.fit([np.random.uniform(0,1,1)],[np.random.uniform(0,1)])
+        # self.estimator1DoF = self.model1DoF.fit([np.random.uniform(0,1,1)],[[np.random.uniform(0,1)]])
+        self.estimator1DoF = self.model1DoF.fit([np.random.uniform(0,1,1)],[np.random.uniform(0,1)])
 
         self.estimator2DoF = self.model2DoF.fit([np.random.uniform(0,1,2)],[[np.random.uniform(0,1)]])
 
@@ -133,7 +135,7 @@ class controller:
         return responses
 
 
-    def getPointCloud(self, x=50, y=50):
+    def getPointCloud(self, x=500, y=500):
 
         randomPointsSize = x*y
 
@@ -608,7 +610,9 @@ class controller:
         # print(f"updating estimator ... yawList:{yawList[-ESTIMATORWINDOW:]}")
         # print(f"updating estimator ... Ji(k):{j_i_k[-ESTIMATORWINDOW:]}")
 
-        self.estimator1DoF = self.model1DoF.fit(yawList[-ESTIMATORWINDOW:],j_i_k[-ESTIMATORWINDOW:])
+        weights = np.linspace(0.1,1,len(yawList[-ESTIMATORWINDOW:]))
+
+        self.estimator1DoF = self.model1DoF.fit(yawList[-ESTIMATORWINDOW:],j_i_k[-ESTIMATORWINDOW:], **{'linear__sample_weight': weights})
 
 
     def plotEstimator1DoF(self):
@@ -643,6 +647,7 @@ class controller:
         # plt.show(block=False)
         # plt.pause(5)
         plt.close()
+
 
     def updateState(self, posIdx, timeStep):
 
@@ -748,7 +753,7 @@ class controller:
         self.updateMultirotorState()
         return self.state
 
-
+#
     def updateMultirotorState(self):
 
         self.state = self.client.getMultirotorState(vehicle_name=self.name)
