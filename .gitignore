@@ -1,6 +1,7 @@
 /swarm_detected/*
 /swarm_raw_output/*
 /results/*
+/results*
 /yolo-coco/*
 /__pycache__/*
 
@@ -155,4 +156,3 @@ com_crashlytics_export_strings.xml
 crashlytics.properties
 crashlytics-build.properties
 fabric.properties
-
