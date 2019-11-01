@@ -108,7 +108,7 @@ def compareRandomDist(cloud1, cloud2):
         z2 = z2[0:minSize]
 
     else:
-        
+
         minSize = x2.size
         x1 = x1[0:minSize]
         y1 = y1[0:minSize]
@@ -122,9 +122,9 @@ def compareRandomDist(cloud1, cloud2):
     return dist_sum, dist_average
 
 
-def similarityOut(dataPoints, similarityKPI = None):
+def similarityOut(dataPoints, similarityKPI = None, ip = 0):
 
-    report_file = open(os.path.join(os.getcwd(),"results", "report_similarity.txt"),"w+")
+    report_file = open(os.path.join(os.getcwd(),f"results_{ip}", "report_similarity.txt"),"w+")
 
     droneIDs = list(dataPoints.keys())
     combos = list(itertools.combinations(droneIDs,2))

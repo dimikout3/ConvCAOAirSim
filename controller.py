@@ -25,7 +25,7 @@ WEIGHTS = {"cars":1.0, "persons":0.0 , "trafficLights":1.0}
 
 class controller:
 
-    def __init__(self, clientIn, droneName, offSets):
+    def __init__(self, clientIn, droneName, offSets, ip="1"):
 
         self.client = clientIn
         self.name = droneName
@@ -77,14 +77,14 @@ class controller:
         self.contribution = []
         self.j_i = []
 
-        self.parentRaw = os.path.join(os.getcwd(), "swarm_raw_output")
+        self.parentRaw = os.path.join(os.getcwd(),f"results_{ip}", "swarm_raw_output")
         try:
             os.makedirs(self.parentRaw)
         except OSError:
             if not os.path.isdir(self.parentRaw):
                 raise
 
-        self.parentDetect = os.path.join(os.getcwd(), "swarm_detected")
+        self.parentDetect = os.path.join(os.getcwd(),f"results_{ip}", "swarm_detected")
         try:
             os.makedirs(self.parentDetect)
         except OSError:
@@ -422,7 +422,7 @@ class controller:
         lowHeight, highHeight = int(height/2-pixel10H), int(height/2+pixel10H)
         wLow, wHigh = int(width*0.1) ,int(width*0.1)
 
-        yawCanditate = np.random.uniform(leftDeg/2, rightDeg/2, randomPointsSize)
+        yawCanditate = np.random.uniform(leftDeg/5, rightDeg/5, randomPointsSize)
 
         # validPoint = []
         jPoint = []

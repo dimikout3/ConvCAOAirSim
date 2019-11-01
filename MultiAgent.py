@@ -13,6 +13,13 @@ from mpl_toolkits.mplot3d import Axes3D
 import pickle
 from utilities.similarity import similarityOut
 from threading import Thread
+import optparse
+import json
+import subprocess as sp
+
+
+settingsDir = r"C:\Users\dkoutras\Documents\AirSim"
+envDir = r"C:\Users\dkoutras\Desktop\CityEnviron"
 
 CAM_YAW = -0.5
 CAM_PITCH = 0.
@@ -22,6 +29,8 @@ NORM = {'information':50.0, 'similarity':50.0}
 WEIGHT = {'information':.0, 'similarity':1.0}
 
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
+
+    global options
 
     print(f"[MONITORING] position {posInd}")
 
@@ -47,7 +56,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
             informationScore += ctrl.getScore(index=-1, absolute=True)
 
-        sum, avg = similarityOut(cloudPoints, similarityKPI="DistRandom")
+        sum, avg = similarityOut(cloudPoints, similarityKPI="DistRandom", ip=options.ip)
         # Apply boundaries
         # avg = NORM['mutualLow'] if avg<NORM['mutualLow'] else avg
         similarityAvgNorm = avg/NORM['similarity']
@@ -89,7 +98,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
                     pointCloud = np.stack((x,y,z), axis=1)
                     cloudPoints[other.getName()] = pointCloud
 
-            _, avg = similarityOut(cloudPoints, similarityKPI="DistRandom")
+            _, avg = similarityOut(cloudPoints, similarityKPI="DistRandom", ip=options.ip)
             # avg = NORM['mutualLow'] if avg<NORM['mutualLow'] else avg
             similarityAvgNorm = avg/NORM["similarity"]
             informationScoreNorm = np.sum(information)/NORM['information']
@@ -106,10 +115,11 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
     print(f"[MONITORING] finished position {posInd}" )
 
 
-# TODO: move it to utilities.utils
 def generatingResultsFolders():
 
-    result_folder = os.path.join(os.getcwd(), "results")
+    global options
+
+    result_folder = os.path.join(os.getcwd(), f"results_{options.ip}")
     try:
         os.makedirs(result_folder)
     except OSError:
@@ -158,175 +168,214 @@ def generatingResultsFolders():
         if not os.path.isdir(globalView_folder):
             raise
 
-wayPointsSize = 70
 
-OFFSETS = {"Drone1":[0,0,0],
-           "Drone2":[0,-50,0],
-           "Drone3":[50,0,0],
-           "Drone4":[50,-50,0]
-          }
+def fillTemplate():
+
+    global options
+
+    settingsTemplate = os.path.join(settingsDir,"settingsTemplate.json")
+    json_data = json.load(open(settingsTemplate,'r'))
+
+    json_data["LocalHostIp"] = f"127.0.0.{options.ip}"
+
+    settingsOutput = os.path.join(settingsDir,"settings.json")
+    json.dump(json_data,open(settingsOutput,"w"),indent=2)
 
 
-dronesID = list(OFFSETS.keys())
+def get_options():
 
-generatingResultsFolders()
+    optParser = optparse.OptionParser()
+    optParser.add_option("--ip", dest="ip", help="the ip of the simulations launched")
+    options, args = optParser.parse_args()
 
-client = airsim.MultirotorClient()
-client.confirmConnection()
+    return options
 
-controllers = []
-for drone in dronesID:
-    controllers.append(controller(client, drone, OFFSETS[drone]))
 
-# Setting Camera Orientation
-for ctrl in controllers: ctrl.setCameraOrientation(CAM_YAW, CAM_PITCH, CAM_ROOL)
+def launchAirSim():
 
-print("Taking off all drones")
-tasks = []
-for ctrl in controllers:
-    t = ctrl.takeOff()
-    tasks.append(t)
-for t in tasks: t.join()
+    call = f"{envDir}\\CityEnviron"
+    sp.Popen(call, shell=True)
+    time.sleep(10)
 
-print("\nLifting all drones to specified Z altitude")
-tasks = []
-intialAlt = -14
-stepAlt = -0.5
-for i,ctrl in enumerate(controllers):
-    t = ctrl.moveToZ(intialAlt + stepAlt*i,2)
-    tasks.append(t)
-for t in tasks: t.join()
+if __name__ == "__main__":
 
-print("\nSetting Geo Fence for all drones")
-for ctrl in controllers:
-    # no need for task list (just setting values here)
-    ctrl.setGeoFence(x=10, y=20, z=-10, r=50)
+    global options
+    options = get_options()
 
-print("\nSetting random Yaw all drones")
-for ctrl in controllers:
-    np.random.seed()
-    yawRandom = np.random.uniform(-180,180,1)
-    ctrl.rotateToYaw(yawRandom)
+    generatingResultsFolders()
 
-startTime = time.time()
+    fillTemplate()
 
-global similarityList, informationScoreList, costJ
-similarityList = []
-informationScoreList = []
-costJ = []
+    launchAirSim()
 
-for positionIdx in range(0,wayPointsSize):
+    wayPointsSize = 70
 
-    ptime = time.time()
+    OFFSETS = {"Drone1":[0,0,0],
+               "Drone2":[0,-50,0],
+               "Drone3":[50,0,0],
+               "Drone4":[50,-50,0]
+              }
 
+
+    dronesID = list(OFFSETS.keys())
+
+    ip_id = f"127.0.0.{options.ip}"
+    client = airsim.MultirotorClient(ip = ip_id)
+    client.confirmConnection()
+
+    controllers = []
+    for drone in dronesID:
+        controllers.append(controller(client, drone, OFFSETS[drone], ip=options.ip))
+
+    # Setting Camera Orientation
+    for ctrl in controllers: ctrl.setCameraOrientation(CAM_YAW, CAM_PITCH, CAM_ROOL)
+
+    print("Taking off all drones")
+    tasks = []
     for ctrl in controllers:
-        # ctrl.randomMoveZ()
-        # ctrl.move()
-        ctrl.move1DoF()
-        # t = Thread(target = ctrl.randomMoveZ)
-        # t.start()
-        # x,y,z,speed = PATH[ctrl.getName()][positionIdx]
-        # ctrl.moveToPostion(x,y,z,speed)
+        t = ctrl.takeOff()
+        tasks.append(t)
+    for t in tasks: t.join()
 
-    monitor(dronesID, positionIdx)
+    print("\nLifting all drones to specified Z altitude")
+    tasks = []
+    intialAlt = -14
+    stepAlt = -0.5
+    for i,ctrl in enumerate(controllers):
+        t = ctrl.moveToZ(intialAlt + stepAlt*i,2)
+        tasks.append(t)
+    for t in tasks: t.join()
 
+    print("\nSetting Geo Fence for all drones")
     for ctrl in controllers:
+        # no need for task list (just setting values here)
+        ctrl.setGeoFence(x=10, y=20, z=-10, r=50)
 
-        positions = ctrl.getPositions()
-        orientation = ctrl.getOrientation()
-
-        x = positions.x_val
-        y = positions.y_val
-        z = positions.z_val
-        _,_,yaw = airsim.to_eularian_angles(orientation)
-
-        print(f"[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{np.degrees(yaw):.2f})")
-
-
-    # for ctrl in controllers: ctrl.updateEstimator()
-    for ctrl in controllers: ctrl.updateEstimator1DoF()
-
-    for ctrl in controllers: ctrl.plotEstimator1DoF()
-
-    print(f"----- elapsed time: {time.time() - ptime:.3f} ------")
-    print("---------------------------------\n")
-
-    fig, (ax1, ax2) = plt.subplots(2)
-
-    ax1.plot(costJ, label="Cost J")
-
-    information = [info*WEIGHT["information"] for info in informationScoreList]
-    ax1.plot(information, label="information")
-
-    similarity = [sim*WEIGHT["similarity"] for sim in similarityList]
-    ax1.plot(similarity, label="views dist")
-
-    ax1.set_xlabel("Time")
-    ax1.set_ylabel("Value")
-
-    ax1.legend()
-
+    print("\nSetting random Yaw all drones")
     for ctrl in controllers:
-        stateList = ctrl.getStateList()
-        yawList = [np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]) for state in stateList]
-        ax2.plot(yawList, label=ctrl.getName())
+        np.random.seed()
+        yawRandom = np.random.uniform(-180,180,1)
+        ctrl.rotateToYaw(yawRandom)
 
-    ax2.set_ylim(-180,180)
-    ax2.set_xlabel("Time")
-    ax2.set_ylabel("Yaw [degrees]")
-    ax2.legend()
+    startTime = time.time()
 
-    plt.tight_layout()
+    global similarityList, informationScoreList, costJ
+    similarityList = []
+    informationScoreList = []
+    costJ = []
 
-    report_plot = os.path.join(os.getcwd(),"results", "report",
-                            f"report_{positionIdx}.png")
-    plt.savefig(report_plot)
-    # plt.show(block=False)
-    # plt.pause(5)
-    plt.close()
+    for positionIdx in range(0,wayPointsSize):
+
+        ptime = time.time()
+
+        for ctrl in controllers:
+            # ctrl.randomMoveZ()
+            # ctrl.move()
+            ctrl.move1DoF()
+            # t = Thread(target = ctrl.randomMoveZ)
+            # t.start()
+            # x,y,z,speed = PATH[ctrl.getName()][positionIdx]
+            # ctrl.moveToPostion(x,y,z,speed)
+
+        monitor(dronesID, positionIdx)
+
+        for ctrl in controllers:
+
+            positions = ctrl.getPositions()
+            orientation = ctrl.getOrientation()
+
+            x = positions.x_val
+            y = positions.y_val
+            z = positions.z_val
+            _,_,yaw = airsim.to_eularian_angles(orientation)
+
+            print(f"[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{np.degrees(yaw):.2f})")
 
 
-    fig, (ax1, ax2) = plt.subplots(1,2,figsize=(20,10))
+        # for ctrl in controllers: ctrl.updateEstimator()
+        for ctrl in controllers: ctrl.updateEstimator1DoF()
 
-    for ctrl in controllers:
-        x,y,z,col = ctrl.getPointCloud()
-        ax2.scatter(y, x,c=col/255.0, s=0.05)
-        ax1.scatter(y, x, s=0.05, label=ctrl.getName())
+        for ctrl in controllers: ctrl.plotEstimator1DoF()
 
-    xlim = [-130,130]
-    ylim = [-130,130]
-    ax1.set_xlim(xlim[0],xlim[1])
-    ax1.set_ylim(ylim[0],ylim[1])
-    ax2.set_xlim(xlim[0],xlim[1])
-    ax2.set_ylim(ylim[0],ylim[1])
+        print(f"----- elapsed time: {time.time() - ptime:.3f} ------")
+        print("---------------------------------\n")
 
-    ax1.legend(markerscale=20)
+        fig, (ax1, ax2) = plt.subplots(2)
 
-    ax1.set_xlabel("Y-Axis (NetWork)")
-    ax1.set_ylabel("X-Axis (NetWork)")
-    ax2.set_xlabel("Y-Axis (NetWork)")
-    ax2.set_ylabel("X-Axis (NetWork)")
+        ax1.plot(costJ, label="Cost J")
 
-    plt.tight_layout()
+        information = [info*WEIGHT["information"] for info in informationScoreList]
+        ax1.plot(information, label="information")
 
-    globalView_file = os.path.join(os.getcwd(),"results", "globalView",
-                            f"globalView_{positionIdx}.png")
-    plt.savefig(globalView_file)
-    plt.close()
+        similarity = [sim*WEIGHT["similarity"] for sim in similarityList]
+        ax1.plot(similarity, label="views dist")
 
-file_out = os.path.join(os.getcwd(),"results", "similarity_objects",
-                        f"similarityList.pickle")
-pickle.dump(similarityList,open(file_out,"wb"))
+        ax1.set_xlabel("Time")
+        ax1.set_ylabel("Value")
 
-file_out = os.path.join(os.getcwd(),"results", "information",
-                        f"scoreAggregated.pickle")
-pickle.dump(informationScoreList,open(file_out,"wb"))
+        ax1.legend()
 
-file_out = os.path.join(os.getcwd(),"results", "costJ",
-                        f"costJ.pickle")
-pickle.dump(costJ,open(file_out,"wb"))
+        for ctrl in controllers:
+            stateList = ctrl.getStateList()
+            yawList = [np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]) for state in stateList]
+            ax2.plot(yawList, label=ctrl.getName())
 
-print("\n[RESETING] to original state ....")
-for ctrl in controllers: ctrl.quit()
-client.reset()
-print(f"\n --- elapsed time:{startTime - time.time():.2f} [sec] ---")
+        ax2.set_ylim(-180,180)
+        ax2.set_xlabel("Time")
+        ax2.set_ylabel("Yaw [degrees]")
+        ax2.legend()
+
+        plt.tight_layout()
+
+        report_plot = os.path.join(os.getcwd(),f"results_{options.ip}", "report",
+                                f"report_{positionIdx}.png")
+        plt.savefig(report_plot)
+        # plt.show(block=False)
+        # plt.pause(5)
+        plt.close()
+
+
+        fig, (ax1, ax2) = plt.subplots(1,2,figsize=(20,10))
+
+        for ctrl in controllers:
+            x,y,z,col = ctrl.getPointCloud()
+            ax2.scatter(y, x,c=col/255.0, s=0.05)
+            ax1.scatter(y, x, s=0.05, label=ctrl.getName())
+
+        xlim = [-130,130]
+        ylim = [-130,130]
+        ax1.set_xlim(xlim[0],xlim[1])
+        ax1.set_ylim(ylim[0],ylim[1])
+        ax2.set_xlim(xlim[0],xlim[1])
+        ax2.set_ylim(ylim[0],ylim[1])
+
+        ax1.legend(markerscale=20)
+
+        ax1.set_xlabel("Y-Axis (NetWork)")
+        ax1.set_ylabel("X-Axis (NetWork)")
+        ax2.set_xlabel("Y-Axis (NetWork)")
+        ax2.set_ylabel("X-Axis (NetWork)")
+
+        plt.tight_layout()
+
+        globalView_file = os.path.join(os.getcwd(),f"results_{options.ip}", "globalView",
+                                f"globalView_{positionIdx}.png")
+        plt.savefig(globalView_file)
+        plt.close()
+
+    file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
+                            f"similarityList.pickle")
+    pickle.dump(similarityList,open(file_out,"wb"))
+
+    file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "information",
+                            f"scoreAggregated.pickle")
+    pickle.dump(informationScoreList,open(file_out,"wb"))
+
+    file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "costJ",
+                            f"costJ.pickle")
+    pickle.dump(costJ,open(file_out,"wb"))
+
+    print("\n[RESETING] to original state ....")
+    for ctrl in controllers: ctrl.quit()
+    client.reset()
+    print(f"\n --- elapsed time:{startTime - time.time():.2f} [sec] ---")
