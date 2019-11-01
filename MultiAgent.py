@@ -18,8 +18,8 @@ CAM_YAW = -0.5
 CAM_PITCH = 0.
 CAM_ROOL = 0.
 
-NORM = {'information':30.0, 'similarity':50.0}
-WEIGHT = {'information':1.0, 'similarity':.7}
+NORM = {'information':50.0, 'similarity':50.0}
+WEIGHT = {'information':.0, 'similarity':1.0}
 
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
@@ -151,18 +151,23 @@ def generatingResultsFolders():
         if not os.path.isdir(report_folder):
             raise
 
-PATH = {"Drone1":[(x,-10,-12,5) for x in range(100,-100,-5)],
-        "Drone2":[(0.0,y,-8,5) for y in range(100,-100,-5)],
-        }
+    globalView_folder = os.path.join(result_folder, "globalView")
+    try:
+        os.makedirs(globalView_folder)
+    except OSError:
+        if not os.path.isdir(globalView_folder):
+            raise
 
-OFFSETS = {"Drone1":[-25,-20,0],
-           "Drone2":[80,-20,0]
+wayPointsSize = 70
+
+OFFSETS = {"Drone1":[0,0,0],
+           "Drone2":[0,-50,0],
+           "Drone3":[50,0,0],
+           "Drone4":[50,-50,0]
           }
 
 
-dronesID = list(PATH.keys())
-wayPointsSize = len(PATH[dronesID[0]])
-print(f"Detected {dronesID} with {wayPointsSize} positions")
+dronesID = list(OFFSETS.keys())
 
 generatingResultsFolders()
 
@@ -202,8 +207,6 @@ for ctrl in controllers:
     np.random.seed()
     yawRandom = np.random.uniform(-180,180,1)
     ctrl.rotateToYaw(yawRandom)
-
-wayPointsSize = 70
 
 startTime = time.time()
 
@@ -248,41 +251,68 @@ for positionIdx in range(0,wayPointsSize):
     print(f"----- elapsed time: {time.time() - ptime:.3f} ------")
     print("---------------------------------\n")
 
-    if (positionIdx % 1) == 0:
+    fig, (ax1, ax2) = plt.subplots(2)
 
-        fig, (ax1, ax2) = plt.subplots(2)
+    ax1.plot(costJ, label="Cost J")
 
-        ax1.plot(costJ, label="Cost J")
+    information = [info*WEIGHT["information"] for info in informationScoreList]
+    ax1.plot(information, label="information")
 
-        information = [info*WEIGHT["information"] for info in informationScoreList]
-        ax1.plot(information, label="information")
+    similarity = [sim*WEIGHT["similarity"] for sim in similarityList]
+    ax1.plot(similarity, label="views dist")
 
-        similarity = [sim*WEIGHT["similarity"] for sim in similarityList]
-        ax1.plot(similarity, label="similarity")
+    ax1.set_xlabel("Time")
+    ax1.set_ylabel("Value")
 
-        ax1.set_xlabel("Time")
-        ax1.set_ylabel("Value")
+    ax1.legend()
 
-        ax1.legend()
+    for ctrl in controllers:
+        stateList = ctrl.getStateList()
+        yawList = [np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]) for state in stateList]
+        ax2.plot(yawList, label=ctrl.getName())
 
-        for ctrl in controllers:
-            stateList = ctrl.getStateList()
-            yawList = [np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]) for state in stateList]
-            ax2.plot(yawList, label=ctrl.getName())
+    ax2.set_ylim(-180,180)
+    ax2.set_xlabel("Time")
+    ax2.set_ylabel("Yaw [degrees]")
+    ax2.legend()
 
-        ax2.set_ylim(-180,180)
-        ax2.set_xlabel("Time")
-        ax2.set_ylabel("Yaw [degrees]")
-        ax2.legend()
+    plt.tight_layout()
 
-        plt.tight_layout()
+    report_plot = os.path.join(os.getcwd(),"results", "report",
+                            f"report_{positionIdx}.png")
+    plt.savefig(report_plot)
+    # plt.show(block=False)
+    # plt.pause(5)
+    plt.close()
 
-        report_plot = os.path.join(os.getcwd(),"results", "report",
-                                f"report_{positionIdx}.png")
-        plt.savefig(report_plot)
-        # plt.show(block=False)
-        # plt.pause(5)
-        plt.close()
+
+    fig, (ax1, ax2) = plt.subplots(1,2,figsize=(20,10))
+
+    for ctrl in controllers:
+        x,y,z,col = ctrl.getPointCloud()
+        ax2.scatter(y, x,c=col/255.0, s=0.05)
+        ax1.scatter(y, x, s=0.05, label=ctrl.getName())
+
+    xlim = [-130,130]
+    ylim = [-130,130]
+    ax1.set_xlim(xlim[0],xlim[1])
+    ax1.set_ylim(ylim[0],ylim[1])
+    ax2.set_xlim(xlim[0],xlim[1])
+    ax2.set_ylim(ylim[0],ylim[1])
+
+    ax1.legend(markerscale=20)
+
+    ax1.set_xlabel("Y-Axis (NetWork)")
+    ax1.set_ylabel("X-Axis (NetWork)")
+    ax2.set_xlabel("Y-Axis (NetWork)")
+    ax2.set_ylabel("X-Axis (NetWork)")
+
+    plt.tight_layout()
+
+    globalView_file = os.path.join(os.getcwd(),"results", "globalView",
+                            f"globalView_{positionIdx}.png")
+    plt.savefig(globalView_file)
+    plt.close()
 
 file_out = os.path.join(os.getcwd(),"results", "similarity_objects",
                         f"similarityList.pickle")
