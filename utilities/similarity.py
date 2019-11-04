@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import time
 
 
-THRESHOLD_DIST = 30.0
+THRESHOLD_DIST = 7.0
 
 def compareCloudsIdeal(cloud1, cloud2):
 
@@ -78,21 +78,24 @@ def compareExhaustiveDuplicates(cloud1, cloud2):
 
     dist_array = np.sqrt(x**2 + y**2 + z**2)
 
-    sumMin = []
+    # sumMin = []
+    similarObjects = 0
     while dist_array.size != 0:
 
         x,y = np.unravel_index(dist_array.argmin(), dist_array.shape)
 
         if dist_array[x,y] < THRESHOLD_DIST:
-            sumMin.append( 1/(dist_array[x,y]**2) )
+            # sumMin.append( 1/(dist_array[x,y]**2) )
+            similarObjects += 1
 
         dist_array = np.delete(dist_array,(x),axis=0)
         dist_array = np.delete(dist_array,(y),axis=1)
 
-    if sumMin == []:
-        return 0,0
+    # if sumMin == []:
+        # return 0,0
 
-    return np.sum(sumMin), np.average(sumMin)
+    # return np.sum(sumMin), np.average(sumMin)
+    return similarObjects, similarObjects
 
 
 def compareRandomDist(cloud1, cloud2):
@@ -139,8 +142,10 @@ def similarityOut(dataPoints, similarityKPI = None, ip = 0):
 
         if similarityKPI == "DistExhaustive":
 
-            pointCloud1 = dataPoints[dronesComb[0]][1]
-            pointCloud2 = dataPoints[dronesComb[1]][1]
+            # pointCloud1 = dataPoints[dronesComb[0]][1]
+            # pointCloud2 = dataPoints[dronesComb[1]][1]
+            pointCloud1 = dataPoints[dronesComb[0]]
+            pointCloud2 = dataPoints[dronesComb[1]]
 
             start_time = time.time()
             clouds_dist_sum_ideal, clouds_dist_average_ideal = compareExhaustiveDuplicates(pointCloud1, pointCloud2)
