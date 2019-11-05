@@ -17,6 +17,7 @@ import optparse
 import json
 import subprocess as sp
 
+# TODO: rename to ruuner.py and kill airsim env when finished
 
 settingsDir = r"C:\Users\dkoutras\Documents\AirSim"
 envDir = r"C:\Users\dkoutras\Desktop\CityEnviron"
@@ -25,8 +26,8 @@ CAM_YAW = -0.5
 CAM_PITCH = 0.
 CAM_ROOL = 0.
 
-NORM = {'information':50.0, 'similarity':50.0}
-WEIGHT = {'information':.0, 'similarity':1.0}
+NORM = {'information':10.0, 'similarity':10.0}
+WEIGHT = {'information':1.0, 'similarity':-4.0}
 
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
@@ -48,15 +49,19 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
             ctrl.updateState(posInd, timeStep)
             responses = ctrl.getImages(save_raw=True)
             detectionsInfo, detectionsCoordinates = ctrl.detectObjects(detector, save_detected=True)
-            x,y,z,c = ctrl.getPointCloud()
-
-            pointCloud = np.stack((x,y,z), axis=1)
+            # x,y,z,c = ctrl.getPointCloud()
+            # pointCloud = np.stack((x,y,z), axis=1)
+            pointCloud = detectionsCoordinates
 
             cloudPoints[ctrl.getName()] = pointCloud
 
             informationScore += ctrl.getScore(index=-1, absolute=True)
 
-        sum, avg = similarityOut(cloudPoints, similarityKPI="DistRandom", ip=options.ip)
+        # sum, avg = similarityOut(cloudPoints, similarityKPI="DistRandom", ip=options.ip)
+        sum, avg = similarityOut(cloudPoints, similarityKPI="DistExhaustive", ip=options.ip)
+        # TODO: monta einai auto to = prepei na skeftw kati kalytero
+        avg = sum
+
         # Apply boundaries
         # avg = NORM['mutualLow'] if avg<NORM['mutualLow'] else avg
         similarityAvgNorm = avg/NORM['similarity']
@@ -87,18 +92,23 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
                 if other.getName() != ctrl.getName():
 
                     information.append(other.getScore(index=-1, absolute=True))
-                    x,y,z,c = other.getPointCloudList(index=-1)
-                    pointCloud = np.stack((x,y,z), axis=1)
+                    # x,y,z,c = other.getPointCloudList(index=-1)
+                    # pointCloud = np.stack((x,y,z), axis=1)
+                    pointCloud = other.getDetectionsCoordinates(index=-1)
                     cloudPoints[other.getName()] = pointCloud
 
                 else:
 
                     information.append(other.getScore(index=-2, absolute=True))
-                    x,y,z,c = other.getPointCloudList(index=-2)
-                    pointCloud = np.stack((x,y,z), axis=1)
+                    # x,y,z,c = other.getPointCloudList(index=-2)
+                    # pointCloud = np.stack((x,y,z), axis=1)
+                    pointCloud = other.getDetectionsCoordinates(index=-2)
                     cloudPoints[other.getName()] = pointCloud
 
-            _, avg = similarityOut(cloudPoints, similarityKPI="DistRandom", ip=options.ip)
+            # _, avg = similarityOut(cloudPoints, similarityKPI="DistRandom", ip=options.ip)
+            sum, avg = similarityOut(cloudPoints, similarityKPI="DistExhaustive", ip=options.ip)
+            avg = sum
+
             # avg = NORM['mutualLow'] if avg<NORM['mutualLow'] else avg
             similarityAvgNorm = avg/NORM["similarity"]
             informationScoreNorm = np.sum(information)/NORM['information']
@@ -208,12 +218,12 @@ if __name__ == "__main__":
 
     launchAirSim()
 
-    wayPointsSize = 70
+    wayPointsSize = 200
 
     OFFSETS = {"Drone1":[0,0,0],
-               "Drone2":[0,-50,0],
-               "Drone3":[50,0,0],
-               "Drone4":[50,-50,0]
+               "Drone2":[0,-5,0],
+               "Drone3":[5,0,0],
+               "Drone4":[5,5,0]
               }
 
 
@@ -249,13 +259,15 @@ if __name__ == "__main__":
     print("\nSetting Geo Fence for all drones")
     for ctrl in controllers:
         # no need for task list (just setting values here)
-        ctrl.setGeoFence(x=10, y=20, z=-10, r=50)
+        ctrl.setGeoFence(x = -25, y = -25, z = -14, r=75)
 
     print("\nSetting random Yaw all drones")
-    for ctrl in controllers:
+    for i,ctrl in enumerate(controllers):
         np.random.seed()
-        yawRandom = np.random.uniform(-180,180,1)
+        # yawRandom = np.random.uniform(-180,180,1)
+        yawRandom = 30
         ctrl.rotateToYaw(yawRandom)
+        # ctrl.rotateToYaw(-5 + i*90)
 
     startTime = time.time()
 
@@ -270,8 +282,8 @@ if __name__ == "__main__":
 
         for ctrl in controllers:
             # ctrl.randomMoveZ()
-            # ctrl.move()
-            ctrl.move1DoF()
+            ctrl.move()
+            # ctrl.move1DoF()
             # t = Thread(target = ctrl.randomMoveZ)
             # t.start()
             # x,y,z,speed = PATH[ctrl.getName()][positionIdx]
@@ -293,9 +305,11 @@ if __name__ == "__main__":
 
 
         # for ctrl in controllers: ctrl.updateEstimator()
-        for ctrl in controllers: ctrl.updateEstimator1DoF()
+        for ctrl in controllers:
+            # ctrl.updateEstimator1DoF()
+            ctrl.updateEstimator()
 
-        for ctrl in controllers: ctrl.plotEstimator1DoF()
+        # for ctrl in controllers: ctrl.plotEstimator1DoF()
 
         print(f"----- elapsed time: {time.time() - ptime:.3f} ------")
         print("---------------------------------\n")
@@ -308,7 +322,7 @@ if __name__ == "__main__":
         ax1.plot(information, label="information")
 
         similarity = [sim*WEIGHT["similarity"] for sim in similarityList]
-        ax1.plot(similarity, label="views dist")
+        ax1.plot(similarity, label="similar")
 
         ax1.set_xlabel("Time")
         ax1.set_ylabel("Value")
@@ -338,7 +352,7 @@ if __name__ == "__main__":
         fig, (ax1, ax2) = plt.subplots(1,2,figsize=(20,10))
 
         for ctrl in controllers:
-            x,y,z,col = ctrl.getPointCloud()
+            x,y,z,col = ctrl.getPointCloud(x=200,y=200)
             ax2.scatter(y, x,c=col/255.0, s=0.05)
             ax1.scatter(y, x, s=0.05, label=ctrl.getName())
 
@@ -362,6 +376,24 @@ if __name__ == "__main__":
                                 f"globalView_{positionIdx}.png")
         plt.savefig(globalView_file)
         plt.close()
+
+        for ctrl in controllers:
+            detections = ctrl.getDetectionsCoordinates()
+            x,y = detections[:,0], detections[:,1]
+            plt.scatter(y, x, label=ctrl.getName())
+
+        plt.legend()
+        plt.xlim(xlim[0],xlim[1])
+        plt.ylim(ylim[0],ylim[1])
+
+        plt.xlabel("Y-Axis (NetWork)")
+        plt.ylabel("X-Axis (NetWork)")
+
+        detected_objects_folder = os.path.join(os.getcwd(),f"results_{options.ip}",
+                                               "detected_objects", f"detections_{positionIdx}.png")
+        plt.savefig(detected_objects_folder)
+        plt.close()
+
 
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
                             f"similarityList.pickle")

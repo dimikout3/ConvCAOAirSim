@@ -15,7 +15,10 @@ from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neural_network import MLPRegressor
 
-ESTIMATORWINDOW = 18
+ESTIMATORWINDOW = 35
+# the value wich will devide the field of view (constraing the yaw movement)
+CAM_DEV = 5
+ORIENTATION_DEV = 5
 
 DEBUG_GEOFENCE = False
 DEBUG_RANDOMZ = False
@@ -29,6 +32,8 @@ class controller:
 
         self.client = clientIn
         self.name = droneName
+
+        self.ip = ip
 
         self.scoreDetections = []
         self.scoreDetectionsNum = []
@@ -50,11 +55,11 @@ class controller:
 
         self.stateList = []
 
-        self.model = Pipeline([('poly', PolynomialFeatures(degree=3)),
-                               ('linear', LinearRegression(fit_intercept=False))])
+        self.model = Pipeline([('poly', PolynomialFeatures(degree=8)),
+                               ('linear', LinearRegression())])
 
-        self.model1DoF = Pipeline([('poly', PolynomialFeatures(degree=2)),
-                               ('linear', LinearRegression(fit_intercept=False))])
+        self.model1DoF = Pipeline([('poly', PolynomialFeatures(degree=8)),
+                               ('linear', LinearRegression())])
         # self.model1DoF = SVR(gamma='scale', C=1.0, epsilon=0.2)
         # self.model1DoF = KNeighborsRegressor(n_neighbors=2)
         # self.model1DoF = LinearRegression()
@@ -445,7 +450,7 @@ class controller:
             # print(f"[DEBUG][MOVE1DOF] tartgetsPointIndex: {tartgetPointIndex}")
 
 
-    def move(self, randomPointsSize=50, maxTravelTime=15., minDist=5.):
+    def move(self, randomPointsSize=70, maxTravelTime=5., minDist=5.):
 
         axiZ = self.altitude
 
@@ -476,10 +481,10 @@ class controller:
             wLow, wHigh = int(width*0.1) ,int(width*0.1)
 
             # boundaries should be avoided for collision avoidance (thats what +/- 3 degrees do ...)
-            randomOrientation = np.random.uniform(np.radians(leftDeg+3), np.radians(rightDeg-3), randomPointsSize)
+            randomOrientation = np.random.uniform(np.radians(leftDeg/ORIENTATION_DEV), np.radians(rightDeg/ORIENTATION_DEV), randomPointsSize)
             # travelTime = np.random.uniform(0, maxTravelTime, randomPointsSize)
             travelTime = np.random.uniform(0., maxTravelTime, randomPointsSize)
-            yawCanditate = np.random.uniform(-30,30,randomPointsSize)
+            yawCanditate = np.random.uniform(leftDeg/CAM_DEV,rightDeg/CAM_DEV,randomPointsSize)
 
             # validPoint = []
             jPoint = []
@@ -508,14 +513,8 @@ class controller:
 
                 # the estimated score each canditate point has
                 if safeDist and inGeoFence:
-                    # jPoint.append(dist)
+
                     angle =  np.radians(yawCanditate[i]) + currentYaw + randomOrientation[i]
-                    if angle>np.pi:
-                        angle=np.pi
-                        yawCanditate[i] = angle
-                    elif angle<-np.pi:
-                        angle=-np.pi
-                        yawCanditate[i] = angle
 
                     jPoint.append(self.estimate(xCanditate, yCanditate, angle))
                     availablePosition = True
@@ -547,7 +546,7 @@ class controller:
                                     vehicle_name=self.name).join()
         self.stabilize().join()
 
-        self.client.rotateByYawRateAsync(yawCanditate[tartgetPointIndex] + np.degrees(currentYaw),1,vehicle_name=self.name).join()
+        self.client.rotateByYawRateAsync(yawCanditate[tartgetPointIndex],1,vehicle_name=self.name).join()
         self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
 
         if DEBUG_MOVE:
@@ -560,6 +559,18 @@ class controller:
 
 
     def estimate(self,x,y,yaw):
+
+        if yaw > np.pi:
+            yaw = -np.pi*2 + yaw
+        if yaw < -np.pi:
+            yaw = np.pi*2 - yaw
+
+        # Normalize the X,Y,Yaw values (faster convergence)
+        yaw = (yaw + np.pi)/(np.pi + np.pi)
+        # x = ( x - (self.fenceX-self.fenceR) )/(2*self.fenceR)
+        # y = ( y - (self.fenceY-self.fenceR) )/(2*self.fenceR)
+        x = (x - self.minX) / (self.maxX - self.minX)
+        y = (y - self.minY) / (self.maxY - self.minY)
 
         return float(self.estimator.predict([[x,y,np.radians(yaw)]]))
 
@@ -585,16 +596,15 @@ class controller:
 
         xList = [(state[0].kinematics_estimated.position.x_val-self.minX)/(self.maxX - self.minX) for state in self.stateList]
         yList = [(state[0].kinematics_estimated.position.y_val-self.minY)/(self.maxY-self.minY) for state in self.stateList]
-        yawList = [(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]-np.pi)/(np.pi+np.pi) for state in self.stateList]
+        yawList = [(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]+np.pi)/(np.pi+np.pi) for state in self.stateList]
 
-        contributionList = [[con] for con in self.contribution]
+        j_i_k = [[self.j_i[i-1] + self.contribution[i]] for i in range(len(self.contribution))]
 
-        data = []
-        for i in range(len(xList)):
-            data.append([xList[i],yList[i],yawList[i]])
+        data = np.stack((xList,yList,yawList),axis=1)
 
-        # print(f" data:{data} contributionList:{contributionList}")
-        self.estimator = self.model.fit(data,contributionList)
+        weights = np.linspace(0.3,1,len(data[-ESTIMATORWINDOW:]))
+
+        self.estimator = self.model.fit(data[-ESTIMATORWINDOW:],j_i_k[-ESTIMATORWINDOW:], **{'linear__sample_weight': weights})
 
 
     def updateEstimator1DoF(self):
@@ -795,49 +805,57 @@ class controller:
         return self.client.simGetCameraInfo(cam,vehicle_name=self.name)
 
 
+    def getDetectionsCoordinates(self, index=-1):
+
+        if abs(index) > len(self.detectionsCoordinates):
+            return self.detectionsCoordinates[-1]
+        else:
+            return self.detectionsCoordinates[index]
+
+
     def quit(self):
 
         self.client.armDisarm(False, self.name)
         self.client.enableApiControl(False, self.name)
 
         # TODO: possible np.save() instead of pickle ...
-        score_detections_file = os.path.join(os.getcwd(), "swarm_raw_output",
+        score_detections_file = os.path.join(self.parentRaw,
                                         self.getName(), f"score_detections_{self.name}.pickle")
         pickle.dump(self.scoreDetections,open(score_detections_file,"wb"))
-        score_detections_file = os.path.join(os.getcwd(), "results","information",
+        score_detections_file = os.path.join(os.getcwd(), f"results_{self.ip}","information",
                                         f"score_detections_{self.name}.pickle")
         pickle.dump(self.scoreDetections,open(score_detections_file,"wb"))
 
-        detections_file = os.path.join(os.getcwd(), "swarm_raw_output",
+        detections_file = os.path.join(self.parentRaw,
                                        self.getName(), f"detectionsInfo_{self.name}.pickle")
         pickle.dump(self.detectionsInfo,open(detections_file,"wb"))
-        detections_file = os.path.join(os.getcwd(), "results","detected_objects",
+        detections_file = os.path.join(os.getcwd(), f"results_{self.ip}","detected_objects",
                                        f"detectionsInfo_{self.name}.pickle")
         pickle.dump(self.detectionsInfo,open(detections_file,"wb"))
 
-        detections_file = os.path.join(os.getcwd(), "swarm_raw_output",
+        detections_file = os.path.join(self.parentRaw,
                                        self.getName(), f"detectionsCoordinates_{self.name}.pickle")
         pickle.dump(self.detectionsCoordinates,open(detections_file,"wb"))
-        detections_file = os.path.join(os.getcwd(), "results","detected_objects",
+        detections_file = os.path.join(os.getcwd(), f"results_{self.ip}","detected_objects",
                                        f"detectionsCoordinates_{self.name}.pickle")
         pickle.dump(self.detectionsCoordinates,open(detections_file,"wb"))
 
-        state_file = os.path.join(os.getcwd(), "swarm_raw_output",
+        state_file = os.path.join(self.parentRaw,
                                   self.getName(), f"state_{self.name}.pickle")
         pickle.dump(self.stateList,open(state_file,"wb"))
 
-        pointCloud_file = os.path.join(os.getcwd(), "swarm_raw_output",
+        pointCloud_file = os.path.join(self.parentRaw,
                                   self.getName(), f"pointCloud_{self.name}.pickle")
         pickle.dump(self.pointCloud,open(pointCloud_file,"wb"))
 
-        contribution_file = os.path.join(os.getcwd(), "swarm_raw_output",
+        contribution_file = os.path.join(self.parentRaw,
                                   self.getName(), f"contribution_{self.name}.pickle")
         pickle.dump(self.contribution,open(contribution_file,"wb"))
 
-        estimations_file = os.path.join(os.getcwd(), "swarm_raw_output",
+        estimations_file = os.path.join(self.parentRaw,
                                   self.getName(), f"estimations_{self.name}.pickle")
         pickle.dump(self.estimations,open(estimations_file,"wb"))
 
-        history_file = os.path.join(os.getcwd(), "swarm_raw_output",
+        history_file = os.path.join(self.parentRaw,
                                   self.getName(), f"history_{self.name}.pickle")
         pickle.dump(self.historyData,open(history_file,"wb"))
