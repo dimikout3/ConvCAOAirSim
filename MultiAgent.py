@@ -27,7 +27,7 @@ CAM_PITCH = 0.
 CAM_ROOL = 0.
 
 NORM = {'information':10.0, 'similarity':10.0}
-WEIGHT = {'information':1.0, 'similarity':-4.0}
+WEIGHT = {'information':1.0, 'similarity':-1.0}
 
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
@@ -113,12 +113,17 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
             similarityAvgNorm = avg/NORM["similarity"]
             informationScoreNorm = np.sum(information)/NORM['information']
 
-            j_i = informationScoreNorm*WEIGHT['information'] + similarityAvgNorm*WEIGHT['similarity']
-            delta = costJ[-1] - j_i
+            J_isolation = informationScoreNorm*WEIGHT['information'] + similarityAvgNorm*WEIGHT['similarity']
+            delta = costJ[-1] - J_isolation
 
-            print(f"[INFO] {ctrl.getName()} has delta:{delta:.4f} Ji:{j_i:.4f}")
             ctrl.appendContribution(delta)
-            ctrl.appendJi(j_i)
+            # ctrl.appendJi(J_isolation)
+            if (posInd>=1):
+                ctrl.appendJi(ctrl.getJi() + delta)
+            else:
+                ctrl.appendJi(costJ[-1] + delta)
+
+            print(f"[INFO] {ctrl.getName()} has delta:{delta:.4f} Ji:{ctrl.getJi():.4f}")
 
         time.sleep(timeInterval)
 
@@ -259,7 +264,7 @@ if __name__ == "__main__":
     print("\nSetting Geo Fence for all drones")
     for ctrl in controllers:
         # no need for task list (just setting values here)
-        ctrl.setGeoFence(x = -25, y = -25, z = -14, r=75)
+        ctrl.setGeoFence(x = 25, y = -25, z = -14, r=75)
 
     print("\nSetting random Yaw all drones")
     for i,ctrl in enumerate(controllers):

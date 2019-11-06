@@ -15,10 +15,10 @@ from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neural_network import MLPRegressor
 
-ESTIMATORWINDOW = 35
+ESTIMATORWINDOW = 45
 # the value wich will devide the field of view (constraing the yaw movement)
-CAM_DEV = 5
-ORIENTATION_DEV = 5
+CAM_DEV = 4
+ORIENTATION_DEV = 4
 
 DEBUG_GEOFENCE = False
 DEBUG_RANDOMZ = False
@@ -197,6 +197,11 @@ class controller:
         self.j_i.append(Ji)
 
 
+    def getJi(self, index=-1):
+
+        return self.j_i[index]
+
+        
     def getDepthFront(self):
 
         responses = self.client.simGetImages([
@@ -450,7 +455,7 @@ class controller:
             # print(f"[DEBUG][MOVE1DOF] tartgetsPointIndex: {tartgetPointIndex}")
 
 
-    def move(self, randomPointsSize=70, maxTravelTime=5., minDist=5.):
+    def move(self, randomPointsSize=70, maxTravelTime=5., minDist=5., plotEstimator=True):
 
         axiZ = self.altitude
 
@@ -488,6 +493,9 @@ class controller:
 
             # validPoint = []
             jPoint = []
+            xCanditateList = []
+            yCanditateList = []
+            yawAngleList = []
             for i in range(randomPointsSize):
 
                 wCenter = int(  width * ( ( np.degrees(randomOrientation[i]) + camFOV/2 ) / camFOV ) )
@@ -506,6 +514,11 @@ class controller:
                 xCanditate = xCurrent + np.cos(randomOrientation[i] + currentYaw)*speedScalar*travelTime[i]
                 yCanditate = yCurrent + np.sin(randomOrientation[i] + currentYaw)*speedScalar*travelTime[i]
                 zCanditate = zCurrent
+                angle =  np.radians(yawCanditate[i]) + currentYaw + randomOrientation[i]
+
+                xCanditateList.append(xCanditate)
+                yCanditateList.append(yCanditate)
+                yawAngleList.append(angle)
 
                 canditates = [xCanditate,yCanditate,zCanditate]
 
@@ -513,8 +526,6 @@ class controller:
 
                 # the estimated score each canditate point has
                 if safeDist and inGeoFence:
-
-                    angle =  np.radians(yawCanditate[i]) + currentYaw + randomOrientation[i]
 
                     jPoint.append(self.estimate(xCanditate, yCanditate, angle))
                     availablePosition = True
@@ -548,6 +559,9 @@ class controller:
 
         self.client.rotateByYawRateAsync(yawCanditate[tartgetPointIndex],1,vehicle_name=self.name).join()
         self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
+
+        if plotEstimator:
+            self.plotEstimator(xCanditateList, yCanditateList, yawAngleList, jPoint)
 
         if DEBUG_MOVE:
             print(f"\n[DEBUG][MOVE] ----- {self.getName()} -----")
@@ -598,7 +612,8 @@ class controller:
         yList = [(state[0].kinematics_estimated.position.y_val-self.minY)/(self.maxY-self.minY) for state in self.stateList]
         yawList = [(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]+np.pi)/(np.pi+np.pi) for state in self.stateList]
 
-        j_i_k = [[self.j_i[i-1] + self.contribution[i]] for i in range(len(self.contribution))]
+        j_i_k = [[self.j_i[i-1]] for i in range(len(self.contribution))]
+        # j_i_k = [[self.j_i[i-1]] for i in range(len(self.contribution))]
 
         data = np.stack((xList,yList,yawList),axis=1)
 
@@ -612,8 +627,8 @@ class controller:
         yawList = [[(np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2])+180)/(180+180)] for state in self.stateList]
 
         # Ji(k) = Ji(k-1) + delta(=contribution)
-        j_i_k = [[self.j_i[i-1] + self.contribution[i]] for i in range(len(self.contribution))]
-        # j_i_k = [self.j_i[i-1] + self.contribution[i] for i in range(len(self.contribution))]
+        j_i_k = [[self.j_i[i-1]] for i in range(len(self.contribution))]
+        # j_i_k = [self.j_i[i-1] for i in range(len(self.contribution))]
 
         self.historyData.append([yawList,j_i_k])
         # print(f"\n --- {self.getName()}")
@@ -634,7 +649,7 @@ class controller:
         x = [(i+180)/(180+180) for i in x]
 
         yawList = [(np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2])+180)/(180+180) for state in self.stateList]
-        j_i_k = [self.j_i[i-1] + self.contribution[i] for i in range(len(self.contribution))]
+        j_i_k = [self.j_i[i-1] for i in range(len(self.contribution))]
 
         report_estimator = os.path.join(os.getcwd(),"results", f"estimator_{self.getName()}")
         try:
@@ -658,6 +673,41 @@ class controller:
         # plt.pause(5)
         plt.close()
 
+
+    def plotEstimator(self, xCanditate, yCanditate, yawCanditate, JCanditate):
+
+        report_estimator = os.path.join(os.getcwd(),f"results_{self.ip}", f"estimator_{self.getName()}")
+        try:
+            os.makedirs(report_estimator)
+        except OSError:
+            if not os.path.isdir(report_estimator):
+                raise
+
+        u = np.cos(yawCanditate)
+        v = np.sin(yawCanditate)
+
+        # XXX: reverting x,y and therefore u,v to match counterclockwise orientation, defined in AirSim
+        plt.quiver(yCanditate, xCanditate, v, u, JCanditate, cmap=plt.cm.seismic)
+        plt.colorbar()
+
+        plt.xlabel("Y-Axis (network)")
+        plt.ylabel("X-Axis (network)")
+
+        # plt.xlim(self.minX,self.maxX)
+        # plt.ylim(self.minY,self.maxY)
+
+        try:
+            estimator_file = os.path.join(report_estimator, f"estimaton_{self.posIdx}.png")
+            plt.title(f"{self.getName()} - Time:{self.timeStep} - Canditates")
+        except:
+            estimator_file = os.path.join(report_estimator, f"estimaton_{0}.png")
+            plt.title(f"{self.getName()} - Time:{0} - Canditates")
+
+
+        plt.tight_layout()
+
+        plt.savefig(estimator_file)
+        plt.close()
 
     def updateState(self, posIdx, timeStep):
 
