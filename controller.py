@@ -15,7 +15,7 @@ from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neural_network import MLPRegressor
 
-ESTIMATORWINDOW = 45
+ESTIMATORWINDOW = 50
 # the value wich will devide the field of view (constraing the yaw movement)
 CAM_DEV = 4
 ORIENTATION_DEV = 4
@@ -55,10 +55,10 @@ class controller:
 
         self.stateList = []
 
-        self.model = Pipeline([('poly', PolynomialFeatures(degree=8)),
+        self.model = Pipeline([('poly', PolynomialFeatures(degree=3)),
                                ('linear', LinearRegression())])
 
-        self.model1DoF = Pipeline([('poly', PolynomialFeatures(degree=8)),
+        self.model1DoF = Pipeline([('poly', PolynomialFeatures(degree=3)),
                                ('linear', LinearRegression())])
         # self.model1DoF = SVR(gamma='scale', C=1.0, epsilon=0.2)
         # self.model1DoF = KNeighborsRegressor(n_neighbors=2)
@@ -201,7 +201,12 @@ class controller:
 
         return self.j_i[index]
 
-        
+
+    def getJiList(self):
+
+        return self.j_i
+
+
     def getDepthFront(self):
 
         responses = self.client.simGetImages([

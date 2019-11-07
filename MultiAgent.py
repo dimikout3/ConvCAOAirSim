@@ -79,10 +79,6 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         # TODO: computational complex ... simplify
         for ctrl in controllers:
 
-            if posInd == 0:
-                # the initial value for the output of the estimator is the overall J
-                ctrl.appendJi(J)
-
             information = []
             similarity = []
             cloudPoints = {}
@@ -335,13 +331,14 @@ if __name__ == "__main__":
         ax1.legend()
 
         for ctrl in controllers:
-            stateList = ctrl.getStateList()
-            yawList = [np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]) for state in stateList]
-            ax2.plot(yawList, label=ctrl.getName())
+            # stateList = ctrl.getStateList()
+            # yawList = [np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]) for state in stateList]
+            # ax2.plot(yawList, label=ctrl.getName())
+            ax2.plot(ctrl.getJiList(), label=ctrl.getName())
 
-        ax2.set_ylim(-180,180)
+        # ax2.set_ylim(-180,180)
         ax2.set_xlabel("Time")
-        ax2.set_ylabel("Yaw [degrees]")
+        ax2.set_ylabel("Ji")
         ax2.legend()
 
         plt.tight_layout()
