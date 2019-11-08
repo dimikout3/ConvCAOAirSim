@@ -15,7 +15,7 @@ from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neural_network import MLPRegressor
 
-ESTIMATORWINDOW = 50
+ESTIMATORWINDOW = 35
 # the value wich will devide the field of view (constraing the yaw movement)
 CAM_DEV = 4
 ORIENTATION_DEV = 4
@@ -23,12 +23,13 @@ ORIENTATION_DEV = 4
 DEBUG_GEOFENCE = False
 DEBUG_RANDOMZ = False
 DEBUG_MOVE = False
-DEBUG_MOVE1DOF = True
+DEBUG_MOVE1DOF = False
+DEBUG_MOVE_OMNI = True
 WEIGHTS = {"cars":1.0, "persons":0.0 , "trafficLights":1.0}
 
 class controller:
 
-    def __init__(self, clientIn, droneName, offSets, ip="1"):
+    def __init__(self, clientIn, droneName, offSets, ip="1", timeWindow=200):
 
         self.client = clientIn
         self.name = droneName
@@ -55,7 +56,7 @@ class controller:
 
         self.stateList = []
 
-        self.model = Pipeline([('poly', PolynomialFeatures(degree=3)),
+        self.model = Pipeline([('poly', PolynomialFeatures(degree=2)),
                                ('linear', LinearRegression())])
 
         self.model1DoF = Pipeline([('poly', PolynomialFeatures(degree=3)),
@@ -82,6 +83,8 @@ class controller:
         self.contribution = []
         self.j_i = []
 
+        self.restrictingMovement = np.linspace(1,0.1,timeWindow)
+
         self.parentRaw = os.path.join(os.getcwd(),f"results_{ip}", "swarm_raw_output")
         try:
             os.makedirs(self.parentRaw)
@@ -102,9 +105,15 @@ class controller:
         return self.client.takeoffAsync(vehicle_name = self.name)
 
 
-    def moveToPostion(self, x, y, z, speed):
+    def moveToPosition(self, x, y, z, speed):
 
-        return self.client.moveToPositionAsync(x,y,z,speed,vehicle_name=self.name)
+        # moveToPositionAsync works only for relative coordinates, therefore we must
+        # subtrack the offset (which corresponds to global coordinates)
+        x -= self.offSetX
+        y -= self.offSetY
+        z -= self.offSetZ
+
+        return self.client.moveToPositionAsync(x,y,z,speed,vehicle_name=self.name).join()
 
 
     def setCameraOrientation(self, cam_yaw, cam_pitch, cam_roll):
@@ -244,8 +253,13 @@ class controller:
 
 
     def rotateToYaw(self, yaw):
-        self.client.rotateByYawRateAsync(float(yaw),1,vehicle_name=self.name).join()
+
+        self.updateMultirotorState()
+        _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
+
+        self.client.rotateByYawRateAsync(float(yaw) - np.degrees(currentYaw),1,vehicle_name=self.name).join()
         self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
+        # self.client.rotateToYawAsync(yaw, vehicle_name=self.name).join()
 
 
     def setGeoFence(self, x=0, y=0, z=-10, r=20):
@@ -577,6 +591,125 @@ class controller:
             print(f"[DEBUG][MOVE] tartgetPointIndex: {tartgetPointIndex}")
 
 
+    def getPeripheralView(self):
+
+        imageDepth = []
+
+        responses = self.client.simGetImages([
+            airsim.ImageRequest("1", airsim.ImageType.DepthPerspective, True),
+            # airsim.ImageRequest("2", airsim.ImageType.DepthPerspective, True),
+            # airsim.ImageRequest("3", airsim.ImageType.DepthPerspective, True),
+            airsim.ImageRequest("4", airsim.ImageType.DepthPerspective, True)],
+            vehicle_name = self.name)  #scene vision image in uncompressed RGB array
+
+        imageDepthFront = airsim.list_to_2d_float_array(responses[0].image_data_float,
+                                                   responses[0].width,
+                                                   responses[0].height)
+        imageDepth.append(imageDepthFront)
+
+        # imageDepthRight = airsim.list_to_2d_float_array(responses[1].image_data_float,
+        #                                            responses[1].width,
+        #                                            responses[1].height)
+        # imageDepth.append(imageDepthRight)
+        #
+        # imageDepthBack = airsim.list_to_2d_float_array(responses[2].image_data_float,
+        #                                            responses[2].width,
+        #                                            responses[2].height)
+        # imageDepth.append(imageDepthBack)
+
+        imageDepthLeft = airsim.list_to_2d_float_array(responses[1].image_data_float,
+                                                   responses[1].width,
+                                                   responses[1].height)
+        imageDepth.append(imageDepthLeft)
+
+        return imageDepth, responses[1].height, responses[1].width
+
+
+    def moveOmniDirectional(self, randomPointsSize=70, maxTravelTime=5., minDist=5., plotEstimator=True):
+
+        axiZ = self.altitude
+
+        speedScalar = 1
+        np.random.seed()
+
+        self.updateMultirotorState()
+        _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
+
+        # camera field of view (degrees)
+        camFOV = self.cameraInfo.fov
+        leftDeg, rightDeg = -camFOV/2 , camFOV/2
+
+        imageDepthList, height, width = self.getPeripheralView()
+
+        # height, width = imageDepthList[0].height, imageDepthList[0].width
+        pixel10H = height*0.1
+        lowHeight, highHeight = int(height/2-pixel10H), int(height/2+pixel10H)
+        wLow, wHigh = int(width*0.1) ,int(width*0.1)
+
+        jEstimaged = []
+        xCanditateList = []
+        yCanditateList = []
+        zCanditateList = []
+        yawCanditateList = []
+
+        for imageIdx,imageDepth in enumerate(imageDepthList):
+
+            # boundaries should be avoided for collision avoidance (thats what +/- 3 degrees do ...)
+            randomOrientation = np.random.uniform(np.radians(leftDeg), np.radians(rightDeg), randomPointsSize)
+            # travelTime = np.random.uniform(0, maxTravelTime, randomPointsSize)
+            travelTime = np.random.uniform(0., maxTravelTime, randomPointsSize)
+            yawCanditate = np.random.uniform(-180, 180,randomPointsSize)
+
+            for i in range(randomPointsSize):
+
+                wCenter = int(  width * ( ( np.degrees(randomOrientation[i]) + camFOV/2 ) / camFOV ) )
+                if wCenter - wLow < 0: wCenter = wLow + 1
+                if wCenter + wHigh> (width-1): wCenter = wHigh + 1
+                # print(f"{self.getName()} wCenter:{wCenter}")
+
+                dist = np.min(imageDepth[ (wCenter-wLow) : (wCenter+wHigh), lowHeight:highHeight])
+
+                safeDist = dist>(travelTime[i]*speedScalar + minDist)
+
+                xCurrent = self.state.kinematics_estimated.position.x_val
+                yCurrent = self.state.kinematics_estimated.position.y_val
+                zCurrent = self.state.kinematics_estimated.position.z_val
+
+                xCanditate = xCurrent + np.cos( (randomOrientation[i] + imageIdx*np.pi) + currentYaw)*speedScalar*travelTime[i]
+                yCanditate = yCurrent + np.sin( (randomOrientation[i] + imageIdx*np.pi) + currentYaw)*speedScalar*travelTime[i]
+                zCanditate = zCurrent
+
+                canditates = [xCanditate,yCanditate,zCanditate]
+                inGeoFence = self.insideGeoFence(c = canditates, d = minDist)
+
+                # the estimated score each canditate point has
+                if safeDist and inGeoFence:
+
+                    jEstimaged.append(self.estimate(xCanditate, yCanditate, np.radians(yawCanditate[i]) ))
+                    xCanditateList.append(xCanditate)
+                    yCanditateList.append(yCanditate)
+                    zCanditateList.append(zCanditate)
+                    yawCanditateList.append(yawCanditate[i])
+
+
+        tartgetPointIndex = np.argmax(jEstimaged)
+
+        self.moveToPosition(xCanditateList[tartgetPointIndex], yCanditateList[tartgetPointIndex],
+                           zCanditateList[tartgetPointIndex], 2)
+
+        self.rotateToYaw(yawCanditateList[tartgetPointIndex])
+
+        if plotEstimator:
+            self.plotEstimator(xCanditateList, yCanditateList, yawCanditateList, jEstimaged)
+
+        if DEBUG_MOVE_OMNI:
+            print(f"\n[DEBUG][MOVE_OMNI] ----- {self.getName()} -----")
+            print(f"[DEBUG][MOVE_OMNI] target pose (x:{xCanditateList[tartgetPointIndex]:.2f} ,y:{yCanditateList[tartgetPointIndex]:.2f}, z:{zCanditateList[tartgetPointIndex]:.2f}, yaw:{yawCanditateList[tartgetPointIndex]:.2f})")
+            # print(f"[DEBUG][MOVE_OMNI] travelTime: {travelTime}")
+            # print(f"[DEBUG][MOVE_OMNI] yawCanditate: {yawCanditate}")
+            # print(f"[DEBUG][MOVE_OMNI] jPoint: {jPoint}")
+            # print(f"[DEBUG][MOVE_OMNI] tartgetPointIndex: {tartgetPointIndex}")
+
     def estimate(self,x,y,yaw):
 
         if yaw > np.pi:
@@ -591,7 +724,7 @@ class controller:
         x = (x - self.minX) / (self.maxX - self.minX)
         y = (y - self.minY) / (self.maxY - self.minY)
 
-        return float(self.estimator.predict([[x,y,np.radians(yaw)]]))
+        return float(self.estimator.predict([[x,y,yaw]]))
 
 
     def estimate1DoF(self,yaw):
@@ -688,6 +821,8 @@ class controller:
             if not os.path.isdir(report_estimator):
                 raise
 
+        yawCanditate = [np.radians(yaw) for yaw in yawCanditate]
+
         u = np.cos(yawCanditate)
         v = np.sin(yawCanditate)
 
@@ -713,6 +848,7 @@ class controller:
 
         plt.savefig(estimator_file)
         plt.close()
+
 
     def updateState(self, posIdx, timeStep):
 

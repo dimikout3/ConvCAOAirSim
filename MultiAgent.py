@@ -283,7 +283,8 @@ if __name__ == "__main__":
 
         for ctrl in controllers:
             # ctrl.randomMoveZ()
-            ctrl.move()
+            # ctrl.move()
+            ctrl.moveOmniDirectional()
             # ctrl.move1DoF()
             # t = Thread(target = ctrl.randomMoveZ)
             # t.start()
