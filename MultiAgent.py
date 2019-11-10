@@ -219,7 +219,7 @@ if __name__ == "__main__":
 
     launchAirSim()
 
-    wayPointsSize = 200
+    wayPointsSize = 400
 
     OFFSETS = {"Drone1":[0,0,0],
                "Drone2":[0,-5,0],
@@ -236,7 +236,8 @@ if __name__ == "__main__":
 
     controllers = []
     for drone in dronesID:
-        controllers.append(controller(client, drone, OFFSETS[drone], ip=options.ip))
+        controllers.append(controller(client, drone, OFFSETS[drone],
+                                      ip=options.ip, timeWindow=wayPointsSize))
 
     # Setting Camera Orientation
     for ctrl in controllers: ctrl.setCameraOrientation(CAM_YAW, CAM_PITCH, CAM_ROOL)
@@ -284,7 +285,7 @@ if __name__ == "__main__":
         for ctrl in controllers:
             # ctrl.randomMoveZ()
             # ctrl.move()
-            ctrl.moveOmniDirectional()
+            ctrl.moveOmniDirectional(maxTravelTime=5)
             # ctrl.move1DoF()
             # t = Thread(target = ctrl.randomMoveZ)
             # t.start()

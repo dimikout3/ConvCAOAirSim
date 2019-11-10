@@ -15,7 +15,7 @@ from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neural_network import MLPRegressor
 
-ESTIMATORWINDOW = 35
+ESTIMATORWINDOW = 40
 # the value wich will devide the field of view (constraing the yaw movement)
 CAM_DEV = 4
 ORIENTATION_DEV = 4
@@ -56,7 +56,7 @@ class controller:
 
         self.stateList = []
 
-        self.model = Pipeline([('poly', PolynomialFeatures(degree=2)),
+        self.model = Pipeline([('poly', PolynomialFeatures(degree=3)),
                                ('linear', LinearRegression())])
 
         self.model1DoF = Pipeline([('poly', PolynomialFeatures(degree=3)),
@@ -82,6 +82,9 @@ class controller:
         # how much vehicles currrent movement affected the cost Function (delta)
         self.contribution = []
         self.j_i = []
+
+        self.timeStep = 0
+        self.posIdx = 0
 
         self.restrictingMovement = np.linspace(1,0.1,timeWindow)
 
@@ -652,13 +655,17 @@ class controller:
         zCanditateList = []
         yawCanditateList = []
 
+        # decreasing the available movement because we are getting closer to convergence point
+        # initialy we wan to explore and then exploit more carefully
+        a = self.restrictingMovement[self.timeStep]
+
         for imageIdx,imageDepth in enumerate(imageDepthList):
 
             # boundaries should be avoided for collision avoidance (thats what +/- 3 degrees do ...)
             randomOrientation = np.random.uniform(np.radians(leftDeg), np.radians(rightDeg), randomPointsSize)
             # travelTime = np.random.uniform(0, maxTravelTime, randomPointsSize)
             travelTime = np.random.uniform(0., maxTravelTime, randomPointsSize)
-            yawCanditate = np.random.uniform(-180, 180,randomPointsSize)
+            yawCanditate = np.random.uniform(0, 180,randomPointsSize)
 
             for i in range(randomPointsSize):
 
@@ -669,14 +676,14 @@ class controller:
 
                 dist = np.min(imageDepth[ (wCenter-wLow) : (wCenter+wHigh), lowHeight:highHeight])
 
-                safeDist = dist>(travelTime[i]*speedScalar + minDist)
+                safeDist = dist>(travelTime[i]*speedScalar*a + minDist)
 
                 xCurrent = self.state.kinematics_estimated.position.x_val
                 yCurrent = self.state.kinematics_estimated.position.y_val
                 zCurrent = self.state.kinematics_estimated.position.z_val
 
-                xCanditate = xCurrent + np.cos( (randomOrientation[i] + imageIdx*np.pi) + currentYaw)*speedScalar*travelTime[i]
-                yCanditate = yCurrent + np.sin( (randomOrientation[i] + imageIdx*np.pi) + currentYaw)*speedScalar*travelTime[i]
+                xCanditate = xCurrent + np.cos( (randomOrientation[i] + imageIdx*np.pi) + currentYaw)*speedScalar*travelTime[i]*a
+                yCanditate = yCurrent + np.sin( (randomOrientation[i] + imageIdx*np.pi) + currentYaw)*speedScalar*travelTime[i]*a
                 zCanditate = zCurrent
 
                 canditates = [xCanditate,yCanditate,zCanditate]
@@ -755,7 +762,7 @@ class controller:
 
         data = np.stack((xList,yList,yawList),axis=1)
 
-        weights = np.linspace(0.3,1,len(data[-ESTIMATORWINDOW:]))
+        weights = np.linspace(1,1,len(data[-ESTIMATORWINDOW:]))
 
         self.estimator = self.model.fit(data[-ESTIMATORWINDOW:],j_i_k[-ESTIMATORWINDOW:], **{'linear__sample_weight': weights})
 
@@ -821,29 +828,46 @@ class controller:
             if not os.path.isdir(report_estimator):
                 raise
 
+        fig, (ax1, ax2) = plt.subplots(1,2,figsize=(20,10))
+
         yawCanditate = [np.radians(yaw) for yaw in yawCanditate]
 
         u = np.cos(yawCanditate)
         v = np.sin(yawCanditate)
 
         # XXX: reverting x,y and therefore u,v to match counterclockwise orientation, defined in AirSim
-        plt.quiver(yCanditate, xCanditate, v, u, JCanditate, cmap=plt.cm.seismic)
-        plt.colorbar()
+        ax_1 = ax1.quiver(yCanditate, xCanditate, v, u, JCanditate, cmap=plt.cm.seismic)
+        # ax1.colorbar()
+        fig.colorbar(ax_1, ax=ax1)
 
-        plt.xlabel("Y-Axis (network)")
-        plt.ylabel("X-Axis (network)")
+        ax1.set_xlabel("Y-Axis (network)")
+        ax1.set_ylabel("X-Axis (network)")
 
-        # plt.xlim(self.minX,self.maxX)
-        # plt.ylim(self.minY,self.maxY)
+        x = [state[0].kinematics_estimated.position.x_val for state in self.stateList ]
+        y = [state[0].kinematics_estimated.position.y_val for state in self.stateList ]
+        yaw = [state[1].pose.orientation for state in self.stateList ]
+        # to_eularian_angles -> (picth, roll, yaw)
+        yaw = [airsim.to_eularian_angles(i)[2] for i in yaw]
+        u = np.cos(yaw)
+        v = np.sin(yaw)
+        ji = self.j_i
+
+        ax_2 = ax2.quiver(y[-ESTIMATORWINDOW:],x[-ESTIMATORWINDOW:],v[-ESTIMATORWINDOW:],
+                   u[-ESTIMATORWINDOW:],ji[-ESTIMATORWINDOW:], cmap=plt.cm.seismic)
+        # ax2.colorbar()
+        fig.colorbar(ax_2, ax=ax2)
+        ax2.set_xlabel("Y-Axis (network)")
+        ax2.set_ylabel("X-Axis (network)")
 
         try:
             estimator_file = os.path.join(report_estimator, f"estimaton_{self.posIdx}.png")
-            plt.title(f"{self.getName()} - Time:{self.timeStep} - Canditates")
+            # plt.title(f"{self.getName()} - Time:{self.timeStep} - Canditates")
         except:
             estimator_file = os.path.join(report_estimator, f"estimaton_{0}.png")
-            plt.title(f"{self.getName()} - Time:{0} - Canditates")
+            # plt.title(f"{self.getName()} - Time:{0} - Canditates")
 
-
+        # ax1.tight_layout()
+        # ax2.tight_layout()
         plt.tight_layout()
 
         plt.savefig(estimator_file)
