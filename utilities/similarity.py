@@ -53,13 +53,23 @@ def compareCloudsIdeal(cloud1, cloud2):
     return dist_sum, dist_average
 
 
-def compareExhaustiveDuplicates(cloud1, cloud2):
+def compareExhaustiveDuplicates(detectionsData1, detectionsData2):
 
-    if (cloud1.size == 0) or (cloud2.size == 0) :
-        return 0,0
+    # indices that will be excluded because they are the same object detected
+    excluded1 = []
+    excluded2 = []
 
-    x1,y1,z1 = cloud1[:,0], cloud1[:,1], cloud1[:,2]
-    x2,y2,z2 = cloud2[:,0], cloud2[:,1], cloud2[:,2]
+    info1 = detectionsData1[1]
+    info2 = detectionsData2[1]
+
+    coordinates1 = detectionsData1[0]
+    coordinates2 = detectionsData2[0]
+
+    if (coordinates1.size == 0) or (coordinates2.size == 0) :
+        return excluded1,excluded2
+
+    x1,y1,z1 = coordinates1[:,0], coordinates1[:,1], coordinates1[:,2]
+    x2,y2,z2 = coordinates2[:,0], coordinates2[:,1], coordinates2[:,2]
 
     x1v = np.vstack(x1)
     x1m = np.tile(x1v,(1,x2.size))
@@ -78,24 +88,29 @@ def compareExhaustiveDuplicates(cloud1, cloud2):
 
     dist_array = np.sqrt(x**2 + y**2 + z**2)
 
-    # sumMin = []
-    similarObjects = 0
-    while dist_array.size != 0:
+    # while dist_array.size != 0:
+    for _ in range(dist_array.size):
 
         x,y = np.unravel_index(dist_array.argmin(), dist_array.shape)
+        # x-> index of drone1 detections, y-> index of drone2 detections
 
         if dist_array[x,y] < THRESHOLD_DIST:
-            # sumMin.append( 1/(dist_array[x,y]**2) )
-            similarObjects += 1
+            # check if they are the same time
+            if info1[x][0].split("_")[0] == info2[y][0].split("_")[0]:
+                if info1[x][1] > info2[y][1]:
+                    excluded2.append(y)
+                else:
+                    excluded1.append(x)
 
-        dist_array = np.delete(dist_array,(x),axis=0)
-        dist_array = np.delete(dist_array,(y),axis=1)
+        else:
+            break
 
-    # if sumMin == []:
-        # return 0,0
+        # dist_array = np.delete(dist_array,(x),axis=0)
+        # dist_array = np.delete(dist_array,(y),axis=1)
+        # instead of deleting put big values
+        dist_array[x,y] =  THRESHOLD_DIST*2
 
-    # return np.sum(sumMin), np.average(sumMin)
-    return similarObjects, similarObjects
+    return excluded1, excluded2
 
 
 def compareRandomDist(cloud1, cloud2):
@@ -132,6 +147,8 @@ def similarityOut(dataPoints, similarityKPI = None, ip = 0):
     droneIDs = list(dataPoints.keys())
     combos = list(itertools.combinations(droneIDs,2))
 
+    excludedDict = {id:set() for id in droneIDs}
+
     # dronesComb -> [("drone1,drone2"),("drones1","drones3") ...]
     simSum = []
     simAvg = []
@@ -142,20 +159,21 @@ def similarityOut(dataPoints, similarityKPI = None, ip = 0):
 
         if similarityKPI == "DistExhaustive":
 
-            # pointCloud1 = dataPoints[dronesComb[0]][1]
-            # pointCloud2 = dataPoints[dronesComb[1]][1]
-            pointCloud1 = dataPoints[dronesComb[0]]
-            pointCloud2 = dataPoints[dronesComb[1]]
+            detectionsData1 = dataPoints[dronesComb[0]]
+            detectionsData2 = dataPoints[dronesComb[1]]
 
             start_time = time.time()
-            clouds_dist_sum_ideal, clouds_dist_average_ideal = compareExhaustiveDuplicates(pointCloud1, pointCloud2)
+            excluded1, excluded2 = compareExhaustiveDuplicates(detectionsData1, detectionsData2)
             timeDistIdeal = time.time() - start_time
 
-            simSum.append(clouds_dist_sum_ideal)
-            simAvg.append(clouds_dist_average_ideal)
+            excludedDict[dronesComb[0]].update(excluded1)
+            excludedDict[dronesComb[1]].update(excluded2)
 
-            print(f"{4*' '} {8*' '} objects dist aggregated exhuastive {clouds_dist_sum_ideal:.2f}, {timeDistIdeal:.4f}[sec]", file=report_file)
-            print(f"{4*' '} {8*' '} objects dist average exhuastive {clouds_dist_average_ideal:.2f}, {timeDistIdeal:.4f}[sec]", file=report_file)
+            # simSum.append(clouds_dist_sum_ideal)
+            # simAvg.append(clouds_dist_average_ideal)
+
+            # print(f"{4*' '} {8*' '} objects dist aggregated exhuastive {clouds_dist_sum_ideal:.2f}, {timeDistIdeal:.4f}[sec]", file=report_file)
+            # print(f"{4*' '} {8*' '} objects dist average exhuastive {clouds_dist_average_ideal:.2f}, {timeDistIdeal:.4f}[sec]", file=report_file)
 
         if similarityKPI == "DistRandom":
 
@@ -172,4 +190,5 @@ def similarityOut(dataPoints, similarityKPI = None, ip = 0):
             print(f"{4*' '} {8*' '} objects dist aggregated exhuastive {clouds_dist_sum_ideal:.2f}, {timeDistIdeal:.4f}[sec]", file=report_file)
             print(f"{4*' '} {8*' '} objects dist average exhuastive {clouds_dist_average_ideal:.2f}, {timeDistIdeal:.4f}[sec]", file=report_file)
 
-    return np.sum(simSum), np.average(simAvg)
+    # return np.sum(simSum), np.average(simAvg)
+    return excludedDict
