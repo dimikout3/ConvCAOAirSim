@@ -29,6 +29,49 @@ CAM_ROOL = 0.
 NORM = {'information':10.0, 'similarity':10.0}
 WEIGHT = {'information':1.0, 'similarity':-1.0}
 
+def plotDetections(detectionsDict, excludedDict, posInd):
+
+    global options
+
+    dronesID = list(detectionsDict.keys())
+
+    fig, ax = plt.subplots(2,2,figsize=(10,10))
+
+    xUnraveled, yUnraveled = np.unravel_index(np.arange(4),(2,2))
+
+    for j,drone in enumerate(dronesID):
+
+        xPositive, yPositive = [], []
+        xNegative, yNegative = [], []
+
+        for i,detection in enumerate(detectionsDict[drone][0]):
+
+            x,y = detection[0], detection[1]
+
+            if i in excludedDict[drone]:
+                xNegative.append(x)
+                yNegative.append(y)
+            else:
+                xPositive.append(x)
+                yPositive.append(y)
+
+        ax[xUnraveled[j], yUnraveled[j]].scatter(yPositive, xPositive, marker='o', label=f"{drone} (+)")
+        ax[xUnraveled[j], yUnraveled[j]].scatter(yNegative, xNegative, marker='v', label=f"{drone} (-)")
+
+        ax[xUnraveled[j], yUnraveled[j]].legend()
+        ax[xUnraveled[j], yUnraveled[j]].set_xlim(-130,130)
+        ax[xUnraveled[j], yUnraveled[j]].set_ylim(-130,130)
+
+        ax[xUnraveled[j], yUnraveled[j]].set_xlabel("Y-Axis (NetWork)")
+        ax[xUnraveled[j], yUnraveled[j]].set_ylabel("X-Axis (NetWork)")
+
+    detected_objects_folder = os.path.join(os.getcwd(),f"results_{options.ip}",
+                                           "detected_objects", f"detections_{posInd}.png")
+
+    plt.tight_layout()
+    plt.savefig(detected_objects_folder)
+    plt.close()
+
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
     global options
@@ -41,85 +84,75 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
     for timeStep in range(0,totalTime,timeInterval):
 
-        cloudPoints = {}
+        detectionsDict = {}
         informationScore = 0.0
 
         for i,ctrl in enumerate(controllers):
 
             ctrl.updateState(posInd, timeStep)
             responses = ctrl.getImages(save_raw=True)
-            detectionsInfo, detectionsCoordinates = ctrl.detectObjects(detector, save_detected=True)
-            # x,y,z,c = ctrl.getPointCloud()
-            # pointCloud = np.stack((x,y,z), axis=1)
-            pointCloud = detectionsCoordinates
+            ctrl.detectObjects(detector, save_detected=True)
 
-            cloudPoints[ctrl.getName()] = pointCloud
+            detectionsCoordinates, detectionsInfo = ctrl.getDetections()
+            detectionsData = [detectionsCoordinates, detectionsInfo]
 
-            informationScore += ctrl.getScore(index=-1, absolute=True)
+            detectionsDict[ctrl.getName()] = detectionsData
 
-        # sum, avg = similarityOut(cloudPoints, similarityKPI="DistRandom", ip=options.ip)
-        sum, avg = similarityOut(cloudPoints, similarityKPI="DistExhaustive", ip=options.ip)
-        # TODO: monta einai auto to = prepei na skeftw kati kalytero
-        avg = sum
+        excludedDict = similarityOut(detectionsDict, similarityKPI="DistExhaustive", ip=options.ip)
 
-        # Apply boundaries
-        # avg = NORM['mutualLow'] if avg<NORM['mutualLow'] else avg
-        similarityAvgNorm = avg/NORM['similarity']
-        print(f"[INFO] Similarity avg:{avg:.3f}, norm:{similarityAvgNorm:.3f}")
-        similarityList.append(similarityAvgNorm)
+        plotDetections(detectionsDict, excludedDict, posInd)
 
-        informationScoreNorm = informationScore/NORM["information"]
-        print(f"[INFO] Information Score combined:{informationScore:.3f}, norm:{informationScoreNorm:.3f}")
-        informationScoreList.append(informationScoreNorm)
+        for ctrl in controllers:
+            score = ctrl.scoreExcludingDetections(excludedDict[ctrl.getName()])
+            # ctrl.updateScore()
+            # informationScore += ctrl.getScore(index=-1)
+            informationScore += score
+            ctrl.appendJi(score)
 
-        J = informationScoreNorm*WEIGHT['information'] + similarityAvgNorm*WEIGHT['similarity']
+        J = informationScore
         costJ.append(J)
         print(f"[INFO] Cost J:{J:.3f}")
 
         # TODO: computational complex ... simplify
-        for ctrl in controllers:
-
-            information = []
-            similarity = []
-            cloudPoints = {}
-
-            for other in controllers:
-
-                if other.getName() != ctrl.getName():
-
-                    information.append(other.getScore(index=-1, absolute=True))
-                    # x,y,z,c = other.getPointCloudList(index=-1)
-                    # pointCloud = np.stack((x,y,z), axis=1)
-                    pointCloud = other.getDetectionsCoordinates(index=-1)
-                    cloudPoints[other.getName()] = pointCloud
-
-                else:
-
-                    information.append(other.getScore(index=-2, absolute=True))
-                    # x,y,z,c = other.getPointCloudList(index=-2)
-                    # pointCloud = np.stack((x,y,z), axis=1)
-                    pointCloud = other.getDetectionsCoordinates(index=-2)
-                    cloudPoints[other.getName()] = pointCloud
-
-            # _, avg = similarityOut(cloudPoints, similarityKPI="DistRandom", ip=options.ip)
-            sum, avg = similarityOut(cloudPoints, similarityKPI="DistExhaustive", ip=options.ip)
-            avg = sum
-
-            # avg = NORM['mutualLow'] if avg<NORM['mutualLow'] else avg
-            similarityAvgNorm = avg/NORM["similarity"]
-            informationScoreNorm = np.sum(information)/NORM['information']
-
-            J_isolation = informationScoreNorm*WEIGHT['information'] + similarityAvgNorm*WEIGHT['similarity']
-            delta = costJ[-1] - J_isolation
-
-            ctrl.appendContribution(delta)
-            # ctrl.appendJi(J_isolation)
-            if (posInd>=1):
-                ctrl.appendJi(ctrl.getJi() + delta)
-            else:
-                ctrl.appendJi(costJ[-1] + delta)
-
-            print(f"[INFO] {ctrl.getName()} has delta:{delta:.4f} Ji:{ctrl.getJi():.4f}")
+        # for ctrl in controllers:
+        #
+        #     information = []
+        #     similarity = []
+        #     cloudPoints = {}
+        #
+        #     for other in controllers:
+        #
+        #         if other.getName() != ctrl.getName():
+        #
+        #             information.append(other.getScore(index=-1))
+        #             pointCloud = other.getDetectionsCoordinates(index=-1)
+        #             cloudPoints[other.getName()] = pointCloud
+        #
+        #         else:
+        #
+        #             information.append(other.getScore(index=-2))
+        #             pointCloud = other.getDetectionsCoordinates(index=-2)
+        #             cloudPoints[other.getName()] = pointCloud
+        #
+        #     # _, avg = similarityOut(cloudPoints, similarityKPI="DistRandom", ip=options.ip)
+        #     sum, avg = similarityOut(cloudPoints, similarityKPI="DistExhaustive", ip=options.ip)
+        #     avg = sum
+        #
+        #     # avg = NORM['mutualLow'] if avg<NORM['mutualLow'] else avg
+        #     similarityAvgNorm = avg/NORM["similarity"]
+        #     informationScoreNorm = np.sum(information)/NORM['information']
+        #
+        #     J_isolation = informationScoreNorm*WEIGHT['information'] + similarityAvgNorm*WEIGHT['similarity']
+        #     delta = costJ[-1] - J_isolation
+        #
+        #     ctrl.appendContribution(delta)
+        #     # ctrl.appendJi(J_isolation)
+        #     if (posInd>=1):
+        #         ctrl.appendJi(ctrl.getJi() + delta)
+        #     else:
+        #         ctrl.appendJi(costJ[-1] + delta)
+        #
+        #     print(f"[INFO] {ctrl.getName()} has delta:{delta:.4f} Ji:{ctrl.getJi():.4f}")
 
         time.sleep(timeInterval)
 
@@ -219,7 +252,7 @@ if __name__ == "__main__":
 
     launchAirSim()
 
-    wayPointsSize = 400
+    wayPointsSize = 500
 
     OFFSETS = {"Drone1":[0,0,0],
                "Drone2":[0,-5,0],
@@ -263,14 +296,6 @@ if __name__ == "__main__":
         # no need for task list (just setting values here)
         ctrl.setGeoFence(x = 25, y = -25, z = -14, r=75)
 
-    print("\nSetting random Yaw all drones")
-    for i,ctrl in enumerate(controllers):
-        np.random.seed()
-        # yawRandom = np.random.uniform(-180,180,1)
-        yawRandom = 30
-        ctrl.rotateToYaw(yawRandom)
-        # ctrl.rotateToYaw(-5 + i*90)
-
     startTime = time.time()
 
     global similarityList, informationScoreList, costJ
@@ -285,12 +310,22 @@ if __name__ == "__main__":
         for ctrl in controllers:
             # ctrl.randomMoveZ()
             # ctrl.move()
-            ctrl.moveOmniDirectional(maxTravelTime=5)
+            ctrl.moveOmniDirectional(maxTravelTime=1., maxYaw=10.)
             # ctrl.move1DoF()
             # t = Thread(target = ctrl.randomMoveZ)
             # t.start()
             # x,y,z,speed = PATH[ctrl.getName()][positionIdx]
             # ctrl.moveToPostion(x,y,z,speed)
+
+        # so drones start fromw worst positioning
+        if positionIdx == 0:
+            for i,ctrl in enumerate(controllers):
+                np.random.seed()
+                print("\nSetting random Yaw all drones")
+                yawRandom = 90
+                ctrl.rotateToYaw(yawRandom)
+                # ctrl.rotateToYaw(-5 + i*90)
+
 
         monitor(dronesID, positionIdx)
 
@@ -304,7 +339,7 @@ if __name__ == "__main__":
             z = positions.z_val
             _,_,yaw = airsim.to_eularian_angles(orientation)
 
-            print(f"[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{np.degrees(yaw):.2f})")
+            print(f"[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{np.degrees(yaw):.2f}) with Ji:{ctrl.getJi():.2f}")
 
 
         # for ctrl in controllers: ctrl.updateEstimator()
@@ -320,12 +355,6 @@ if __name__ == "__main__":
         fig, (ax1, ax2) = plt.subplots(2)
 
         ax1.plot(costJ, label="Cost J")
-
-        information = [info*WEIGHT["information"] for info in informationScoreList]
-        ax1.plot(information, label="information")
-
-        similarity = [sim*WEIGHT["similarity"] for sim in similarityList]
-        ax1.plot(similarity, label="similar")
 
         ax1.set_xlabel("Time")
         ax1.set_ylabel("Value")
@@ -356,7 +385,7 @@ if __name__ == "__main__":
         fig, (ax1, ax2) = plt.subplots(1,2,figsize=(20,10))
 
         for ctrl in controllers:
-            x,y,z,col = ctrl.getPointCloud(x=200,y=200)
+            x,y,z,col = ctrl.getPointCloud(x=100,y=100)
             ax2.scatter(y, x,c=col/255.0, s=0.05)
             ax1.scatter(y, x, s=0.05, label=ctrl.getName())
 
@@ -381,22 +410,22 @@ if __name__ == "__main__":
         plt.savefig(globalView_file)
         plt.close()
 
-        for ctrl in controllers:
-            detections = ctrl.getDetectionsCoordinates()
-            x,y = detections[:,0], detections[:,1]
-            plt.scatter(y, x, label=ctrl.getName())
-
-        plt.legend()
-        plt.xlim(xlim[0],xlim[1])
-        plt.ylim(ylim[0],ylim[1])
-
-        plt.xlabel("Y-Axis (NetWork)")
-        plt.ylabel("X-Axis (NetWork)")
-
-        detected_objects_folder = os.path.join(os.getcwd(),f"results_{options.ip}",
-                                               "detected_objects", f"detections_{positionIdx}.png")
-        plt.savefig(detected_objects_folder)
-        plt.close()
+        # for ctrl in controllers:
+        #     detections = ctrl.getDetectionsCoordinates()
+        #     x,y = detections[:,0], detections[:,1]
+        #     plt.scatter(y, x, label=ctrl.getName())
+        #
+        # plt.legend()
+        # plt.xlim(xlim[0],xlim[1])
+        # plt.ylim(ylim[0],ylim[1])
+        #
+        # plt.xlabel("Y-Axis (NetWork)")
+        # plt.ylabel("X-Axis (NetWork)")
+        #
+        # detected_objects_folder = os.path.join(os.getcwd(),f"results_{options.ip}",
+        #                                        "detected_objects", f"detections_{positionIdx}.png")
+        # plt.savefig(detected_objects_folder)
+        # plt.close()
 
 
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
