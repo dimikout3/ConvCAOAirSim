@@ -2,6 +2,7 @@
 /swarm_raw_output/*
 /results/*
 /results*
+*results*
 /yolo-coco/*
 /__pycache__/*
 
