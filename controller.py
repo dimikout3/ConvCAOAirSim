@@ -628,7 +628,8 @@ class controller:
         return imageDepth, responses[1].height, responses[1].width
 
 
-    def moveOmniDirectional(self, randomPointsSize=70, maxTravelTime=5., minDist=5., plotEstimator=True):
+    def moveOmniDirectional(self, randomPointsSize=70, maxTravelTime=5.,
+                            minDist=5., plotEstimator=True, maxYaw=15.):
 
         axiZ = self.altitude
 
@@ -662,10 +663,10 @@ class controller:
         for imageIdx,imageDepth in enumerate(imageDepthList):
 
             # boundaries should be avoided for collision avoidance (thats what +/- 3 degrees do ...)
-            randomOrientation = np.random.uniform(np.radians(leftDeg), np.radians(rightDeg), randomPointsSize)
+            randomOrientation = np.random.uniform(np.radians(leftDeg + 3), np.radians(rightDeg - 3), randomPointsSize)
             # travelTime = np.random.uniform(0, maxTravelTime, randomPointsSize)
             travelTime = np.random.uniform(0., maxTravelTime, randomPointsSize)
-            yawCanditate = np.random.uniform(0, 180,randomPointsSize)
+            yawCanditate = np.random.uniform(np.degrees(currentYaw) - (maxYaw/2)*a, np.degrees(currentYaw) + (maxYaw/2)*a, randomPointsSize)
 
             for i in range(randomPointsSize):
 
@@ -757,14 +758,11 @@ class controller:
         yList = [(state[0].kinematics_estimated.position.y_val-self.minY)/(self.maxY-self.minY) for state in self.stateList]
         yawList = [(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]+np.pi)/(np.pi+np.pi) for state in self.stateList]
 
-        j_i_k = [[self.j_i[i-1]] for i in range(len(self.contribution))]
-        # j_i_k = [[self.j_i[i-1]] for i in range(len(self.contribution))]
-
         data = np.stack((xList,yList,yawList),axis=1)
 
         weights = np.linspace(1,1,len(data[-ESTIMATORWINDOW:]))
 
-        self.estimator = self.model.fit(data[-ESTIMATORWINDOW:],j_i_k[-ESTIMATORWINDOW:], **{'linear__sample_weight': weights})
+        self.estimator = self.model.fit(data[-ESTIMATORWINDOW:],self.j_i[-ESTIMATORWINDOW:], **{'linear__sample_weight': weights})
 
 
     def updateEstimator1DoF(self):
@@ -906,7 +904,7 @@ class controller:
         # detections = {'cars':[(pixel_x,pixel_y,detecions_id,confidece),(pixel_x,pixel_y,detecions_id,confidece), ...]}
         # val[4] -> confidence of each detections
         # score = sum([val[4]*WEIGHTS[key] for key,val in detections.items()])
-        score = 0.0
+        # score = 0.0
         pixelX = []
         pixelY = []
         # scoreNum -> number of detected objects (int)
@@ -914,10 +912,10 @@ class controller:
         for detectionClass, objects in detections.items():
             for object in objects:
                 # object = (pixel_x,pixel_y,detecions_id,confidece)
-                score += object[3]*WEIGHTS[detectionClass]
+                # score += object[3]*WEIGHTS[detectionClass]
                 pixelX.append(object[0])
                 pixelY.append(object[1])
-                scoreNum += WEIGHTS[detectionClass]
+                # scoreNum += WEIGHTS[detectionClass]
 
         depthImage = self.getDepthImage()
 
@@ -934,15 +932,44 @@ class controller:
                 # x,y,z are full lista, use x[i], y[i], z[i]
                 detectionsInfo.append([object[2], object[3]])
 
-        self.scoreDetections.append(score)
-        self.scoreDetectionsNum.append(scoreNum)
+        # self.scoreDetections.append(score)
+        # self.scoreDetectionsNum.append(scoreNum)
         self.detectionsInfo.append(detectionsInfo)
         self.detectionsCoordinates.append(detectionsCoordinates)
         # self.stateList.append([self.getState(), self.getCameraInfo()])
         self.stateList.append([self.state, self.cameraInfo])
 
-        # print(f"info: {detectionsInfo} \ncoordinates: {detectionsCoordinates}")
-        return detectionsInfo, detectionsCoordinates
+
+    def getDetections(self):
+
+        return self.detectionsCoordinates[-1], self.detectionsInfo[-1]
+
+
+    def scoreExcludingDetections(self, excludedList):
+        """ Excluding dections that have been better detected (higher confidence)
+            from other drones """
+
+        tempCoordinates = self.detectionsCoordinates[-1]
+        tempInfo = self.detectionsInfo[-1]
+
+        score = 0.
+
+        for i, info in enumerate(tempInfo):
+
+            if i in excludedList:
+                score -= info[1]
+            else:
+                score += info[1]
+            # del tempCoordinates[i]
+            # del tempInfo[i]
+
+        return score
+
+
+    def updateScore(self):
+
+        self.scoreDetections.append( np.sum(self.detectionsInfo[-1][1]) )
+        self.scoreDetectionsNum.append( len(self.detectionsInfo[-1][1]) )
 
 
     def getScore(self, index = None, absolute = False):
