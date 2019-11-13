@@ -6,11 +6,10 @@ from matplotlib import pyplot as plt
 import pickle
 import optparse
 
-KW = 10
 xLine = 0.8
 n_p = 2000
 targetPoints = [ [xLine,i] for i in np.linspace(0,1,n_p)]
-
+KW = n_p/25
 
 def plotState(posInd):
 
@@ -29,7 +28,7 @@ def plotState(posInd):
     plt.tight_layout()
 
     out = os.path.join(os.getcwd(),f"results_{options.ip}",
-                       f"state_{posInd}.png")
+                       "state",f"state_{posInd}.png")
 
     plt.tight_layout()
     plt.savefig(out)
@@ -61,9 +60,11 @@ def calculateCostJ(droneList, posInd):
 
         j += minDist
 
+
     for i in range(len(droneList)):
         if cellsAssigned[i] == 0:
             j += KW*np.min(distR2P[:,i])
+            # print(f"[INFO] {droneList[i]} has no point close, np.min(dist[:,i]:{np.min(distR2P[:,i])})")
 
     costJ.append(j)
 
@@ -78,14 +79,14 @@ def calculateCostJ(droneList, posInd):
 
             for other in controllers:
 
+                xTarget, yTarget = targetPoints[i][0], targetPoints[i][1]
+
                 if other.getName() != ctrl.getName():
                     xDrone, yDrone = other.getPositions(index=-1)
-                    xTarget, yTarget = targetPoints[i][0], targetPoints[i][1]
-                    distR2P[i,r] = np.sqrt((xDrone-xTarget)**2 + (yDrone-yTarget)**2)
                 else:
-                    xDrone, yDrone = other.getPositions(index=-2)
-                    xTarget, yTarget = targetPoints[i][0], targetPoints[i][1]
-                    distR2P[i,r] = np.sqrt((xDrone-xTarget)**2 + (yDrone-yTarget)**2)
+                    xDrone, yDrone = ctrl.getPositions(index=-2)
+
+                distR2P[i,r] = np.sqrt((xDrone-xTarget)**2 + (yDrone-yTarget)**2)
 
             minDist = np.min(distR2P[i,:])
             # imin = np.unravel_index(np.argmin(distR2P[i,:]),distR2P[i,:].shape)
@@ -99,13 +100,15 @@ def calculateCostJ(droneList, posInd):
                 j_isolation += KW*np.min(distR2P[:,i])
 
         delta = costJ[-1] - j_isolation
+        if delta<0: print("Success !!! negative Delta")
 
         if (posInd>=1):
             ctrl.updateJi(ctrl.getJi() + delta)
         else:
             ctrl.updateJi(costJ[-1] + delta)
 
-        print(f"[INFO] {ctrl.getName()} has delta:{delta:.4f} Ji:{ctrl.getJi():.4f}")
+        # print(f"[INFO] {ctrl.getName()} has delta:{delta:.4f} Ji:{ctrl.getJi():.4f}")
+    print(f"[INFO] time = {posInd} - Cost J = {costJ[-1]}")
 
 
 def generatingResultsFolders():
@@ -119,11 +122,26 @@ def generatingResultsFolders():
         if not os.path.isdir(result_folder):
             raise
 
+    state_folder = os.path.join(result_folder, f"state")
+    try:
+        os.makedirs(state_folder)
+    except OSError:
+        if not os.path.isdir(state_folder):
+            raise
+
+    canditate_folder = os.path.join(result_folder, f"canditates")
+    try:
+        os.makedirs(canditate_folder)
+    except OSError:
+        if not os.path.isdir(canditate_folder):
+            raise
+
 
 def get_options():
 
     optParser = optparse.OptionParser()
     optParser.add_option("--ip", dest="ip", help="the ip of the simulations launched")
+    optParser.add_option("--ws", dest="size",type=int, help="waypoint size", default=100)
     options, args = optParser.parse_args()
 
     return options
@@ -136,9 +154,11 @@ if __name__ == "__main__":
 
     generatingResultsFolders()
 
-    wayPointsSize = 50
+    wayPointsSize = options.size
 
-    dronesID = ["Drone1", "Drone2", "Drone3", "Drone4"]
+    dronesID = ["Drone1", "Drone2", "Drone3", "Drone4", "Drone5", "Drone6"]
+    # dronesID = ["Drone1"]
+    # dronesID = ["Drone1", "Drone2"]
 
     controllers = []
     for drone in dronesID:
@@ -155,26 +175,21 @@ if __name__ == "__main__":
     for positionIdx in range(0,wayPointsSize):
 
         ptime = time.time()
-        print(f"_____ time step: {positionIdx}")
+        # print(f"\n_____ time step: {positionIdx}")
         for ctrl in controllers:
-            ctrl.updateState()
-            ctrl.move()
+            ctrl.updateState(positionIdx)
+            ctrl.move(maxDelta = 0.05)
 
         calculateCostJ(dronesID, positionIdx)
 
-        for ctrl in controllers:
-
-            x,y = ctrl.getPositions()
-            print(f"[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f})")
+        # for ctrl in controllers:
+        #
+        #     x,y = ctrl.getPositions()
+        #     print(f"[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f})")
 
         for ctrl in controllers:
             # ctrl.updateEstimator1DoF()
             ctrl.updateEstimator()
 
-        print(f"J={costJ[-1]}")
-
         plotState(positionIdx)
         # for ctrl in controllers: ctrl.plotEstimator1DoF()
-
-        print(f"----- elapsed time: {time.time() - ptime:.3f} ------")
-        print("---------------------------------\n")

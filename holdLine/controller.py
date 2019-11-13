@@ -27,8 +27,8 @@ class controller:
         self.timeStep = 0
 
         np.random.seed()
-        self.currentX = np.random.uniform(0,1)
-        self.currentY = np.random.uniform(0,1)
+        self.currentX = np.random.uniform(0.2,0.8)
+        self.currentY = np.random.uniform(0.2,0.8)
 
         self.xList = []
         self.yList = []
@@ -48,7 +48,7 @@ class controller:
         return self.Ji[index]
 
 
-    def setGeoFence(self, x=0, y=0):
+    def setGeoFence(self, x=1, y=1):
         """Applying geo fence as a square (0,0,x,y) """
 
         self.fenceX = x
@@ -57,15 +57,15 @@ class controller:
 
     def insideGeoFence(self, x, y):
 
-        if x>self.fenceX and x<0:
+        if x>self.fenceX or x<0:
             return False
-        elif y>self.fenceY and y<0:
+        elif y>self.fenceY or y<0:
             return False
 
         return True
 
 
-    def move(self, randomPointsSize=70, maxDelta = 0.01):
+    def move(self, randomPointsSize=100, maxDelta = 0.01, plot=True):
 
         deltaX = np.random.uniform(-maxDelta,maxDelta,randomPointsSize)
         deltaY = np.random.uniform(-maxDelta,maxDelta,randomPointsSize)
@@ -91,6 +91,32 @@ class controller:
         self.currentX = xCanditateList[tartgetPointIndex]
         self.currentY = yCanditateList[tartgetPointIndex]
 
+        if plot:
+            self.plotCanditates(xCanditateList, yCanditateList, jEstimated)
+
+
+    def plotCanditates(self, xCanditateList, yCanditateList, jEstimated):
+
+        canditate_folder = os.path.join(os.getcwd(), f"results_{self.ip}",
+                                        f"canditates", f"{self.getName()}")
+        try:
+            os.makedirs(canditate_folder)
+        except OSError:
+            if not os.path.isdir(canditate_folder):
+                raise
+
+        plt.scatter(xCanditateList, yCanditateList, c=jEstimated)
+
+        # plt.xlim(0,1)
+        # plt.ylim(0,1)
+
+        plt.colorbar()
+
+        plt.tight_layout()
+        outFile = os.path.join(canditate_folder, f"canditates_{self.timeStep}.png")
+        plt.savefig(outFile)
+        plt.close()
+
 
     def estimate(self,x,y):
 
@@ -102,10 +128,14 @@ class controller:
         data = np.stack((self.xList,self.yList),axis=1)
         weights = np.linspace(1,1,len(data[-ESTIMATORWINDOW:]))
 
+        # print(f"{self.getName()} {data}")
+
         self.estimator = self.model.fit(data[-ESTIMATORWINDOW:],self.Ji[-ESTIMATORWINDOW:])
 
 
-    def updateState(self):
+    def updateState(self, timeStep):
+
+        self.timeStep =timeStep
 
         self.xList.append(self.currentX)
         self.yList.append(self.currentY)
