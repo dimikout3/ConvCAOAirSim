@@ -68,6 +68,8 @@ def calculateCostJ(droneList, posInd):
 
     costJ.append(j)
 
+    distStable = distR2P
+
     # _________________ Update Ji _________________
     for ctrl in controllers:
 
@@ -84,7 +86,7 @@ def calculateCostJ(droneList, posInd):
                 if other.getName() != ctrl.getName():
                     xDrone, yDrone = other.getPositions(index=-1)
                 else:
-                    xDrone, yDrone = ctrl.getPositions(index=-2)
+                    xDrone, yDrone = other.getPositions(index=-2)
 
                 distR2P[i,r] = np.sqrt((xDrone-xTarget)**2 + (yDrone-yTarget)**2)
 
@@ -106,6 +108,13 @@ def calculateCostJ(droneList, posInd):
             ctrl.updateJi(ctrl.getJi() + delta)
         else:
             ctrl.updateJi(costJ[-1] + delta)
+
+        if posInd>=2:
+            print(f"distStable.shape:{distStable.shape} distR2P.shape{distR2P.shape}")
+            plt.imshow(distStable - distR2P, aspect=0.005)
+            plt.title(f"updating {ctrl.getName()}")
+            plt.colorbar()
+            plt.show()
 
         # print(f"[INFO] {ctrl.getName()} has delta:{delta:.4f} Ji:{ctrl.getJi():.4f}")
     print(f"[INFO] time = {posInd} - Cost J = {costJ[-1]}")
@@ -158,7 +167,7 @@ if __name__ == "__main__":
 
     dronesID = ["Drone1", "Drone2", "Drone3", "Drone4", "Drone5", "Drone6"]
     # dronesID = ["Drone1"]
-    # dronesID = ["Drone1", "Drone2"]
+    # dronesID = ["Drone1", "Drone2", "Drone3"]
 
     controllers = []
     for drone in dronesID:
