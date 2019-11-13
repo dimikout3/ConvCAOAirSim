@@ -10,7 +10,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 
-ESTIMATORWINDOW = 10
+ESTIMATORWINDOW = 40
 
 class controller:
 

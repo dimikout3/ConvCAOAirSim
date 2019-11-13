@@ -79,16 +79,20 @@ def calculateCostJ(droneList, posInd):
 
         for i in range(n_p):
 
-            for other in controllers:
+            for r,other in enumerate(controllers):
 
                 xTarget, yTarget = targetPoints[i][0], targetPoints[i][1]
 
+                # print(f"comparing other:{other.getName()} -- ego:{ctrl.getName()}")
                 if other.getName() != ctrl.getName():
-                    xDrone, yDrone = other.getPositions(index=-1)
+                    xDrone, yDrone = other.getPositions()
                 else:
                     xDrone, yDrone = other.getPositions(index=-2)
+                # xDrone, yDrone = other.getPositions()
 
                 distR2P[i,r] = np.sqrt((xDrone-xTarget)**2 + (yDrone-yTarget)**2)
+                # if other.getName() != ctrl.getName():
+                #     print(f"point:{i} diff:{distR2P[i,r] - distStable[i,r]}")
 
             minDist = np.min(distR2P[i,:])
             # imin = np.unravel_index(np.argmin(distR2P[i,:]),distR2P[i,:].shape)
@@ -102,19 +106,20 @@ def calculateCostJ(droneList, posInd):
                 j_isolation += KW*np.min(distR2P[:,i])
 
         delta = costJ[-1] - j_isolation
-        if delta<0: print("Success !!! negative Delta")
+        # if delta<0: print("Success !!! negative Delta")
 
         if (posInd>=1):
             ctrl.updateJi(ctrl.getJi() + delta)
         else:
             ctrl.updateJi(costJ[-1] + delta)
 
-        if posInd>=2:
-            print(f"distStable.shape:{distStable.shape} distR2P.shape{distR2P.shape}")
-            plt.imshow(distStable - distR2P, aspect=0.005)
-            plt.title(f"updating {ctrl.getName()}")
-            plt.colorbar()
-            plt.show()
+        # if posInd>=2:
+        #     # print(f"distStable.shape:{distStable.shape} distR2P.shape{distR2P.shape}")
+        #     diff = distStable - distR2P
+        #     plt.imshow(diff, aspect=0.5)
+        #     plt.title(f"updating {ctrl.getName()}")
+        #     plt.colorbar()
+        #     plt.show()
 
         # print(f"[INFO] {ctrl.getName()} has delta:{delta:.4f} Ji:{ctrl.getJi():.4f}")
     print(f"[INFO] time = {posInd} - Cost J = {costJ[-1]}")
@@ -165,9 +170,9 @@ if __name__ == "__main__":
 
     wayPointsSize = options.size
 
-    dronesID = ["Drone1", "Drone2", "Drone3", "Drone4", "Drone5", "Drone6"]
+    # dronesID = ["Drone1", "Drone2", "Drone3", "Drone4", "Drone5", "Drone6"]
     # dronesID = ["Drone1"]
-    # dronesID = ["Drone1", "Drone2", "Drone3"]
+    dronesID = ["Drone1", "Drone2", "Drone3"]
 
     controllers = []
     for drone in dronesID:
@@ -187,7 +192,7 @@ if __name__ == "__main__":
         # print(f"\n_____ time step: {positionIdx}")
         for ctrl in controllers:
             ctrl.updateState(positionIdx)
-            ctrl.move(maxDelta = 0.05)
+            ctrl.move(maxDelta = 0.01, plot=False)
 
         calculateCostJ(dronesID, positionIdx)
 
