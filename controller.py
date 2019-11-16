@@ -15,7 +15,7 @@ from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neural_network import MLPRegressor
 
-ESTIMATORWINDOW = 40
+ESTIMATORWINDOW = 55
 # the value wich will devide the field of view (constraing the yaw movement)
 CAM_DEV = 4
 ORIENTATION_DEV = 4
@@ -945,7 +945,7 @@ class controller:
         return self.detectionsCoordinates[-1], self.detectionsInfo[-1]
 
 
-    def scoreExcludingDetections(self, excludedList):
+    def scoreExcludingDetections(self, excludedList, minusDuplicates = True):
         """ Excluding dections that have been better detected (higher confidence)
             from other drones """
 
@@ -956,8 +956,9 @@ class controller:
 
         for i, info in enumerate(tempInfo):
 
-            if i in excludedList:
-                score -= info[1]
+            if (i in excludedList) :
+                if minusDuplicates:
+                    score -= info[1]
             else:
                 score += info[1]
             # del tempCoordinates[i]

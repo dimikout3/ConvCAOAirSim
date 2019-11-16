@@ -103,7 +103,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         plotDetections(detectionsDict, excludedDict, posInd)
 
         for ctrl in controllers:
-            score = ctrl.scoreExcludingDetections(excludedDict[ctrl.getName()])
+            score = ctrl.scoreExcludingDetections(excludedDict[ctrl.getName()], minusDuplicates=False)
             # ctrl.updateScore()
             # informationScore += ctrl.getScore(index=-1)
             informationScore += score
@@ -310,7 +310,7 @@ if __name__ == "__main__":
         for ctrl in controllers:
             # ctrl.randomMoveZ()
             # ctrl.move()
-            ctrl.moveOmniDirectional(maxTravelTime=1., maxYaw=10.)
+            ctrl.moveOmniDirectional(maxTravelTime=2.5, maxYaw=10.)
             # ctrl.move1DoF()
             # t = Thread(target = ctrl.randomMoveZ)
             # t.start()
