@@ -28,6 +28,7 @@ CAM_ROOL = 0.
 
 NORM = {'information':10.0, 'similarity':10.0}
 WEIGHT = {'information':1.0, 'similarity':-1.0}
+KW = 1
 
 def plotDetections(detectionsDict, excludedDict, posInd):
 
@@ -104,10 +105,14 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
         for ctrl in controllers:
             score = ctrl.scoreExcludingDetections(excludedDict[ctrl.getName()], minusDuplicates=False)
-            # ctrl.updateScore()
-            # informationScore += ctrl.getScore(index=-1)
+
             informationScore += score
-            ctrl.appendJi(score)
+
+            if score == 0. :
+                print(f"{ctrl.getName()} has no detections - dist to closest older ditection:{-KW*ctrl.getDistanceClosestDetection()}")
+                ctrl.appendJi(-KW*ctrl.getDistanceClosestDetection())
+            else:
+                ctrl.appendJi(score)
 
         J = informationScore
         costJ.append(J)

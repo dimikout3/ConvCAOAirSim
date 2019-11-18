@@ -945,6 +945,25 @@ class controller:
         return self.detectionsCoordinates[-1], self.detectionsInfo[-1]
 
 
+    def getDistanceClosestDetection(self):
+
+        min = 2*self.fenceR
+
+        xCurrent = self.state.kinematics_estimated.position.x_val
+        yCurrent = self.state.kinematics_estimated.position.y_val
+        zCurrent = self.state.kinematics_estimated.position.z_val
+
+        for detections in self.detectionsCoordinates:
+            for xDetection , yDetection, zDetection in detections:
+
+                dist = np.sqrt( (xCurrent - xDetection)**2 + (yCurrent - yDetection)**2 + (zCurrent - zDetection)**2)
+
+                if dist<min:
+                    min = dist
+
+        return min
+
+
     def scoreExcludingDetections(self, excludedList, minusDuplicates = True):
         """ Excluding dections that have been better detected (higher confidence)
             from other drones """
