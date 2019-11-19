@@ -110,7 +110,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
             if score == 0. :
                 print(f"{ctrl.getName()} has no detections - dist to closest older ditection:{-KW*ctrl.getDistanceClosestDetection()}")
-                ctrl.appendJi(-KW*ctrl.getDistanceClosestDetection())
+                ctrl.appendJi(-KW*ctrl.getDistanceClosestDetection(currentDetection = detectionsDict))
             else:
                 ctrl.appendJi(score)
 
