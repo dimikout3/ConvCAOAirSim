@@ -978,12 +978,15 @@ class controller:
         return min
 
 
-    def scoreExcludingDetections(self, excludedList, minusDuplicates = True):
+    def scoreExcludingDetections(self, index=-1, excludedList=[], minusDuplicates = True):
         """ Excluding dections that have been better detected (higher confidence)
             from other drones """
 
-        tempCoordinates = self.detectionsCoordinates[-1]
-        tempInfo = self.detectionsInfo[-1]
+        if abs(index)>len(self.detectionsCoordinates):
+            index=-1
+
+        tempCoordinates = self.detectionsCoordinates[index]
+        tempInfo = self.detectionsInfo[index]
 
         score = 0.
 
@@ -1087,6 +1090,13 @@ class controller:
             return self.detectionsCoordinates[-1]
         else:
             return self.detectionsCoordinates[index]
+
+    def getDetectionsInfo(self, index=-1):
+
+        if abs(index) > len(self.detectionsInfo):
+            return self.detectionsInfo[-1]
+        else:
+            return self.detectionsInfo[index]
 
 
     def quit(self):

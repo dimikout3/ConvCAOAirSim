@@ -73,9 +73,83 @@ def plotDetections(detectionsDict, excludedDict, posInd):
     plt.savefig(detected_objects_folder)
     plt.close()
 
+
+def updateDelta(ego="None", detectionsDict={}, excludedDict={}):
+
+    global controllers
+
+    score = ego.scoreExcludingDetections(excludedList=excludedDict[ego.getName()], minusDuplicates=False)
+
+    ego.appendJi(score)
+
+    # detectionsCoordinates = ego.getDetectionsCoordinates(index=-2)
+    # detectionsInfo = ego.getDetectionsInfo(index=-2)
+    # detectionsData = [detectionsCoordinates, detectionsInfo]
+    # detectionsDict[ego.getName()] = detectionsData
+    #
+    # excludedDict = similarityOut(detectionsDict, similarityKPI="DistExhaustive", ip=options.ip)
+    #
+    # J_information = detectionsScore(ego = ego, excludedDict = excludedDict)
+    # J_costNoDetection = noDetectionsCost(ego=ego, detectionsDict=detectionsDict)
+    #
+    # J_isolation = J_information + J_costNoDetection
+    # delta = costJ[-1] - J_isolation
+    #
+    # print(f"[INFO] {ego.getName()} has delta={delta:.5f}")
+    # if ego.posIdx == 0:
+    #     ego.appendJi(costJ[-1] + delta)
+    # elif ego.posIdx > 0:
+    #     ego.appendJi(ego.getJi() + delta)
+
+
+def detectionsScore(ego="None", excludedDict={}):
+
+    global controllers
+
+    informationScore = 0
+
+    for ctrl in controllers:
+
+        if isinstance(ego,str):
+            index = -1
+        else:
+            if ctrl.getName() == ego.getName():
+                index = -2
+            else:
+                index = -1
+
+        score = ctrl.scoreExcludingDetections(index=index, excludedList=excludedDict[ctrl.getName()], minusDuplicates=False)
+        informationScore += score
+
+    return informationScore
+
+
+def noDetectionsCost(ego="None", detectionsDict={}):
+
+    global controllers
+
+    score = 0.
+
+    for ctrl in controllers:
+
+        if isinstance(ego,str):
+            detectionsCoordinates = ctrl.getDetectionsCoordinates()
+        else:
+            if ctrl.getName() == ego.getName():
+                detectionsCoordinates = ctrl.getDetectionsCoordinates(index=-2)
+            else:
+                detectionsCoordinates = ctrl.getDetectionsCoordinates()
+
+        if detectionsCoordinates == []:
+            # calculate the closest distance to a currently detcted object
+            score += ctrl.getDistanceClosestDetection(detectionsDict)
+
+    return -KW*score
+
+
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
-    global options
+    global options, controllers
 
     print(f"[MONITORING] position {posInd}")
 
@@ -86,7 +160,6 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
     for timeStep in range(0,totalTime,timeInterval):
 
         detectionsDict = {}
-        informationScore = 0.0
 
         for i,ctrl in enumerate(controllers):
 
@@ -103,61 +176,15 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
         plotDetections(detectionsDict, excludedDict, posInd)
 
-        for ctrl in controllers:
-            score = ctrl.scoreExcludingDetections(excludedDict[ctrl.getName()], minusDuplicates=False)
+        informationScore = detectionsScore(excludedDict = excludedDict)
+        costNoDetection = noDetectionsCost(detectionsDict=detectionsDict)
 
-            informationScore += score
-
-            if score == 0. :
-                print(f"{ctrl.getName()} has no detections - dist to closest older ditection:{-KW*ctrl.getDistanceClosestDetection()}")
-                ctrl.appendJi(-KW*ctrl.getDistanceClosestDetection(currentDetection = detectionsDict))
-            else:
-                ctrl.appendJi(score)
-
-        J = informationScore
+        J = informationScore + costNoDetection
         costJ.append(J)
         print(f"[INFO] Cost J:{J:.3f}")
 
-        # TODO: computational complex ... simplify
-        # for ctrl in controllers:
-        #
-        #     information = []
-        #     similarity = []
-        #     cloudPoints = {}
-        #
-        #     for other in controllers:
-        #
-        #         if other.getName() != ctrl.getName():
-        #
-        #             information.append(other.getScore(index=-1))
-        #             pointCloud = other.getDetectionsCoordinates(index=-1)
-        #             cloudPoints[other.getName()] = pointCloud
-        #
-        #         else:
-        #
-        #             information.append(other.getScore(index=-2))
-        #             pointCloud = other.getDetectionsCoordinates(index=-2)
-        #             cloudPoints[other.getName()] = pointCloud
-        #
-        #     # _, avg = similarityOut(cloudPoints, similarityKPI="DistRandom", ip=options.ip)
-        #     sum, avg = similarityOut(cloudPoints, similarityKPI="DistExhaustive", ip=options.ip)
-        #     avg = sum
-        #
-        #     # avg = NORM['mutualLow'] if avg<NORM['mutualLow'] else avg
-        #     similarityAvgNorm = avg/NORM["similarity"]
-        #     informationScoreNorm = np.sum(information)/NORM['information']
-        #
-        #     J_isolation = informationScoreNorm*WEIGHT['information'] + similarityAvgNorm*WEIGHT['similarity']
-        #     delta = costJ[-1] - J_isolation
-        #
-        #     ctrl.appendContribution(delta)
-        #     # ctrl.appendJi(J_isolation)
-        #     if (posInd>=1):
-        #         ctrl.appendJi(ctrl.getJi() + delta)
-        #     else:
-        #         ctrl.appendJi(costJ[-1] + delta)
-        #
-        #     print(f"[INFO] {ctrl.getName()} has delta:{delta:.4f} Ji:{ctrl.getJi():.4f}")
+        for i,drone in enumerate(controllers):
+            updateDelta(ego=drone, detectionsDict=detectionsDict, excludedDict=excludedDict)
 
         time.sleep(timeInterval)
 
@@ -248,7 +275,8 @@ def launchAirSim():
 
 if __name__ == "__main__":
 
-    global options
+    global options, controllers
+
     options = get_options()
 
     generatingResultsFolders()
