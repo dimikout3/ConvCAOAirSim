@@ -273,6 +273,11 @@ def launchAirSim():
     sp.Popen(call, shell=True)
     time.sleep(10)
 
+
+def killAirSim():
+    """ Killing all the exe that have 'CityEnviron' string """
+    os.system('TASKKILL /F /IM CityEnviron*')
+
 if __name__ == "__main__":
 
     global options, controllers
@@ -285,7 +290,7 @@ if __name__ == "__main__":
 
     launchAirSim()
 
-    wayPointsSize = 500
+    wayPointsSize = 600
 
     OFFSETS = {"Drone1":[0,0,0],
                "Drone2":[0,-5,0],
@@ -450,4 +455,8 @@ if __name__ == "__main__":
     print("\n[RESETING] to original state ....")
     for ctrl in controllers: ctrl.quit()
     client.reset()
+
+    print(f"\n[KILLING|AIRSIM] closing CityEnviron.exe")
+    killAirSim()
+
     print(f"\n --- elapsed time:{startTime - time.time():.2f} [sec] ---")
