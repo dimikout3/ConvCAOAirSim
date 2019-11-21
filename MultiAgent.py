@@ -261,7 +261,8 @@ def fillTemplate():
 def get_options():
 
     optParser = optparse.OptionParser()
-    optParser.add_option("--ip", dest="ip", help="the ip of the simulations launched")
+    optParser.add_option("--ip", dest="ip", default=0, help="the ip of the simulations launched")
+    optParser.add_option("--waypoints", default=500, dest="wayPointsSize", help="the number of waypoints provided")
     options, args = optParser.parse_args()
 
     return options
@@ -290,7 +291,7 @@ if __name__ == "__main__":
 
     launchAirSim()
 
-    wayPointsSize = 600
+    wayPointsSize = options.wayPointsSize
 
     OFFSETS = {"Drone1":[0,0,0],
                "Drone2":[0,-5,0],

@@ -17,7 +17,9 @@ if __name__ == "__main__":
 
         print(f"Running simulation {ip}")
 
-        call = ["python","MultiAgent.py", "--ip", str(ip)]
+        call = ["python","MultiAgent.py",
+                "--ip", str(ip),
+                "--waypoints", str(600)]
         s = sp.Popen(call, shell=True)
 
         s.wait()
