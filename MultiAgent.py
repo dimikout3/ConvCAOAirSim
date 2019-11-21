@@ -74,32 +74,32 @@ def plotDetections(detectionsDict, excludedDict, posInd):
     plt.close()
 
 
-def updateDelta(ego="None", detectionsDict={}, excludedDict={}):
+def updateDelta(ego="None", detectionsDict={}):
 
     global controllers
 
-    score = ego.scoreExcludingDetections(excludedList=excludedDict[ego.getName()], minusDuplicates=False)
+    # score = ego.scoreExcludingDetections(excludedList=excludedDict[ego.getName()], minusDuplicates=False)
 
-    ego.appendJi(score)
+    # ego.appendJi(score)
 
-    # detectionsCoordinates = ego.getDetectionsCoordinates(index=-2)
-    # detectionsInfo = ego.getDetectionsInfo(index=-2)
-    # detectionsData = [detectionsCoordinates, detectionsInfo]
-    # detectionsDict[ego.getName()] = detectionsData
-    #
-    # excludedDict = similarityOut(detectionsDict, similarityKPI="DistExhaustive", ip=options.ip)
-    #
-    # J_information = detectionsScore(ego = ego, excludedDict = excludedDict)
-    # J_costNoDetection = noDetectionsCost(ego=ego, detectionsDict=detectionsDict)
-    #
-    # J_isolation = J_information + J_costNoDetection
-    # delta = costJ[-1] - J_isolation
-    #
-    # print(f"[INFO] {ego.getName()} has delta={delta:.5f}")
-    # if ego.posIdx == 0:
-    #     ego.appendJi(costJ[-1] + delta)
-    # elif ego.posIdx > 0:
-    #     ego.appendJi(ego.getJi() + delta)
+    detectionsCoordinates = ego.getDetectionsCoordinates(index=-2)
+    detectionsInfo = ego.getDetectionsInfo(index=-2)
+    detectionsData = [detectionsCoordinates, detectionsInfo]
+    detectionsDict[ego.getName()] = detectionsData
+
+    excludedDict = similarityOut(detectionsDict, similarityKPI="DistExhaustive", ip=options.ip)
+
+    J_information = detectionsScore(ego = ego, excludedDict = excludedDict)
+    J_costNoDetection = noDetectionsCost(ego=ego, detectionsDict=detectionsDict)
+
+    J_isolation = J_information + J_costNoDetection
+    delta = costJ[-1] - J_isolation
+
+    print(f"[INFO] {ego.getName()} has delta={delta:.5f}")
+    if ego.posIdx == 0:
+        ego.appendJi(costJ[-1] + delta)
+    elif ego.posIdx > 0:
+        ego.appendJi(ego.getJi() + delta)
 
 
 def detectionsScore(ego="None", excludedDict={}):
@@ -184,7 +184,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         print(f"[INFO] Cost J:{J:.3f}")
 
         for i,drone in enumerate(controllers):
-            updateDelta(ego=drone, detectionsDict=detectionsDict, excludedDict=excludedDict)
+            updateDelta(ego=drone, detectionsDict=detectionsDict.copy())
 
         time.sleep(timeInterval)
 
