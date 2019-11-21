@@ -164,7 +164,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         for i,ctrl in enumerate(controllers):
 
             ctrl.updateState(posInd, timeStep)
-            responses = ctrl.getImages(save_raw=True)
+            responses = ctrl.getImages(save_raw=False)
             ctrl.detectObjects(detector, save_detected=True)
 
             detectionsCoordinates, detectionsInfo = ctrl.getDetections()
@@ -341,14 +341,9 @@ if __name__ == "__main__":
         ptime = time.time()
 
         for ctrl in controllers:
-            # ctrl.randomMoveZ()
-            # ctrl.move()
-            ctrl.moveOmniDirectional(maxTravelTime=2.5, maxYaw=10.)
-            # ctrl.move1DoF()
-            # t = Thread(target = ctrl.randomMoveZ)
-            # t.start()
-            # x,y,z,speed = PATH[ctrl.getName()][positionIdx]
-            # ctrl.moveToPostion(x,y,z,speed)
+
+            ctrl.moveOmniDirectional(maxTravelTime=2.5, maxYaw=10.,
+                                     plotEstimator = False)
 
         # so drones start fromw worst positioning
         if positionIdx == 0:
@@ -395,9 +390,6 @@ if __name__ == "__main__":
         ax1.legend()
 
         for ctrl in controllers:
-            # stateList = ctrl.getStateList()
-            # yawList = [np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]) for state in stateList]
-            # ax2.plot(yawList, label=ctrl.getName())
             ax2.plot(ctrl.getJiList(), label=ctrl.getName())
 
         # ax2.set_ylim(-180,180)
@@ -442,24 +434,6 @@ if __name__ == "__main__":
                                 f"globalView_{positionIdx}.png")
         plt.savefig(globalView_file)
         plt.close()
-
-        # for ctrl in controllers:
-        #     detections = ctrl.getDetectionsCoordinates()
-        #     x,y = detections[:,0], detections[:,1]
-        #     plt.scatter(y, x, label=ctrl.getName())
-        #
-        # plt.legend()
-        # plt.xlim(xlim[0],xlim[1])
-        # plt.ylim(ylim[0],ylim[1])
-        #
-        # plt.xlabel("Y-Axis (NetWork)")
-        # plt.ylabel("X-Axis (NetWork)")
-        #
-        # detected_objects_folder = os.path.join(os.getcwd(),f"results_{options.ip}",
-        #                                        "detected_objects", f"detections_{positionIdx}.png")
-        # plt.savefig(detected_objects_folder)
-        # plt.close()
-
 
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
                             f"similarityList.pickle")

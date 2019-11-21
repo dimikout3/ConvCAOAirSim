@@ -24,7 +24,7 @@ DEBUG_GEOFENCE = False
 DEBUG_RANDOMZ = False
 DEBUG_MOVE = False
 DEBUG_MOVE1DOF = False
-DEBUG_MOVE_OMNI = True
+DEBUG_MOVE_OMNI = False
 WEIGHTS = {"cars":1.0, "persons":0.0 , "trafficLights":1.0}
 
 class controller:
@@ -131,23 +131,25 @@ class controller:
         return self.name
 
 
-    def getImages(self, save_raw=None):
+    def getImages(self, save_raw=False):
 
         responses = self.client.simGetImages([
             airsim.ImageRequest("0", airsim.ImageType.DepthPerspective, True),  #depth visualization image
             airsim.ImageRequest("0", airsim.ImageType.Scene, False, False)],
             vehicle_name = self.name)  #scene vision image in uncompressed RGB array
 
-        if save_raw != None:
+
+        img1d = np.frombuffer(responses[1].image_data_uint8, dtype=np.uint8) #get numpy array
+        img_rgb = img1d.reshape(responses[1].height, responses[1].width, 3) #reshape array to 3 channel image array H X W X 3
+        self.imageScene = img_rgb
+
+        if save_raw:
 
             filenameDepth = os.path.join(self.raw_dir, f"depth_time_{self.timeStep}" )
             airsim.write_pfm(os.path.normpath(filenameDepth + '.pfm'), airsim.get_pfm_array(responses[0]))
 
             filenameScene = os.path.join(self.raw_dir, f"scene_time_{self.timeStep}" )
-            img1d = np.frombuffer(responses[1].image_data_uint8, dtype=np.uint8) #get numpy array
-            img_rgb = img1d.reshape(responses[1].height, responses[1].width, 3) #reshape array to 3 channel image array H X W X 3
             cv2.imwrite(os.path.normpath(filenameScene + '.png'), img_rgb) # write to png
-            self.imageScene = img_rgb
 
         return responses
 
