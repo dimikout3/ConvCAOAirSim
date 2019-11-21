@@ -19,8 +19,8 @@ import subprocess as sp
 
 # TODO: rename to ruuner.py and kill airsim env when finished
 
-settingsDir = r"C:\Users\dkoutras\Documents\AirSim"
-envDir = r"C:\Users\dkoutras\Desktop\CityEnviron"
+settingsDir = r"C:/Users/" + os.getlogin() + "/Documents/AirSim"
+envDir = r"C:/Users/" + os.getlogin() + "/Documents/AirSim/CityEnviron"
 
 CAM_YAW = -0.5
 CAM_PITCH = 0.
@@ -270,7 +270,7 @@ def get_options():
 
 def launchAirSim():
 
-    call = f"{envDir}\\CityEnviron"
+    call = f"{envDir}\\CityEnviron -windowed -ResX=640 -ResY=480"
     sp.Popen(call, shell=True)
     time.sleep(10)
 
