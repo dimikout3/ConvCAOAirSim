@@ -25,7 +25,7 @@ DEBUG_GEOFENCE = False
 DEBUG_RANDOMZ = False
 DEBUG_MOVE = False
 DEBUG_MOVE1DOF = False
-DEBUG_MOVE_OMNI = False
+DEBUG_MOVE_OMNI = True
 WEIGHTS = {"cars":1.0, "persons":0.0 , "trafficLights":1.0}
 
 class controller:
@@ -109,6 +109,18 @@ class controller:
     def takeOff(self):
 
         return self.client.takeoffAsync(vehicle_name = self.name)
+
+
+    def moveToPositionYawMode(self, x, y, z, speed, yawmode = 0):
+        # moveToPositionAsync works only for relative coordinates, therefore we must
+        # subtrack the offset (which corresponds to global coordinates)
+        x -= self.offSetX
+        y -= self.offSetY
+        z -= self.offSetZ
+
+        return self.client.moveToPositionAsync(x, y, z, speed,
+                                               yaw_mode = airsim.YawMode(False, yawmode),
+                                               vehicle_name=self.name).join()
 
 
     def moveToPosition(self, x, y, z, speed):
@@ -710,10 +722,11 @@ class controller:
 
         tartgetPointIndex = np.argmax(jEstimaged)
 
-        self.moveToPosition(xCanditateList[tartgetPointIndex], yCanditateList[tartgetPointIndex],
-                           zCanditateList[tartgetPointIndex], 2)
-
-        self.rotateToYaw(yawCanditateList[tartgetPointIndex])
+        self.moveToPositionYawMode(xCanditateList[tartgetPointIndex],
+                                   yCanditateList[tartgetPointIndex],
+                                   zCanditateList[tartgetPointIndex],
+                                   2,
+                                   yawmode = yawCanditateList[tartgetPointIndex])
 
         if plotEstimator:
             self.plotEstimator(xCanditateList, yCanditateList, yawCanditateList, jEstimaged)
@@ -721,10 +734,6 @@ class controller:
         if DEBUG_MOVE_OMNI:
             print(f"\n[DEBUG][MOVE_OMNI] ----- {self.getName()} -----")
             print(f"[DEBUG][MOVE_OMNI] target pose (x:{xCanditateList[tartgetPointIndex]:.2f} ,y:{yCanditateList[tartgetPointIndex]:.2f}, z:{zCanditateList[tartgetPointIndex]:.2f}, yaw:{yawCanditateList[tartgetPointIndex]:.2f})")
-            # print(f"[DEBUG][MOVE_OMNI] travelTime: {travelTime}")
-            # print(f"[DEBUG][MOVE_OMNI] yawCanditate: {yawCanditate}")
-            # print(f"[DEBUG][MOVE_OMNI] jPoint: {jPoint}")
-            # print(f"[DEBUG][MOVE_OMNI] tartgetPointIndex: {tartgetPointIndex}")
 
     def estimate(self,x,y,yaw):
 
