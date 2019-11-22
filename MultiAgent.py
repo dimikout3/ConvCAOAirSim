@@ -161,20 +161,9 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
         detectionsDict = {}
 
-        # for i,ctrl in enumerate(controllers):
-        #
-        #     ctrl.updateState(posInd, timeStep)
-        #     responses = ctrl.getImages(save_raw=False)
-        #     ctrl.detectObjects(detector, save_detected=True)
-        #
-        #     detectionsCoordinates, detectionsInfo = ctrl.getDetections()
-        #     detectionsData = [detectionsCoordinates, detectionsInfo]
-        #
-        #     detectionsDict[ctrl.getName()] = detectionsData
-
         for i,ctrl in enumerate(controllers):
             ctrl.updateState(posInd, timeStep)
-            responses = ctrl.getImages(save_raw=False)
+            ctrl.getImages(save_raw=False)
 
         threadList = []
         for i,ctrl in enumerate(controllers):
@@ -353,7 +342,7 @@ if __name__ == "__main__":
         # no need for task list (just setting values here)
         ctrl.setGeoFence(x = 25, y = -25, z = -14, r=75)
 
-    print("\nTaking initail photos")
+    print("\nTaking initial photos")
     for ctrl in controllers:
         # no need for task list (just setting values here)
         ctrl.getImages()
@@ -467,8 +456,8 @@ if __name__ == "__main__":
         plt.savefig(globalView_file)
         plt.close()
 
-        print(f"----- ploting global view & costJ adds time: {time.time() - plotTime:.3f} ------")
-        print("---------------------------------\n")
+        # print(f"----- ploting global view & costJ adds time: {time.time() - plotTime:.3f} ------")
+        # print("---------------------------------\n")
 
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
                             f"similarityList.pickle")

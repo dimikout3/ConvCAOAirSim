@@ -618,32 +618,16 @@ class controller:
 
         imageDepth = []
 
-        # responses = self.client.simGetImages([
-        #     airsim.ImageRequest("1", airsim.ImageType.DepthPerspective, True),
-        #     # airsim.ImageRequest("2", airsim.ImageType.DepthPerspective, True),
-        #     # airsim.ImageRequest("3", airsim.ImageType.DepthPerspective, True),
-        #     airsim.ImageRequest("4", airsim.ImageType.DepthPerspective, True)],
-        #     vehicle_name = self.name)  #scene vision image in uncompressed RGB array
-
-        # imageDepthFront = airsim.list_to_2d_float_array(responses[0].image_data_float,
-        #                                            responses[0].width,
-        #                                            responses[0].height)
         imageDepthFront = self.imageDepthFront
         imageDepth.append(imageDepthFront)
 
-        # imageDepthBack = airsim.list_to_2d_float_array(responses[1].image_data_float,
-        #                                            responses[1].width,
-        #                                            responses[1].height)
         imageDepthBack = self.imageDepthBack
         imageDepth.append(imageDepthBack)
 
         return imageDepth, self.imageDepthPeripheralHeight, self.imageDepthPeripheralWidth
 
 
-    def moveOmniDirectional(self, randomPointsSize=70, maxTravelTime=5.,
-                            minDist=5., plotEstimator=True, maxYaw=15.):
-
-        axiZ = self.altitude
+    def getCanditates(self, randomPointsSize=70, maxTravelTime=5., minDist=5., maxYaw=15.):
 
         speedScalar = 1
         np.random.seed()
@@ -711,6 +695,18 @@ class controller:
                     zCanditateList.append(zCanditate)
                     yawCanditateList.append(yawCanditate[i])
 
+        return jEstimaged, xCanditateList, yCanditateList, zCanditateList, yawCanditateList
+
+
+    def moveOmniDirectional(self, randomPointsSize=70, maxTravelTime=5.,
+                            minDist=5., plotEstimator=True, maxYaw=15.):
+
+        canditatesData = self.getCanditates(randomPointsSize=randomPointsSize,
+                                            maxTravelTime=maxTravelTime,
+                                            minDist=minDist,
+                                            maxYaw=maxYaw)
+
+        jEstimaged, xCanditateList, yCanditateList, zCanditateList, yawCanditateList = canditatesData
 
         tartgetPointIndex = np.argmax(jEstimaged)
 
