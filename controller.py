@@ -110,6 +110,17 @@ class controller:
 
         return self.client.takeoffAsync(vehicle_name = self.name)
 
+    def moveToPositionYawModeAsync(self, x, y, z, speed, yawmode = 0):
+        # moveToPositionAsync works only for relative coordinates, therefore we must
+        # subtrack the offset (which corresponds to global coordinates)
+        x -= self.offSetX
+        y -= self.offSetY
+        z -= self.offSetZ
+
+        return self.client.moveToPositionAsync(x, y, z, speed,
+                                               yaw_mode = airsim.YawMode(False, yawmode),
+                                               vehicle_name=self.name)
+
 
     def moveToPositionYawMode(self, x, y, z, speed, yawmode = 0):
         # moveToPositionAsync works only for relative coordinates, therefore we must
@@ -722,7 +733,7 @@ class controller:
 
         tartgetPointIndex = np.argmax(jEstimaged)
 
-        self.moveToPositionYawMode(xCanditateList[tartgetPointIndex],
+        task = self.moveToPositionYawModeAsync(xCanditateList[tartgetPointIndex],
                                    yCanditateList[tartgetPointIndex],
                                    zCanditateList[tartgetPointIndex],
                                    2,
@@ -734,6 +745,8 @@ class controller:
         if DEBUG_MOVE_OMNI:
             print(f"\n[DEBUG][MOVE_OMNI] ----- {self.getName()} -----")
             print(f"[DEBUG][MOVE_OMNI] target pose (x:{xCanditateList[tartgetPointIndex]:.2f} ,y:{yCanditateList[tartgetPointIndex]:.2f}, z:{zCanditateList[tartgetPointIndex]:.2f}, yaw:{yawCanditateList[tartgetPointIndex]:.2f})")
+
+        return task
 
     def estimate(self,x,y,yaw):
 

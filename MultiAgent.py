@@ -359,10 +359,14 @@ if __name__ == "__main__":
 
         ptime = time.time()
 
+        tasks = []
         for ctrl in controllers:
+            t = ctrl.moveOmniDirectional(maxTravelTime=2.5, maxYaw=10.,
+                                         plotEstimator = False)
+            tasks.append(t)
 
-            ctrl.moveOmniDirectional(maxTravelTime=2.5, maxYaw=10.,
-                                     plotEstimator = False)
+        for task in tasks[::-1]:
+            task.join()
 
         # so drones start fromw worst positioning
         if positionIdx == 0:
