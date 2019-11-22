@@ -153,7 +153,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
     print(f"[MONITORING] position {posInd}")
 
-    detector = yoloDetector.yoloDetector()
+    # detector = yoloDetector.yoloDetector()
 
     global similarityList, informationScoreList, costJ
 
@@ -161,12 +161,30 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
         detectionsDict = {}
 
-        for i,ctrl in enumerate(controllers):
+        # for i,ctrl in enumerate(controllers):
+        #
+        #     ctrl.updateState(posInd, timeStep)
+        #     responses = ctrl.getImages(save_raw=False)
+        #     ctrl.detectObjects(detector, save_detected=True)
+        #
+        #     detectionsCoordinates, detectionsInfo = ctrl.getDetections()
+        #     detectionsData = [detectionsCoordinates, detectionsInfo]
+        #
+        #     detectionsDict[ctrl.getName()] = detectionsData
 
+        for i,ctrl in enumerate(controllers):
             ctrl.updateState(posInd, timeStep)
             responses = ctrl.getImages(save_raw=False)
-            ctrl.detectObjects(detector, save_detected=True)
 
+        threadList = []
+        for i,ctrl in enumerate(controllers):
+            thread = Thread(target = ctrl.detectObjects)
+            thread.start()
+            threadList.append(thread)
+        for thread in threadList:
+            thread.join()
+
+        for i,ctrl in enumerate(controllers):
             detectionsCoordinates, detectionsInfo = ctrl.getDetections()
             detectionsData = [detectionsCoordinates, detectionsInfo]
 
@@ -335,6 +353,12 @@ if __name__ == "__main__":
         # no need for task list (just setting values here)
         ctrl.setGeoFence(x = 25, y = -25, z = -14, r=75)
 
+    print("\nTaking initail photos")
+    for ctrl in controllers:
+        # no need for task list (just setting values here)
+        ctrl.getImages()
+
+
     startTime = time.time()
 
     global similarityList, informationScoreList, costJ
@@ -385,6 +409,8 @@ if __name__ == "__main__":
 
         print(f"----- elapsed time: {time.time() - ptime:.3f} ------")
         print("---------------------------------\n")
+
+        plotTime = time.time()
 
         fig, (ax1, ax2) = plt.subplots(2)
 
@@ -440,6 +466,9 @@ if __name__ == "__main__":
                                 f"globalView_{positionIdx}.png")
         plt.savefig(globalView_file)
         plt.close()
+
+        print(f"----- ploting global view & costJ adds time: {time.time() - plotTime:.3f} ------")
+        print("---------------------------------\n")
 
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
                             f"similarityList.pickle")

@@ -7,6 +7,7 @@ import time
 import pickle
 import utilities.utils as utils
 import matplotlib.pyplot as plt
+import yoloDetector
 
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
@@ -35,6 +36,8 @@ class controller:
         self.name = droneName
 
         self.ip = ip
+
+        self.detector = yoloDetector.yoloDetector()
 
         self.scoreDetections = []
         self.scoreDetectionsNum = []
@@ -135,13 +138,28 @@ class controller:
 
         responses = self.client.simGetImages([
             airsim.ImageRequest("0", airsim.ImageType.DepthPerspective, True),  #depth visualization image
-            airsim.ImageRequest("0", airsim.ImageType.Scene, False, False)],
+            airsim.ImageRequest("0", airsim.ImageType.Scene, False, False),
+            airsim.ImageRequest("1", airsim.ImageType.DepthPerspective, True),
+            airsim.ImageRequest("4", airsim.ImageType.DepthPerspective, True)],
             vehicle_name = self.name)  #scene vision image in uncompressed RGB array
-
 
         img1d = np.frombuffer(responses[1].image_data_uint8, dtype=np.uint8) #get numpy array
         img_rgb = img1d.reshape(responses[1].height, responses[1].width, 3) #reshape array to 3 channel image array H X W X 3
         self.imageScene = img_rgb
+        self.imageDepthCamera = responses[0]
+
+        imageDepthFront = airsim.list_to_2d_float_array(responses[2].image_data_float,
+                                                   responses[2].width,
+                                                   responses[2].height)
+        self.imageDepthFront = imageDepthFront
+
+        imageDepthBack = airsim.list_to_2d_float_array(responses[3].image_data_float,
+                                                   responses[3].width,
+                                                   responses[3].height)
+        self.imageDepthBack = imageDepthBack
+
+        self.imageDepthPeripheralWidth = responses[3].width
+        self.imageDepthPeripheralHeight = responses[3].height
 
         if save_raw:
 
@@ -600,34 +618,26 @@ class controller:
 
         imageDepth = []
 
-        responses = self.client.simGetImages([
-            airsim.ImageRequest("1", airsim.ImageType.DepthPerspective, True),
-            # airsim.ImageRequest("2", airsim.ImageType.DepthPerspective, True),
-            # airsim.ImageRequest("3", airsim.ImageType.DepthPerspective, True),
-            airsim.ImageRequest("4", airsim.ImageType.DepthPerspective, True)],
-            vehicle_name = self.name)  #scene vision image in uncompressed RGB array
+        # responses = self.client.simGetImages([
+        #     airsim.ImageRequest("1", airsim.ImageType.DepthPerspective, True),
+        #     # airsim.ImageRequest("2", airsim.ImageType.DepthPerspective, True),
+        #     # airsim.ImageRequest("3", airsim.ImageType.DepthPerspective, True),
+        #     airsim.ImageRequest("4", airsim.ImageType.DepthPerspective, True)],
+        #     vehicle_name = self.name)  #scene vision image in uncompressed RGB array
 
-        imageDepthFront = airsim.list_to_2d_float_array(responses[0].image_data_float,
-                                                   responses[0].width,
-                                                   responses[0].height)
+        # imageDepthFront = airsim.list_to_2d_float_array(responses[0].image_data_float,
+        #                                            responses[0].width,
+        #                                            responses[0].height)
+        imageDepthFront = self.imageDepthFront
         imageDepth.append(imageDepthFront)
 
-        # imageDepthRight = airsim.list_to_2d_float_array(responses[1].image_data_float,
+        # imageDepthBack = airsim.list_to_2d_float_array(responses[1].image_data_float,
         #                                            responses[1].width,
         #                                            responses[1].height)
-        # imageDepth.append(imageDepthRight)
-        #
-        # imageDepthBack = airsim.list_to_2d_float_array(responses[2].image_data_float,
-        #                                            responses[2].width,
-        #                                            responses[2].height)
-        # imageDepth.append(imageDepthBack)
+        imageDepthBack = self.imageDepthBack
+        imageDepth.append(imageDepthBack)
 
-        imageDepthLeft = airsim.list_to_2d_float_array(responses[1].image_data_float,
-                                                   responses[1].width,
-                                                   responses[1].height)
-        imageDepth.append(imageDepthLeft)
-
-        return imageDepth, responses[1].height, responses[1].width
+        return imageDepth, self.imageDepthPeripheralHeight, self.imageDepthPeripheralWidth
 
 
     def moveOmniDirectional(self, randomPointsSize=70, maxTravelTime=5.,
@@ -894,14 +904,16 @@ class controller:
             os.makedirs(self.detected_dir)
 
 
-    def detectObjects(self, detector, save_detected=False):
+    def detectObjects(self, save_detected=False):
+
+        # detector = yoloDetector.yoloDetector()
 
         detected_file_name = None
         if save_detected:
             detected_file_name = os.path.join(self.detected_dir,
                                               f"detected_time_{self.timeStep}.png")
 
-        detections = detector.detect(self.imageScene, display=False, save=detected_file_name)
+        detections = self.detector.detect(self.imageScene, display=False, save=detected_file_name)
 
         # detections = {'cars':[(pixel_x,pixel_y,detecions_id,confidece),(pixel_x,pixel_y,detecions_id,confidece), ...]}
         # val[4] -> confidence of each detections
@@ -919,7 +931,8 @@ class controller:
                 pixelY.append(object[1])
                 # scoreNum += WEIGHTS[detectionClass]
 
-        depthImage = self.getDepthImage()
+        # depthImage = self.getDepthImage()
+        depthImage = self.imageDepthCamera
 
         xRelative, yRelative, zRelative = utils.to3D(pixelX, pixelY,
                                           self.cameraInfo, depthImage)
