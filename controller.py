@@ -25,7 +25,8 @@ DEBUG_GEOFENCE = False
 DEBUG_RANDOMZ = False
 DEBUG_MOVE = False
 DEBUG_MOVE1DOF = False
-DEBUG_MOVE_OMNI = True
+DEBUG_MOVE_OMNI = False
+DEBUG_ESTIMATOR = False
 WEIGHTS = {"cars":1.0, "persons":0.0 , "trafficLights":1.0}
 
 class controller:
@@ -789,6 +790,9 @@ class controller:
         yawList = [(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]+np.pi)/(np.pi+np.pi) for state in self.stateList]
 
         data = np.stack((xList,yList,yawList),axis=1)
+
+        if DEBUG_ESTIMATOR:
+            print(f"\n[ESTIMATOR] {self.getName()} is using data:{[list(i) for i in data[-ESTIMATORWINDOW:]]} and Ji:{self.j_i[-ESTIMATORWINDOW:]}")
 
         weights = np.linspace(1,1,len(data[-ESTIMATORWINDOW:]))
 

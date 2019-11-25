@@ -377,7 +377,7 @@ if __name__ == "__main__":
                 ctrl.rotateToYaw(yawRandom)
                 # ctrl.rotateToYaw(-5 + i*90)
 
-
+        time.sleep(2)
         monitor(dronesID, positionIdx)
 
         for ctrl in controllers:

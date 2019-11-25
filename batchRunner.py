@@ -4,14 +4,29 @@
 import os
 import time
 import subprocess as sp
+import shutil
 
 
 VERBOSE = True
 # Number of simulations
 Nsim = 10
 
+def deleteExistingResults():
+
+    print("Deleting any previous existing 'results'")
+
+    files = os.listdir()
+
+    for file in files:
+
+        if "results_" in file:
+            path = os.path.join(os.getcwd(),file)
+            shutil.rmtree(path)
+
 
 if __name__ == "__main__":
+
+    deleteExistingResults()
 
     for ip in range(1,Nsim+1):
 
