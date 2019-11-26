@@ -7,9 +7,9 @@ import subprocess as sp
 import shutil
 
 
-VERBOSE = True
 # Number of simulations
 Nsim = 10
+SAVE_LOG = True
 
 def deleteExistingResults():
 
@@ -35,6 +35,18 @@ if __name__ == "__main__":
         call = ["python","MultiAgent.py",
                 "--ip", str(ip),
                 "--waypoints", str(600)]
-        s = sp.Popen(call, shell=True)
 
-        s.wait()
+        if SAVE_LOG:
+            fout = open(f"stdOutput_{ip}.txt","w")
+            s = sp.Popen(call, shell=True, stdout=fout)
+            fout.close()
+        else:
+            s = sp.Popen(call, shell=True)
+
+        exitCode = s.wait()
+
+        if exitCode != 0:
+            # error happened
+            print(f"Simulation {ip} failed ...")
+            print("Killing any AirSim Enviroment")
+            os.system('TASKKILL /F /IM CityEnviron*')
