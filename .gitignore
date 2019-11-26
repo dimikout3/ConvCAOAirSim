@@ -5,6 +5,7 @@
 *results*
 /yolo-coco/*
 /__pycache__/*
+*stdOutput*
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
