@@ -390,6 +390,7 @@ if __name__ == "__main__":
                                          plotEstimator = False)
             tasks.append(t)
 
+        # TODO: Chech if we have collision, if yes, then move drone to previous position
         for task in tasks[::-1]:
             task.join()
 

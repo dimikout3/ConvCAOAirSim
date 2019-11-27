@@ -29,7 +29,7 @@ DEBUG_RANDOMZ = False
 DEBUG_MOVE = False
 DEBUG_MOVE1DOF = False
 DEBUG_MOVE_OMNI = False
-DEBUG_ESTIMATOR = False
+DEBUG_ESTIMATOR = True
 WEIGHTS = {"cars":1.0, "persons":0.0 , "trafficLights":1.0}
 
 class controller:
@@ -643,26 +643,22 @@ class controller:
         if yaw < -np.pi:
             yaw = np.pi*2 - yaw
 
-        # Normalize the X,Y,Yaw values (faster convergence)
-        yaw = (yaw + np.pi)/(np.pi + np.pi)
-        # x = ( x - (self.fenceX-self.fenceR) )/(2*self.fenceR)
-        # y = ( y - (self.fenceY-self.fenceR) )/(2*self.fenceR)
-        x = (x - self.minX) / (self.maxX - self.minX)
-        y = (y - self.minY) / (self.maxY - self.minY)
-
         return float(self.estimator.predict([[x,y,yaw]]))
 
 
     def updateEstimator(self):
 
-        xList = [(state[0].kinematics_estimated.position.x_val-self.minX)/(self.maxX - self.minX) for state in self.stateList]
-        yList = [(state[0].kinematics_estimated.position.y_val-self.minY)/(self.maxY-self.minY) for state in self.stateList]
-        yawList = [(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]+np.pi)/(np.pi+np.pi) for state in self.stateList]
+        xList = [state[0].kinematics_estimated.position.x_val for state in self.stateList]
+        yList = [state[0].kinematics_estimated.position.y_val for state in self.stateList]
+        yawList = [airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2] for state in self.stateList]
+
+        yawListDegrees = [np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]) for state in self.stateList]
 
         data = np.stack((xList,yList,yawList),axis=1)
+        dataDegrees = np.stack((xList,yList,yawListDegrees),axis=1)
 
         if DEBUG_ESTIMATOR:
-            print(f"\n[ESTIMATOR] {self.getName()} is using data:{[list(i) for i in data[-ESTIMATORWINDOW:]]} and Ji:{self.j_i[-ESTIMATORWINDOW:]}")
+            print(f"\n[ESTIMATOR] {self.getName()} is using data:{[list(i) for i in dataDegrees[-ESTIMATORWINDOW:]]} and Ji:{self.j_i[-ESTIMATORWINDOW:]}")
 
         weights = np.linspace(1,1,len(data[-ESTIMATORWINDOW:]))
 
