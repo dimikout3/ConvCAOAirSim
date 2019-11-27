@@ -68,20 +68,8 @@ class controller:
 
         self.model1DoF = Pipeline([('poly', PolynomialFeatures(degree=3)),
                                ('linear', LinearRegression())])
-        # self.model1DoF = SVR(gamma='scale', C=1.0, epsilon=0.2)
-        # self.model1DoF = KNeighborsRegressor(n_neighbors=2)
-        # self.model1DoF = LinearRegression()
-        # self.model1DoF = MLPRegressor( hidden_layer_sizes=(10,),  activation='relu', solver='lbfgs', max_iter=10000)
-
-        self.model2DoF = Pipeline([('poly', PolynomialFeatures(degree=2)),
-                               ('linear', LinearRegression(fit_intercept=False))])
 
         self.estimator = self.model.fit([np.random.uniform(0,1,3)],[np.random.uniform(0,1)])
-
-        # self.estimator1DoF = self.model1DoF.fit([np.random.uniform(0,1,1)],[[np.random.uniform(0,1)]])
-        self.estimator1DoF = self.model1DoF.fit([np.random.uniform(0,1,1)],[np.random.uniform(0,1)])
-
-        self.estimator2DoF = self.model2DoF.fit([np.random.uniform(0,1,2)],[[np.random.uniform(0,1)]])
 
         self.estimations = []
         self.historyData = []
@@ -113,6 +101,7 @@ class controller:
     def takeOff(self):
 
         return self.client.takeoffAsync(vehicle_name = self.name)
+
 
     def moveToPositionYawModeAsync(self, x, y, z, speed, yawmode = 0):
         # moveToPositionAsync works only for relative coordinates, therefore we must
@@ -396,153 +385,6 @@ class controller:
             self.updateMultirotorState()
 
 
-    def randomMoveZ(self):
-
-        minThreshold = 5
-        axiZ = -15
-        pixeSquare = 150
-        speedScalar = 3
-
-        changeYaw = 0.0
-
-        tries = 0
-
-        while True:
-
-            tries += 1
-
-            self.applyGeoFence()
-
-            _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
-
-            # restint the seed for more random results (if it is not included it yawRandom
-            # is not random anymore ... )
-            np.random.seed()
-
-            if tries >=5:
-                # if stuck drone should rotatte only towards one side (clockwise)
-                # otherwise it will constantly orient towards the obstackel (mean value
-                # of many different randomYaw will be 0
-                randomYaw = np.random.uniform(0, np.pi/4)
-            else:
-                randomYaw = np.random.uniform(-np.pi/4, np.pi/4)
-
-            self.client.rotateByYawRateAsync(np.degrees(randomYaw),1,vehicle_name=self.name).join()
-            self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
-
-            self.getDepthFront()
-            imageDepth = airsim.list_to_2d_float_array(self.imageDepthFront.image_data_float,
-                                                       self.imageDepthFront.width,
-                                                       self.imageDepthFront.height)
-
-            midW = self.imageDepthFront.width/2
-            midH = self.imageDepthFront.width/2
-            imageDepthTarget = imageDepth[int(midW-pixeSquare):int(midW+pixeSquare),
-                                          int(midH-pixeSquare):int(midH+pixeSquare)]
-
-            current = np.min(imageDepthTarget)
-
-            travelTime = np.random.uniform(5.,10.)
-
-            if (current - travelTime*speedScalar)<minThreshold:
-                travelTime = (current - (minThreshold-2))/speedScalar
-            if travelTime<5.0: travelTime = 5.
-
-            if DEBUG_RANDOMZ:
-                print(f"\n[DEBUG][RANDOM_MOVE_Z] ----- {self.name} -----")
-                print(f"[DEBUG][RANDOM_MOVE_Z] currentYaw:{np.degrees(currentYaw):.4f} [deg]")
-                print(f"[DEBUG][RANDOM_MOVE_Z] randomYaw:{np.degrees(randomYaw):.4f} [deg]")
-                print(f"[DEBUG][RANDOM_MOVE_Z] available current distance:{current:.2f} [m]")
-                print(f"[DEBUG][RANDOM_MOVE_Z] suggested travel time:{travelTime:.2f} [sec]")
-                print(f"[DEBUG][RANDOM_MOVE_Z] expected travel dist:{travelTime*speedScalar:.2f} [m]")
-
-            if (current - travelTime*speedScalar)>minThreshold:
-
-                anglesSpeed = currentYaw + randomYaw
-                if DEBUG_RANDOMZ:
-                    print(f"[DEBUG][RANDOM_MOVE_Z] anglesSpeed:{np.degrees(anglesSpeed):.4f} [deg]")
-
-                vx = np.cos(anglesSpeed)
-                vy = np.sin(anglesSpeed)
-                if DEBUG_RANDOMZ:
-                    print(f"[DEBUG][RANDOM_MOVE_Z] has Vx:{vx*speedScalar:.3f} Vy:{vy*speedScalar:.3f} [m/s]")
-
-                #BUG: huge bug, duration drone will move after the execution of the duration ....
-                #TODO: Find a walk around
-                task = self.client.moveByVelocityZAsync(speedScalar*vx, speedScalar*vy, axiZ, travelTime,
-                                            airsim.DrivetrainType.ForwardOnly,
-                                            airsim.YawMode(False, 0),
-                                            vehicle_name=self.name).join()
-                self.stabilize().join()
-
-                break
-            elif tries >= 10:
-                # if drone is stucked in tree or building send it to initial position
-                # TODO: keep track of position and send it to previous position (it can surely access it).
-                pose = self.client.simGetVehiclePose()
-                pose.position.x_val = 0
-                pose.position.y_val = 0
-                pose.position.z_val = -15
-
-                # task = self.client.moveToPositionAsync(0,0,-10,3)
-                # QUESTION: Ignore collision -> what it does ? (now its True)
-                self.client.simSetVehiclePose(pose, True, self.getName())
-                self.stabilize().join()
-
-                print(f"[WARNING] Reached max tries:{tries} ... teleporting to initial position")
-                tries = 0
-            else:
-                print(f"[WARNING] {self.name} changing yaw due to imminent collision ...")
-
-            # self.state = self.getState()
-            self.updateMultirotorState()
-
-
-    def move1DoF(self, randomPointsSize=70):
-
-        np.random.seed()
-
-        # camera field of view (degrees)
-        camFOV = self.cameraInfo.fov
-        leftDeg, rightDeg = -camFOV/2 , camFOV/2
-
-        # self.state = self.getState()
-        self.updateMultirotorState()
-        _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
-
-        self.getDepthFront()
-        imageDepth = airsim.list_to_2d_float_array(self.imageDepthFront.image_data_float,
-                                                   self.imageDepthFront.width,
-                                                   self.imageDepthFront.height)
-
-        height, width = self.imageDepthFront.height, self.imageDepthFront.width
-        pixel10H = height*0.1
-        lowHeight, highHeight = int(height/2-pixel10H), int(height/2+pixel10H)
-        wLow, wHigh = int(width*0.1) ,int(width*0.1)
-
-        yawCanditate = np.random.uniform(leftDeg/5, rightDeg/5, randomPointsSize)
-
-        # validPoint = []
-        jPoint = []
-        for i in range(len(yawCanditate)):
-
-            jPoint.append(self.estimate1DoF(yawCanditate[i]+np.degrees(currentYaw)))
-
-        self.estimations.append(jPoint)
-
-        tartgetPointIndex = np.argmax(jPoint)
-
-        self.client.rotateByYawRateAsync(yawCanditate[tartgetPointIndex],1,vehicle_name=self.name).join()
-        self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
-
-        if DEBUG_MOVE1DOF:
-            print(f"\n[DEBUG][MOVE1DOF] ----- {self.getName()} -----")
-            print(f"[DEBUG][MOVE1DOF] yawCanditate: {yawCanditate[tartgetPointIndex]}")
-            print(f"[DEBUG][MOVE1DOF] currentYaw: {np.degrees(currentYaw):.3f}")
-            # print(f"[DEBUG][MOVE1DOF] estimations: {jPoint}")
-            # print(f"[DEBUG][MOVE1DOF] tartgetsPointIndex: {tartgetPointIndex}")
-
-
     def move(self, randomPointsSize=70, maxTravelTime=5., minDist=5., plotEstimator=True):
 
         axiZ = self.altitude
@@ -811,23 +653,6 @@ class controller:
         return float(self.estimator.predict([[x,y,yaw]]))
 
 
-    def estimate1DoF(self,yaw):
-
-        if yaw > 180:
-            yaw = -360 + yaw
-        if yaw < -180:
-            yaw = 360 - yaw
-
-        yaw = (yaw + 180)/(180 + 180)
-
-        return float(self.estimator1DoF.predict([[yaw]]))
-
-
-    def estimate2Dof(self,x,y,yaw):
-
-        return float(self.estimator.predict([[x,y,np.radians(yaw)]]))
-
-
     def updateEstimator(self):
 
         xList = [(state[0].kinematics_estimated.position.x_val-self.minX)/(self.maxX - self.minX) for state in self.stateList]
@@ -842,58 +667,6 @@ class controller:
         weights = np.linspace(1,1,len(data[-ESTIMATORWINDOW:]))
 
         self.estimator = self.model.fit(data[-ESTIMATORWINDOW:],self.j_i[-ESTIMATORWINDOW:], **{'linear__sample_weight': weights})
-
-
-    def updateEstimator1DoF(self):
-
-        yawList = [[(np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2])+180)/(180+180)] for state in self.stateList]
-
-        # Ji(k) = Ji(k-1) + delta(=contribution)
-        j_i_k = [[self.j_i[i-1]] for i in range(len(self.contribution))]
-        # j_i_k = [self.j_i[i-1] for i in range(len(self.contribution))]
-
-        self.historyData.append([yawList,j_i_k])
-        # print(f"\n --- {self.getName()}")
-        # print(f"updating estimator ... yawList:{yawList[-ESTIMATORWINDOW:]}")
-        # print(f"updating estimator ... Ji(k):{j_i_k[-ESTIMATORWINDOW:]}")
-
-        weights = np.linspace(0.1,1,len(yawList[-ESTIMATORWINDOW:]))
-
-        self.estimator1DoF = self.model1DoF.fit(yawList[-ESTIMATORWINDOW:],j_i_k[-ESTIMATORWINDOW:], **{'linear__sample_weight': weights})
-
-
-    def plotEstimator1DoF(self):
-
-        _,_,currentYaw = np.degrees(airsim.to_eularian_angles(self.state.kinematics_estimated.orientation))
-        x = np.linspace(currentYaw - 45/2,currentYaw + 45/2,100)
-
-        y = [self.estimate1DoF(yaw) for yaw in x]
-        x = [(i+180)/(180+180) for i in x]
-
-        yawList = [(np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2])+180)/(180+180) for state in self.stateList]
-        j_i_k = [self.j_i[i-1] for i in range(len(self.contribution))]
-
-        report_estimator = os.path.join(os.getcwd(),"results", f"estimator_{self.getName()}")
-        try:
-            os.makedirs(report_estimator)
-        except OSError:
-            if not os.path.isdir(report_estimator):
-                raise
-
-        col = np.arange(len(yawList[-ESTIMATORWINDOW:]))
-        plt.scatter(yawList[-ESTIMATORWINDOW:], j_i_k[-ESTIMATORWINDOW:], c=col[-ESTIMATORWINDOW:], cmap=plt.cm.coolwarm)
-        plt.plot(x,y)
-        plt.title(self.getName())
-        plt.xlim(0,1)
-        plt.ylim(0.5,3)
-        plt.xlabel('yaw')
-        plt.ylabel('estimated val')
-
-        estimator_file = os.path.join(report_estimator, f"estimaton_{self.posIdx}.png")
-        plt.savefig(estimator_file)
-        # plt.show(block=False)
-        # plt.pause(5)
-        plt.close()
 
 
     def plotEstimator(self, xCanditate, yCanditate, yawCanditate, JCanditate):
@@ -1173,6 +946,7 @@ class controller:
             return self.detectionsCoordinates[-1]
         else:
             return self.detectionsCoordinates[index]
+
 
     def getDetectionsInfo(self, index=-1):
 
