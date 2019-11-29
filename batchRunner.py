@@ -50,3 +50,5 @@ if __name__ == "__main__":
             print(f"Simulation {ip} failed ...")
             print("Killing any AirSim Enviroment")
             os.system('TASKKILL /F /IM CityEnviron*')
+        else:
+            print(f"Simulation {ip} finished successfully\n")

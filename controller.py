@@ -29,7 +29,7 @@ DEBUG_RANDOMZ = False
 DEBUG_MOVE = False
 DEBUG_MOVE1DOF = False
 DEBUG_MOVE_OMNI = False
-DEBUG_ESTIMATOR = True
+DEBUG_ESTIMATOR = False
 WEIGHTS = {"cars":1.0, "persons":0.0 , "trafficLights":1.0}
 
 class controller:
@@ -66,9 +66,6 @@ class controller:
         self.model = Pipeline([('poly', PolynomialFeatures(degree=3)),
                                ('linear', LinearRegression())])
 
-        self.model1DoF = Pipeline([('poly', PolynomialFeatures(degree=3)),
-                               ('linear', LinearRegression())])
-
         self.estimator = self.model.fit([np.random.uniform(0,1,3)],[np.random.uniform(0,1)])
 
         self.estimations = []
@@ -103,7 +100,7 @@ class controller:
         return self.client.takeoffAsync(vehicle_name = self.name)
 
 
-    def moveToPositionYawModeAsync(self, x, y, z, speed, yawmode = 0):
+    def moveToPositionYawModeAsync(self, x, y, z, speed=1, yawmode = 0):
         # moveToPositionAsync works only for relative coordinates, therefore we must
         # subtrack the offset (which corresponds to global coordinates)
         x -= self.offSetX
@@ -302,9 +299,6 @@ class controller:
 
 
     def rotateYawRelative(self, relavtiveYaw):
-
-        self.updateMultirotorState()
-        _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
 
         self.client.rotateByYawRateAsync(relavtiveYaw,1,vehicle_name=self.name).join()
         self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
@@ -558,7 +552,8 @@ class controller:
                 self.rotateYawRelative(10)
                 self.updateMultirotorState()
                 _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
-                print(f"[CANDITATES] {self.getName()} rotating in order to find canditates (currentYaw={currentYaw:.3f})")
+                print(f"[CANDITATES] {self.getName()} rotating in order to find canditates (currentYaw={np.degrees(currentYaw):.3f}) move more freely (no restrictingMovement)")
+                a=1
                 self.getImages()
                 imageDepthList, height, width = self.getPeripheralView()
                 inGeoFenceCounter = 0
