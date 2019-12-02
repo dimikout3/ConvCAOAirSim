@@ -428,14 +428,6 @@ if __name__ == "__main__":
         # print(f"----- ploting global view & costJ adds time: {time.time() - plotTime:.3f} ------")
         # print("---------------------------------\n")
 
-    file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
-                            f"similarityList.pickle")
-    pickle.dump(similarityList,open(file_out,"wb"))
-
-    file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "information",
-                            f"scoreAggregated.pickle")
-    pickle.dump(informationScoreList,open(file_out,"wb"))
-
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "costJ",
                             f"costJ.pickle")
     pickle.dump(costJ,open(file_out,"wb"))
