@@ -109,7 +109,7 @@ def updateDelta(ego="None", detectionsDict={}, excludedDict={}, delta=False):
         score = ego.scoreExcludingDetections(excludedList=excludedDict[ego.getName()], minusDuplicates=False)
 
         closestDetection = 0.
-        detectionsCoordinates = ego. ()
+        detectionsCoordinates = ego.getDetectionsCoordinates()
 
         if score == 0.:
             print(f"[NO_DETECTIONS] {ego.getName()} has detectionsCoordinates:{detectionsCoordinates}")
