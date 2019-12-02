@@ -7,6 +7,7 @@ import cv2
 import time
 from tqdm import tqdm
 from controller import controller
+from evaluate import evaluate
 import yoloDetector
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -108,7 +109,7 @@ def updateDelta(ego="None", detectionsDict={}, excludedDict={}, delta=False):
         score = ego.scoreExcludingDetections(excludedList=excludedDict[ego.getName()], minusDuplicates=False)
 
         closestDetection = 0.
-        detectionsCoordinates = ego.getDetectionsCoordinates()
+        detectionsCoordinates = ego. ()
 
         if score == 0.:
             print(f"[NO_DETECTIONS] {ego.getName()} has detectionsCoordinates:{detectionsCoordinates}")
@@ -172,7 +173,7 @@ def noDetectionsCost(ego="None", detectionsDict={}):
 
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
-    global options, controllers
+    global options, controllers, evaluator
 
     print(f"[MONITORING] position {posInd}")
 
@@ -206,8 +207,12 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
         plotDetections(detectionsDict, excludedDict, posInd)
 
-        informationScore = detectionsScore(excludedDict = excludedDict)
-        costNoDetection = noDetectionsCost(detectionsDict=detectionsDict)
+        evaluator.update(controllers = controllers,
+                         excludedDict = excludedDict,
+                         detectionsDict = detectionsDict)
+
+        informationScore = evaluator.detectionsScore()
+        costNoDetection = evaluator.noDetectionsCost()
 
         J = informationScore + costNoDetection
         costJ.append(J)
@@ -365,7 +370,7 @@ if __name__ == "__main__":
     print("\nSetting Geo Fence for all drones")
     for ctrl in controllers:
         # no need for task list (just setting values here)
-        ctrl.setGeoFence(x = 25, y = -25, z = -14, r=75)
+        ctrl.setGeoFence(x = 25, y = -25, z = -14, r=45)
 
     print("\nTaking initial photos")
     for ctrl in controllers:
@@ -375,10 +380,11 @@ if __name__ == "__main__":
 
     startTime = time.time()
 
-    global similarityList, informationScoreList, costJ
+    global similarityList, informationScoreList, costJ, evaluator
     similarityList = []
     informationScoreList = []
     costJ = []
+    evaluator = evaluate()
 
     for positionIdx in range(0,wayPointsSize):
 
@@ -386,8 +392,9 @@ if __name__ == "__main__":
 
         tasks = []
         for ctrl in controllers:
-            t = ctrl.moveOmniDirectional(maxTravelTime=2.5, maxYaw=10.,
-                                         plotEstimator = False)
+            t = ctrl.moveOmniDirectional(maxTravelTime=2.5,
+                                         maxYaw=10.,
+                                         plotEstimator = True)
             tasks.append(t)
 
         # TODO: Chech if we have collision, if yes, then move drone to previous position

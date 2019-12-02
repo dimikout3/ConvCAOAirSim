@@ -542,7 +542,7 @@ class controller:
         inGeoFenceCounter = 0
         inSafeDistCounter = 0
 
-        while (jEstimated == []) and (counter<36):
+        while (jEstimated == []) and (counter<38):
 
             counter += 1
 
