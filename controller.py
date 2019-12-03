@@ -553,7 +553,7 @@ class controller:
                 self.updateMultirotorState()
                 _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
                 print(f"[CANDITATES] {self.getName()} rotating in order to find canditates (currentYaw={np.degrees(currentYaw):.3f}) move more freely (no restrictingMovement)")
-                a=1
+                a = 2
                 self.getImages()
                 imageDepthList, height, width = self.getPeripheralView()
                 inGeoFenceCounter = 0
