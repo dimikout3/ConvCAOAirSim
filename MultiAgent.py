@@ -200,6 +200,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         for i,ctrl in enumerate(controllers):
             ctrl.updateState(posInd, timeStep)
             ctrl.getImages(save_raw=False)
+            ctrl.getPointCloud(x=100,y=100)
 
         threadList = []
         for i,ctrl in enumerate(controllers):
@@ -485,7 +486,8 @@ if __name__ == "__main__":
         fig, (ax1, ax2) = plt.subplots(1,2,figsize=(20,10))
 
         for ctrl in controllers:
-            x,y,z,col = ctrl.getPointCloud(x=100,y=100)
+            # x,y,z,col = ctrl.getPointCloud(x=100,y=100)
+            x,y,z,col = ctrl.getPointCloudList()
             ax2.scatter(y, x,c=col/255.0, s=0.05)
             ax1.scatter(y, x, s=0.05, label=ctrl.getName())
 
