@@ -3,6 +3,7 @@ import time
 import os
 import airsim
 from controller import controller
+from scipy.spatial import ConvexHull
 
 
 class evaluate:
@@ -66,6 +67,78 @@ class evaluate:
                 yDrone = positions.y_val
 
                 distR2P[i,r] = np.sqrt((xDrone-xTarget)**2 + (yDrone-yTarget)**2)
+
+            minDist = np.min(distR2P[i,:])
+            imin = np.argmin(distR2P[i,:])
+
+            cellsAssigned[imin] = cellsAssigned[imin] + 1
+
+            j += minDist
+
+
+        for i in range(len(self.controllers)):
+            if cellsAssigned[i] == 0:
+                j += self.KW['noRandomPoint']*np.min(distR2P[:,i])
+
+        return j
+
+
+    def pointInHull(self, hull, point):
+
+        # import pdb; pdb.set_trace()
+        # new_points = np.append(hull.points, point, axis=0)
+        new_points = np.concatenate((hull.points, [point]), axis=0)
+        new_hull = ConvexHull(new_points)
+
+        if list(hull.vertices) == list(new_hull.vertices):
+            return True
+        else:
+            return False
+
+
+    def pointToHullDist(self, hull, point):
+
+        hullEdgePoints = hull.points[hull.vertices]
+        distances = np.sqrt(np.sum((hullEdgePoints - point)**2, axis=1))
+        dist = np.min(distances)
+
+        return dist
+
+
+    def hullDistanceCost(self, ego=None):
+
+        droneHull = []
+
+        for i,drone in enumerate(self.controllers):
+
+            if ego is None:
+                detections = drone.getPointCloudList()
+            elif ego.getName() == drone.getName():
+                detections = drone.getPointCloudList(index = -2)
+            else:
+                detections = drone.getPointCloudList()
+
+            x,y,z,col = detections
+            # using only x-y because we are on 2D space
+            # TODO: adapt fro 3D enviroment movements
+            detectionsPoints = np.stack((x,y), axis=1)
+
+            hull = ConvexHull(detectionsPoints)
+            droneHull.append(hull)
+
+        distR2P = np.zeros((len(self.targetPoints),len(self.controllers)))
+        cellsAssigned = np.zeros(len(self.controllers))
+
+        j = 0.
+
+        for i,point in enumerate(self.targetPoints):
+
+            for r,hull in enumerate(droneHull):
+
+                if self.pointInHull(hull,point):
+                    distR2P[i,r] = 0.
+                else:
+                    distR2P[i,r] = self.pointToHullDist(hull,point)
 
             minDist = np.min(distR2P[i,:])
             imin = np.argmin(distR2P[i,:])
