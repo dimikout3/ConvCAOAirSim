@@ -31,6 +31,11 @@ NORM = {'information':10.0, 'similarity':10.0}
 WEIGHT = {'information':1.0, 'similarity':-1.0}
 KW = 1
 
+fenceR = 45
+fenceX = 25
+fenceY = -25
+fenceZ = -14
+
 def plotDetections(detectionsDict, excludedDict, posInd):
 
     global options
@@ -82,26 +87,33 @@ def updateDelta(ego="None", detectionsDict={}, excludedDict={}, delta=False):
     if delta:
         """ Updating Using the delta differences, proposed in distributed CAO """
 
-        detectionsCoordinates = ego.getDetectionsCoordinates(index=-2)
-        detectionsInfo = ego.getDetectionsInfo(index=-2)
-        detectionsData = [detectionsCoordinates, detectionsInfo]
-        detectionsDict[ego.getName()] = detectionsData
-
-        excludedDict = similarityOut(detectionsDict, similarityKPI="DistExhaustive", ip=options.ip)
-
-        J_information = detectionsScore(ego = ego, excludedDict = excludedDict)
-        # FIXME: no detections should change as in no-delta implementation
-        J_costNoDetection = noDetectionsCost(ego=ego, detectionsDict=detectionsDict)
-
-        J_isolation = J_information + J_costNoDetection
-        delta = costJ[-1] - J_isolation
+        # detectionsCoordinates = ego.getDetectionsCoordinates(index=-2)
+        # detectionsInfo = ego.getDetectionsInfo(index=-2)
+        # detectionsData = [detectionsCoordinates, detectionsInfo]
+        # detectionsDict[ego.getName()] = detectionsData
+        #
+        # excludedDict = similarityOut(detectionsDict, similarityKPI="DistExhaustive", ip=options.ip)
+        #
+        # J_information = detectionsScore(ego = ego, excludedDict = excludedDict)
+        # # FIXME: no detections should change as in no-delta implementation
+        # J_costNoDetection = noDetectionsCost(ego=ego, detectionsDict=detectionsDict)
+        #
+        # J_isolation = J_information + J_costNoDetection
+        # delta = costJ[-1] - J_isolation
+        #
+        # if ego.posIdx == 0:
+        #     update = costJ[-1] + delta
+        # elif ego.posIdx > 0:
+        #     update = ego.getJi() + delta
+        #
+        # print(f"[INFO] {ego.getName()} has delta={update:.5f}")
 
         if ego.posIdx == 0:
-            update = costJ[-1] + delta
+            update = costJ[-1]
         elif ego.posIdx > 0:
+            J_isolation = evaluator.randomPointsCost(ego=ego)
+            delta = costJ[-1] - J_isolation
             update = ego.getJi() + delta
-
-        print(f"[INFO] {ego.getName()} has delta={update:.5f}")
 
     else:
         """ Update using direct values """
@@ -213,15 +225,18 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
         informationScore = evaluator.detectionsScore()
         costNoDetection = evaluator.noDetectionsCost()
+        randomPointsCost = evaluator.randomPointsCost()
 
-        J = informationScore + costNoDetection
+        # J = informationScore + costNoDetection
+        J = randomPointsCost
         costJ.append(J)
         print(f"[INFO] Cost J:{J:.3f}")
 
         for i,drone in enumerate(controllers):
             updateDelta(ego = drone,
                         detectionsDict = detectionsDict.copy(),
-                        excludedDict = excludedDict.copy())
+                        excludedDict = excludedDict.copy(),
+                        delta=True)
 
         time.sleep(timeInterval)
 
@@ -370,7 +385,7 @@ if __name__ == "__main__":
     print("\nSetting Geo Fence for all drones")
     for ctrl in controllers:
         # no need for task list (just setting values here)
-        ctrl.setGeoFence(x = 25, y = -25, z = -14, r=45)
+        ctrl.setGeoFence(x = fenceX, y = fenceY, z = fenceZ, r=fenceR)
 
     print("\nTaking initial photos")
     for ctrl in controllers:
@@ -384,7 +399,10 @@ if __name__ == "__main__":
     similarityList = []
     informationScoreList = []
     costJ = []
+
     evaluator = evaluate()
+    evaluator.setGeoFence(x=fenceX, y=fenceY,z=fenceZ,r=fenceR)
+    evaluator.randomPoints(pointsSize = 500)
 
     for positionIdx in range(0,wayPointsSize):
 

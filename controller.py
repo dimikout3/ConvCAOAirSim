@@ -614,7 +614,8 @@ class controller:
 
         jEstimated, xCanditateList, yCanditateList, zCanditateList, yawCanditateList = canditatesData
 
-        tartgetPointIndex = np.argmax(jEstimated)
+        # tartgetPointIndex = np.argmax(jEstimated)
+        tartgetPointIndex = np.argmin(jEstimated)
 
         task = self.moveToPositionYawModeAsync(xCanditateList[tartgetPointIndex],
                                    yCanditateList[tartgetPointIndex],
@@ -911,9 +912,18 @@ class controller:
         self.cameraInfo.pose.position.z_val += self.offSetZ
 
 
-    def getPositions(self):
+    def getPositions(self, index=None):
 
-        return self.position
+        if index is None:
+
+            return self.position
+
+        else:
+
+            stateList = self.getStateList()
+            stateDrone, _ = stateList[index]
+
+            return stateDrone.kinematics_estimated.position
 
 
     def getOrientation(self):
