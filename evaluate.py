@@ -4,7 +4,9 @@ import os
 import airsim
 from controller import controller
 from scipy.spatial import ConvexHull
+import utilities.AlphaShape as alphashape
 
+DEBUG_AlPHA = True
 
 class evaluate:
 
@@ -139,6 +141,71 @@ class evaluate:
                     distR2P[i,r] = 0.
                 else:
                     distR2P[i,r] = self.pointToHullDist(hull,point)
+
+            minDist = np.min(distR2P[i,:])
+            imin = np.argmin(distR2P[i,:])
+
+            cellsAssigned[imin] = cellsAssigned[imin] + 1
+
+            j += minDist
+
+
+        for i in range(len(self.controllers)):
+            if cellsAssigned[i] == 0:
+                j += self.KW['noRandomPoint']*np.min(distR2P[:,i])
+
+        return j
+
+
+    def pointToPointCloudDist(self, pointCloud, point):
+
+        distances = np.sqrt(np.sum((pointCloud - point)**2, axis=1))
+        dist = np.min(distances)
+
+        return dist
+
+
+    def alphaShapeDistanceCost(self, ego=None):
+
+        droneHullDetections = []
+
+        for i,drone in enumerate(self.controllers):
+
+            if DEBUG_AlPHA:
+                print(f"Creating Polygon for {drone.getName()}")
+
+            if ego is None:
+                detections = drone.getPointCloudList()
+            elif ego.getName() == drone.getName():
+                detections = drone.getPointCloudList(index = -2)
+            else:
+                detections = drone.getPointCloudList()
+
+            x,y,z,col = detections
+            # using only x-y because we are on 2D space
+            # TODO: adapt fro 3D enviroment movements
+            detectionsPoints = np.stack((x,y), axis=1)
+
+            # hull = ConvexHull(detectionsPoints)
+            hull, edges = alphashape.alpha_shape(detectionsPoints, 0.9)
+            droneHullDetections.append([hull,detectionsPoints])
+
+        distR2P = np.zeros((len(self.targetPoints),len(self.controllers)))
+        cellsAssigned = np.zeros(len(self.controllers))
+
+        j = 0.
+
+        for i,point in enumerate(self.targetPoints):
+
+            if DEBUG_AlPHA:
+                print(f"Testing target point{i}")
+
+            for r, (hull, detectionPoints) in enumerate(droneHullDetections):
+
+                if alphashape.pointInHull(hull, detectionPoints, point):
+                    distR2P[i,r] = 0.
+                else:
+                    distR2P[i,r] = self.pointToPointCloudDist(detectionPoints,point)
 
             minDist = np.min(distR2P[i,:])
             imin = np.argmin(distR2P[i,:])
