@@ -111,7 +111,7 @@ def updateDelta(ego="None", detectionsDict={}, excludedDict={}, delta=False):
         if ego.posIdx == 0:
             update = costJ[-1]
         elif ego.posIdx > 0:
-            J_isolation = evaluator.randomPointsCost(ego=ego)
+            J_isolation = evaluator.hullDistanceCost(ego=ego)
             delta = costJ[-1] - J_isolation
             update = ego.getJi() + delta
 
@@ -227,9 +227,10 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         informationScore = evaluator.detectionsScore()
         costNoDetection = evaluator.noDetectionsCost()
         randomPointsCost = evaluator.randomPointsCost()
+        hullCost = evaluator.hullDistanceCost()
 
         # J = informationScore + costNoDetection
-        J = randomPointsCost
+        J = hullCost
         costJ.append(J)
         print(f"[INFO] Cost J:{J:.3f}")
 
