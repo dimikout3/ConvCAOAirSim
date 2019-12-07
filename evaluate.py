@@ -4,9 +4,12 @@ import os
 import airsim
 from controller import controller
 from scipy.spatial import ConvexHull
-import utilities.AlphaShape as alphashape
+# import utilities.AlphaShape as alphashape
+import alphashape
 
-DEBUG_AlPHA = True
+DEBUG_AlPHA = False
+ALPHA = 2.
+DETECTIONS_SIZE = 100
 
 class evaluate:
 
@@ -165,6 +168,16 @@ class evaluate:
         return dist
 
 
+    def pointInAlphaShape(self, alpha, detectionPoints, point):
+
+        new_points = np.concatenate((detectionPoints, [point]), axis=0)
+        new_hull = alphashape.alphashape(new_points, ALPHA)
+
+        if alpha == new_hull:
+            return True
+        else:
+            return False
+
     def alphaShapeDistanceCost(self, ego=None):
 
         droneHullDetections = []
@@ -186,9 +199,10 @@ class evaluate:
             # TODO: adapt fro 3D enviroment movements
             detectionsPoints = np.stack((x,y), axis=1)
 
+            detectionsPoints = detectionsPoints[np.random.randint(0,len(detectionsPoints),DETECTIONS_SIZE)]
             # hull = ConvexHull(detectionsPoints)
-            hull, edges = alphashape.alpha_shape(detectionsPoints, 0.9)
-            droneHullDetections.append([hull,detectionsPoints])
+            hull = alphashape.alphashape(detectionsPoints, ALPHA)
+            droneHullDetections.append([hull, detectionsPoints])
 
         distR2P = np.zeros((len(self.targetPoints),len(self.controllers)))
         cellsAssigned = np.zeros(len(self.controllers))
@@ -202,7 +216,7 @@ class evaluate:
 
             for r, (hull, detectionPoints) in enumerate(droneHullDetections):
 
-                if alphashape.pointInHull(hull, detectionPoints, point):
+                if self.pointInAlphaShape(hull, detectionPoints, point):
                     distR2P[i,r] = 0.
                 else:
                     distR2P[i,r] = self.pointToPointCloudDist(detectionPoints,point)
