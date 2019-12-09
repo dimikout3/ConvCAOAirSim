@@ -8,8 +8,9 @@ import pylab as pl
 import matplotlib.pyplot as plt
 
 # https://gist.github.com/dwyerk/10561690
+# https://stackoverflow.com/questions/20474549/extract-points-coordinates-from-a-polygon-in-shapely
 
-def alpha_shape(points, alpha):
+def alphashape(points, alpha):
     """
     Compute the alpha shape (concave hull) of a set of points.
 
@@ -18,10 +19,6 @@ def alpha_shape(points, alpha):
                   numbers don't fall inward as much as larger numbers. Too large,
                   and you lose everything!
     """
-    if len(points) < 4:
-        # When you have a triangle, there is no sense in computing an alpha
-        # shape.
-        return geometry.MultiPoint(list(points)).convex_hull
 
     coords = points
     tri = Delaunay(coords)
@@ -33,24 +30,44 @@ def alpha_shape(points, alpha):
     areas = (s*(s-a)*(s-b)*(s-c)) ** 0.5
     circums = a * b * c / (4.0 * areas)
     filtered = triangles[circums < (1.0 / alpha)]
-    edge1 = filtered[:,(0,1)]
-    edge2 = filtered[:,(1,2)]
-    edge3 = filtered[:,(2,0)]
-    edge_points = np.unique(np.concatenate((edge1,edge2,edge3)), axis = 0).tolist()
-    m = geometry.MultiLineString(edge_points)
-    triangles = list(polygonize(m))
-    return cascaded_union(triangles), edge_points
-# concave_hull, edge_points = alpha_shape(points, alpha=1.87)
+    # edge1 = filtered[:,(0,1)]
+    # edge2 = filtered[:,(1,2)]
+    # edge3 = filtered[:,(2,0)]
+    # edge_points = np.unique(np.concatenate((edge1,edge2,edge3)), axis = 0).tolist()
+    # m = geometry.MultiLineString(edge_points)
+    # triangles = list(polygonize(m))
+    # return cascaded_union(triangles), edge_points
+    # return cascaded_union(triangles)
+    return filtered
 
-def pointInHull(polygon, detectionPoints, point, alpha=0.9):
+
+def pointInAlphaShape(polygon, detectionPoints, point, alpha=0.9):
 
     new_points = np.concatenate((detectionPoints, [point]), axis=0)
-    h2, e2 = alpha_shape(new_points,0.9)
+    t2 = alphashape(new_points,alpha)
 
-    if polygon == h2:
+    t1 = polygon
+    area1 = abs(t1[:,0,0]*(t1[:,1,1]-t1[:,2,1]) + t1[:,1,0]*(t1[:,2,1]-t1[:,0,1]) + t1[:,2,0]*(t1[:,0,1]-t1[:,1,1]))/2
+
+    area2 = abs(t2[:,0,0]*(t2[:,1,1]-t2[:,2,1]) + t2[:,1,0]*(t2[:,2,1]-t2[:,0,1]) + t2[:,2,0]*(t2[:,0,1]-t2[:,1,1]))/2
+
+    areaSum1 = np.sum(area1)
+    areaSum2 = np.sum(area2)
+
+    if (areaSum1 == areaSum2):
         return True
     else:
         return False
+
+    # try:
+    #     if (polygon == h2).all():
+    #         return True
+    #     else:
+    #         return False
+    # except:
+    #     """"This means that the polygon and the new hull have different triangles
+    #     therefore """"
+    #     return False
 
 def plot_polygon(polygon):
     fig = pl.figure(figsize=(10,10))
