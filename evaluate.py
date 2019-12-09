@@ -4,8 +4,8 @@ import os
 import airsim
 from controller import controller
 from scipy.spatial import ConvexHull
-# import utilities.AlphaShape as alphashape
-import alphashape
+import utilities.AlphaShape as alphashape
+# import alphashape
 
 DEBUG_AlPHA = False
 ALPHA = 2.
@@ -16,7 +16,7 @@ class evaluate:
     def __init__(self, KW={}):
 
         if KW == {}:
-            KW['noRandomPoint'] = 100000
+            KW['noRandomPoint'] = 1000
             KW['noDetectionsCost'] = 1
             self.KW = KW
 
@@ -49,6 +49,8 @@ class evaluate:
 
             self.targetPoints = np.stack((x,y), axis = 1)
 
+            self.KW['noRandomPoint'] = len(self.targetPoints)/25
+
 
     def randomPointsCost(self, ego=None):
 
@@ -72,6 +74,50 @@ class evaluate:
                 yDrone = positions.y_val
 
                 distR2P[i,r] = np.sqrt((xDrone-xTarget)**2 + (yDrone-yTarget)**2)
+
+            minDist = np.min(distR2P[i,:])
+            imin = np.argmin(distR2P[i,:])
+
+            cellsAssigned[imin] = cellsAssigned[imin] + 1
+
+            j += minDist
+
+
+        for i in range(len(self.controllers)):
+            if cellsAssigned[i] == 0:
+                j += self.KW['noRandomPoint']*np.min(distR2P[:,i])
+
+        return j
+
+
+    def randomPointCloudCost(self, ego=None):
+
+        distR2P = np.zeros((len(self.targetPoints),len(self.controllers)))
+        cellsAssigned = np.zeros(len(self.controllers))
+
+        j = 0.
+
+        for i,(xTarget, yTarget) in enumerate(self.targetPoints):
+
+            for r,drone in enumerate(self.controllers):
+
+                if ego is None:
+                    detections = drone.getPointCloudList()
+                elif ego.getName() == drone.getName():
+                    detections = drone.getPointCloudList(index = -2)
+                else:
+                    detections = drone.getPointCloudList()
+
+                x,y,z,col = detections
+                # using only x-y because we are on 2D space
+                # TODO: adapt fro 3D enviroment movements
+                detectionsPoints = np.stack((x,y), axis=1)
+
+                # detectionsPoints = detectionsPoints[np.random.randint(0,len(detectionsPoints),DETECTIONS_SIZE)]
+                # dist = np.sqrt( np.sum( (points-target)**2 ,axis=1))
+
+                target = np.array([xTarget, yTarget])
+                distR2P[i,r] = np.min( np.sqrt( np.sum( (detectionsPoints - target)**2,axis=1) ) )
 
             minDist = np.min(distR2P[i,:])
             imin = np.argmin(distR2P[i,:])
@@ -216,7 +262,7 @@ class evaluate:
 
             for r, (hull, detectionPoints) in enumerate(droneHullDetections):
 
-                if self.pointInAlphaShape(hull, detectionPoints, point):
+                if alphashape.pointInAlphaShape(hull, detectionPoints, point, ALPHA):
                     distR2P[i,r] = 0.
                 else:
                     distR2P[i,r] = self.pointToPointCloudDist(detectionPoints,point)

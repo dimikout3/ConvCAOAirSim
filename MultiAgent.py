@@ -112,7 +112,7 @@ def updateDelta(ego="None", detectionsDict={}, excludedDict={}, delta=False):
             update = costJ[-1]
         elif ego.posIdx > 0:
             # J_isolation = evaluator.hullDistanceCost(ego=ego)
-            J_isolation = evaluator.alphaShapeDistanceCost(ego=ego)
+            J_isolation = evaluator.randomPointCloudCost(ego=ego)
             delta = costJ[-1] - J_isolation
             update = ego.getJi() + delta
 
@@ -227,16 +227,17 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
         informationScore = evaluator.detectionsScore()
         costNoDetection = evaluator.noDetectionsCost()
-        randomPointsCost = evaluator.randomPointsCost()
-        hullCost = evaluator.hullDistanceCost()
-        alphaShape = evaluator.alphaShapeDistanceCost()
+        # randomPointsCost = evaluator.randomPointsCost()
+        # hullCost = evaluator.hullDistanceCost()
+        # alphaShape = evaluator.alphaShapeDistanceCost()
+        randomCloudDistCost = evaluator.randomPointCloudCost()
 
         # J = informationScore + costNoDetection
-        J = alphaShape
+        J = randomCloudDistCost
         costJ.append(J)
         print(f"[INFO] Cost J:{J:.3f}")
 
-        # TODO: multi thread here 
+        # TODO: multi thread here
         for i,drone in enumerate(controllers):
             updateDelta(ego = drone,
                         detectionsDict = detectionsDict.copy(),
