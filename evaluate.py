@@ -6,8 +6,10 @@ from controller import controller
 from scipy.spatial import ConvexHull
 import utilities.AlphaShape as alphashape
 # import alphashape
+from scipy.spatial import distance
 
 DEBUG_AlPHA = False
+DEBUG_CLOUD = True
 ALPHA = 2.
 DETECTIONS_SIZE = 100
 
@@ -50,6 +52,17 @@ class evaluate:
             self.targetPoints = np.stack((x,y), axis = 1)
 
             self.KW['noRandomPoint'] = len(self.targetPoints)/25
+
+            # cubicDistances = distance.cdist(self.targetPoints, self.targetPoints)
+            # self.worstDistance = np.max(cubicDistances)
+            # self.avgDistance = np.average(cubicDistances)
+
+            worstX = self.fenceX + self.fenceR
+            worstY = self.fenceY
+            worstPoints = [worstX, worstY]
+
+            self.worstDist =  np.sum( np.sqrt( np.sum( (self.targetPoints - worstPoints)**2,axis=1) ))
+
 
 
     def randomPointsCost(self, ego=None):
@@ -113,10 +126,9 @@ class evaluate:
                 # TODO: adapt fro 3D enviroment movements
                 detectionsPoints = np.stack((x,y), axis=1)
 
-                # detectionsPoints = detectionsPoints[np.random.randint(0,len(detectionsPoints),DETECTIONS_SIZE)]
-                # dist = np.sqrt( np.sum( (points-target)**2 ,axis=1))
-
                 target = np.array([xTarget, yTarget])
+                # Distance between target points and each detection point (cloud points)
+                # is computed, and only the closest is kept
                 distR2P[i,r] = np.min( np.sqrt( np.sum( (detectionsPoints - target)**2,axis=1) ) )
 
             minDist = np.min(distR2P[i,:])
@@ -124,14 +136,18 @@ class evaluate:
 
             cellsAssigned[imin] = cellsAssigned[imin] + 1
 
-            j += minDist
+            # j += minDist
+        # jList -> for each target point choose the min dist from each drone's detected point,
+        # somehow similar to np.min(distR2P[i,:])
+        jList = np.min(distR2P, axis=1)
+        jSorted = np.argsort(jList)
 
+        # how many drones have no detections assigned
+        # TODO: check what happens if a drone has no detections assigned (rare), add a cost value
+        zeroDetections = len(cellsAssigned) - np.count_nonzero(cellsAssigned)
+        # jList[jSorted[-int(zeroDetections*( len(self.targetPoints)/len(self.controllers) ) ):-1]] = self.avgDistance
 
-        for i in range(len(self.controllers)):
-            if cellsAssigned[i] == 0:
-                j += self.KW['noRandomPoint']*np.min(distR2P[:,i])
-
-        return j
+        return np.sum(jList) / self.worstDist
 
 
     def pointInHull(self, hull, point):
