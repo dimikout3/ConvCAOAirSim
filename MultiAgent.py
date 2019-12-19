@@ -36,6 +36,8 @@ fenceX = 25
 fenceY = -25
 fenceZ = -14
 
+SAVE_RAW_IMAGES = False
+
 def plotDetections(detectionsDict, excludedDict, posInd):
 
     global options
@@ -200,7 +202,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
         for i,ctrl in enumerate(controllers):
             ctrl.updateState(posInd, timeStep)
-            ctrl.getImages(save_raw=False)
+            ctrl.getImages(save_raw=SAVE_RAW_IMAGES)
             ctrl.getPointCloud(x=100,y=100)
 
         threadList = []
@@ -238,11 +240,17 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         print(f"[INFO] Cost J:{J:.3f}")
 
         # TODO: multi thread here
+        threadList = []
         for i,drone in enumerate(controllers):
-            updateDelta(ego = drone,
-                        detectionsDict = detectionsDict.copy(),
-                        excludedDict = excludedDict.copy(),
-                        delta=True)
+            argsDict = dict(ego = drone,
+                            detectionsDict = detectionsDict.copy(),
+                            excludedDict = excludedDict.copy(),
+                            delta=True)
+            thread = Thread(target = updateDelta, kwargs=argsDict)
+            thread.start()
+            threadList.append(thread)
+        for thread in threadList:
+            thread.join()
 
         time.sleep(timeInterval)
 
