@@ -24,6 +24,8 @@ ORIENTATION_DEV = 4
 # how may tries we will try to get images from AirSim
 IMAGES_TRIES = 10
 
+SAVE_DETECTED = False
+
 DEBUG_GEOFENCE = False
 DEBUG_RANDOMZ = False
 DEBUG_MOVE = False
@@ -148,8 +150,6 @@ class controller:
 
 
     def getImages(self, save_raw=False):
-
-        success = False
 
         for _ in range(IMAGES_TRIES):
 
@@ -736,7 +736,7 @@ class controller:
             os.makedirs(self.detected_dir)
 
 
-    def detectObjects(self, save_detected=False):
+    def detectObjects(self, save_detected=SAVE_DETECTED):
 
         # detector = yoloDetector.yoloDetector()
 

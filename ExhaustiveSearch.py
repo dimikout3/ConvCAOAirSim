@@ -206,8 +206,8 @@ def get_options():
 
     optParser = optparse.OptionParser()
     optParser.add_option("--ip", dest="ip", default=1,type="int", help="the ip of the simulations launched")
-    optParser.add_option("--waypoints", default=500, dest="waypoints",type="int", help="the number of waypoints provided")
-    optParser.add_option("--canditatesS", default=10, dest="canditatesSize",type="int", help="number of canditates to visit before moving")
+    optParser.add_option("--waypoints", default=300, dest="waypoints",type="int", help="the number of waypoints provided")
+    optParser.add_option("--canditatesS", default=60, dest="canditatesSize",type="int", help="number of canditates to visit before moving")
     options, args = optParser.parse_args()
 
     return options

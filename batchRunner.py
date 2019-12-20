@@ -9,7 +9,7 @@ import shutil
 
 # Number of simulations
 Nsim = 10
-SAVE_LOG = True
+SAVE_LOG = False
 
 def deleteExistingResults():
 
@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
         call = ["python","MultiAgent.py",
                 "--ip", str(ip),
-                "--waypoints", str(450)]
+                "--waypoints", str(150)]
 
         if SAVE_LOG:
             fout = open(f"stdOutput_{ip}.txt","w")

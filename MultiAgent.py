@@ -31,7 +31,7 @@ NORM = {'information':10.0, 'similarity':10.0}
 WEIGHT = {'information':1.0, 'similarity':-1.0}
 KW = 1
 
-fenceR = 45
+fenceR = 90
 fenceX = 25
 fenceY = -25
 fenceZ = -14
@@ -237,7 +237,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         # J = informationScore + costNoDetection
         J = randomCloudDistCost
         costJ.append(J)
-        print(f"[INFO] Cost J:{J:.3f}")
+        print(f"[INFO] Cost J:{J:.8f}")
 
         # TODO: multi thread here
         threadList = []
@@ -504,8 +504,8 @@ if __name__ == "__main__":
             ax2.scatter(y, x,c=col/255.0, s=0.05)
             ax1.scatter(y, x, s=0.05, label=ctrl.getName())
 
-        xlim = [-130,130]
-        ylim = [-130,130]
+        xlim = [fenceY-(fenceR+70),fenceY+(fenceR+70)]
+        ylim = [fenceX-(fenceR+70),fenceX+(fenceR+70)]
         ax1.set_xlim(xlim[0],xlim[1])
         ax1.set_ylim(ylim[0],ylim[1])
         ax2.set_xlim(xlim[0],xlim[1])
