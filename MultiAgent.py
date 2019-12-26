@@ -36,9 +36,9 @@ fenceX = 25
 fenceY = -25
 fenceZ = -14
 
-Xglobal = 25
+Xglobal = -50
 Yglobal = -25
-Zglobal = -30
+Zglobal = -90
 
 SAVE_RAW_IMAGES = False
 
@@ -337,6 +337,8 @@ if __name__ == "__main__":
     globalHawk = controller(client, "GlobalHawk", OFFSET_GLOBALHAWK, ip=options.ip, timeWindow=wayPointsSize)
     globalHawk.setCameraOrientation(CAM_YAW, CAM_PITCH, CAM_ROOL)
     globalHawk.takeOff()
+    #first climb to target altitude | avoid collision
+    globalHawk.moveToZ(Zglobal,2)
     globalHawk.moveToPositionYawMode(Xglobal, Yglobal, Zglobal, 1)
 
     controllers = []
