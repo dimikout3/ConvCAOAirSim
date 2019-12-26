@@ -1,0 +1,78 @@
+{
+	"SeeDocsAt": "https://github.com/Microsoft/AirSim/blob/master/docs/settings.md",
+	"SettingsVersion": 1.2,
+	"SimMode": "Multirotor",
+	"ViewMode":"",
+
+	"CameraDefaults": {
+      "CaptureSettings": [
+        {
+          "ImageType": 0,
+          "Width": 128,
+          "Height": 128	,
+          "FOV_Degrees": 90,
+          "AutoExposureSpeed": 100,
+          "MotionBlurAmount": 0
+        },
+				{
+					"ImageType": 2,
+					"Width": 128,
+					"Height": 128	,
+					"FOV_Degrees": 90,
+					"AutoExposureSpeed": 100,
+					"MotionBlurAmount": 0
+				},
+				{
+					"ImageType": 2,
+					"Width": 128,
+					"Height": 128	,
+					"FOV_Degrees": 90,
+					"AutoExposureSpeed": 100,
+					"MotionBlurAmount": 0
+				},
+				{
+					"ImageType": 2,
+					"Width": 128,
+					"Height": 128	,
+					"FOV_Degrees": 90,
+					"AutoExposureSpeed": 100,
+					"MotionBlurAmount": 0
+				},
+				{
+					"ImageType": 2,
+					"Width": 128,
+					"Height": 128	,
+					"FOV_Degrees": 90,
+					"AutoExposureSpeed": 100,
+					"MotionBlurAmount": 0
+				}
+    ]
+  },
+
+	"ClockSpeed": 1.0,
+	"LocalHostIp": "127.0.0.1",
+
+	"Vehicles": {
+		"Drone1": {
+		  "VehicleType": "SimpleFlight",
+		  "X": 0, "Y": 0, "Z": 0
+		},
+		"Drone2": {
+		  "VehicleType": "SimpleFlight",
+		  "X": 0, "Y": -5, "Z": 0
+		},
+		"Drone3": {
+		  "VehicleType": "SimpleFlight",
+		  "X": 5, "Y": 0, "Z": 0
+		},
+		"Drone4": {
+		  "VehicleType": "SimpleFlight",
+		  "X": 5, "Y": 5, "Z": 0
+		},
+		"GlobalHawk": {
+		  "VehicleType": "SimpleFlight",
+		  "X": 10, "Y": 10, "Z": 0
+		}
+
+    }
+}

@@ -36,11 +36,26 @@ fenceX = 25
 fenceY = -25
 fenceZ = -14
 
+#positions of GlobalHawk
 Xglobal = -50
 Yglobal = -25
-Zglobal = -90
+Zglobal = -60
 
 SAVE_RAW_IMAGES = False
+
+def setGlobalHawk(client):
+    """Setting the position and heading of the drone that will observer the Enviroment"""
+    global options, globalHawk
+
+    OFFSET_GLOBALHAWK = [10,10,0]
+    globalHawk = controller(client, "GlobalHawk", OFFSET_GLOBALHAWK, ip=options.ip)
+    globalHawk.setCameraOrientation(-0.75, 0., 0.)
+    globalHawk.takeOff()
+    #first climb to target altitude | avoid collision
+    globalHawk.moveToZ(Zglobal, 3)
+    globalHawk.moveToPositionYawMode(Xglobal, Yglobal, Zglobal, 3)
+    globalHawk.hover()
+
 
 def plotDetections(detectionsDict, excludedDict, posInd):
 
@@ -333,13 +348,7 @@ if __name__ == "__main__":
     client = airsim.MultirotorClient(ip = ip_id)
     client.confirmConnection()
 
-    OFFSET_GLOBALHAWK = [10,10,0]
-    globalHawk = controller(client, "GlobalHawk", OFFSET_GLOBALHAWK, ip=options.ip, timeWindow=wayPointsSize)
-    globalHawk.setCameraOrientation(CAM_YAW, CAM_PITCH, CAM_ROOL)
-    globalHawk.takeOff()
-    #first climb to target altitude | avoid collision
-    globalHawk.moveToZ(Zglobal,2)
-    globalHawk.moveToPositionYawMode(Xglobal, Yglobal, Zglobal, 1)
+    setGlobalHawk(client)
 
     controllers = []
     for drone in dronesID:

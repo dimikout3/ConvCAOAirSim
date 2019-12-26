@@ -102,6 +102,11 @@ class controller:
         return self.client.takeoffAsync(vehicle_name = self.name)
 
 
+    def hover(self):
+
+        return self.client.hoverAsync(vehicle_name=self.name)
+
+
     def moveToPositionYawModeAsync(self, x, y, z, speed=1, yawmode = 0):
         # moveToPositionAsync works only for relative coordinates, therefore we must
         # subtrack the offset (which corresponds to global coordinates)
