@@ -36,6 +36,10 @@ fenceX = 25
 fenceY = -25
 fenceZ = -14
 
+Xglobal = 25
+Yglobal = -25
+Zglobal = -30
+
 SAVE_RAW_IMAGES = False
 
 def plotDetections(detectionsDict, excludedDict, posInd):
@@ -141,54 +145,9 @@ def updateDelta(ego="None", detectionsDict={}, excludedDict={}, delta=False):
     ego.appendJi(update)
 
 
-def detectionsScore(ego="None", excludedDict={}):
-
-    global controllers
-
-    informationScore = 0
-
-    for ctrl in controllers:
-
-        if isinstance(ego,str):
-            index = -1
-        else:
-            if ctrl.getName() == ego.getName():
-                index = -2
-            else:
-                index = -1
-
-        score = ctrl.scoreExcludingDetections(index=index, excludedList=excludedDict[ctrl.getName()], minusDuplicates=False)
-        informationScore += score
-
-    return informationScore
-
-
-def noDetectionsCost(ego="None", detectionsDict={}):
-
-    global controllers
-
-    score = 0.
-
-    for ctrl in controllers:
-
-        if isinstance(ego,str):
-            detectionsCoordinates = ctrl.getDetectionsCoordinates()
-        else:
-            if ctrl.getName() == ego.getName():
-                detectionsCoordinates = ctrl.getDetectionsCoordinates(index=-2)
-            else:
-                detectionsCoordinates = ctrl.getDetectionsCoordinates()
-
-        if detectionsCoordinates == []:
-            # calculate the closest distance to a currently detcted object
-            score += ctrl.getDistanceClosestDetection(detectionsDict)
-
-    return -KW*score
-
-
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
-    global options, controllers, evaluator
+    global options, controllers, evaluator, globalHawk
 
     print(f"[MONITORING] position {posInd}")
 
@@ -199,6 +158,9 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
     for timeStep in range(0,totalTime,timeInterval):
 
         detectionsDict = {}
+
+        globalHawk.updateState(posInd, timeStep)
+        globalHawk.getImages(save_raw=True)
 
         for i,ctrl in enumerate(controllers):
             ctrl.updateState(posInd, timeStep)
@@ -347,7 +309,7 @@ def killAirSim():
 
 if __name__ == "__main__":
 
-    global options, controllers
+    global options, controllers, globalHawk
 
     options = get_options()
 
@@ -365,12 +327,17 @@ if __name__ == "__main__":
                "Drone4":[5,5,0]
               }
 
-
     dronesID = list(OFFSETS.keys())
 
     ip_id = f"127.0.0.{options.ip}"
     client = airsim.MultirotorClient(ip = ip_id)
     client.confirmConnection()
+
+    OFFSET_GLOBALHAWK = [10,10,0]
+    globalHawk = controller(client, "GlobalHawk", OFFSET_GLOBALHAWK, ip=options.ip, timeWindow=wayPointsSize)
+    globalHawk.setCameraOrientation(CAM_YAW, CAM_PITCH, CAM_ROOL)
+    globalHawk.takeOff()
+    globalHawk.moveToPositionYawMode(Xglobal, Yglobal, Zglobal, 1)
 
     controllers = []
     for drone in dronesID:
