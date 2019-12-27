@@ -37,9 +37,10 @@ fenceY = -25
 fenceZ = -14
 
 #positions of GlobalHawk
-Xglobal = -50
-Yglobal = -25
+Xglobal = fenceX
+Yglobal = fenceY
 Zglobal = -60
+
 
 SAVE_RAW_IMAGES = False
 
@@ -49,12 +50,47 @@ def setGlobalHawk(client):
 
     OFFSET_GLOBALHAWK = [10,10,0]
     globalHawk = controller(client, "GlobalHawk", OFFSET_GLOBALHAWK, ip=options.ip)
-    globalHawk.setCameraOrientation(-0.75, 0., 0.)
+    # The camera orientation of the global view | yaw,pitch,roll | radians
+    globalHawk.setCameraOrientation(-np.pi/2, 0., 0.)
     globalHawk.takeOff()
     #first climb to target altitude | avoid collision
-    globalHawk.moveToZ(Zglobal, 3)
+    globalHawk.moveToZ(Zglobal, 3).join()
     globalHawk.moveToPositionYawMode(Xglobal, Yglobal, Zglobal, 3)
     globalHawk.hover()
+
+
+def globalView():
+
+    global controllers
+
+    fig, (ax1, ax2) = plt.subplots(1,2,figsize=(20,10))
+
+    for ctrl in controllers:
+        # x,y,z,col = ctrl.getPointCloud(x=100,y=100)
+        x,y,z,col = ctrl.getPointCloudList()
+        ax2.scatter(y, x,c=col/255.0, s=0.05)
+        ax1.scatter(y, x, s=0.05, label=ctrl.getName())
+
+    xlim = [fenceY-(fenceR+70),fenceY+(fenceR+70)]
+    ylim = [fenceX-(fenceR+70),fenceX+(fenceR+70)]
+    ax1.set_xlim(xlim[0],xlim[1])
+    ax1.set_ylim(ylim[0],ylim[1])
+    ax2.set_xlim(xlim[0],xlim[1])
+    ax2.set_ylim(ylim[0],ylim[1])
+
+    ax1.legend(markerscale=20)
+
+    ax1.set_xlabel("Y-Axis (NetWork)")
+    ax1.set_ylabel("X-Axis (NetWork)")
+    ax2.set_xlabel("Y-Axis (NetWork)")
+    ax2.set_ylabel("X-Axis (NetWork)")
+
+    plt.tight_layout()
+
+    globalView_file = os.path.join(os.getcwd(),f"results_{options.ip}", "globalView",
+                            f"globalView_{positionIdx}.png")
+    plt.savefig(globalView_file)
+    plt.close()
 
 
 def plotDetections(detectionsDict, excludedDict, posInd):
@@ -473,38 +509,7 @@ if __name__ == "__main__":
         # plt.pause(5)
         plt.close()
 
-
-        fig, (ax1, ax2) = plt.subplots(1,2,figsize=(20,10))
-
-        for ctrl in controllers:
-            # x,y,z,col = ctrl.getPointCloud(x=100,y=100)
-            x,y,z,col = ctrl.getPointCloudList()
-            ax2.scatter(y, x,c=col/255.0, s=0.05)
-            ax1.scatter(y, x, s=0.05, label=ctrl.getName())
-
-        xlim = [fenceY-(fenceR+70),fenceY+(fenceR+70)]
-        ylim = [fenceX-(fenceR+70),fenceX+(fenceR+70)]
-        ax1.set_xlim(xlim[0],xlim[1])
-        ax1.set_ylim(ylim[0],ylim[1])
-        ax2.set_xlim(xlim[0],xlim[1])
-        ax2.set_ylim(ylim[0],ylim[1])
-
-        ax1.legend(markerscale=20)
-
-        ax1.set_xlabel("Y-Axis (NetWork)")
-        ax1.set_ylabel("X-Axis (NetWork)")
-        ax2.set_xlabel("Y-Axis (NetWork)")
-        ax2.set_ylabel("X-Axis (NetWork)")
-
-        plt.tight_layout()
-
-        globalView_file = os.path.join(os.getcwd(),f"results_{options.ip}", "globalView",
-                                f"globalView_{positionIdx}.png")
-        plt.savefig(globalView_file)
-        plt.close()
-
-        # print(f"----- ploting global view & costJ adds time: {time.time() - plotTime:.3f} ------")
-        # print("---------------------------------\n")
+        globalView()
 
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
                             f"similarityList.pickle")
