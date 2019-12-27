@@ -59,6 +59,37 @@ def setGlobalHawk(client):
     globalHawk.hover()
 
 
+def reportPlot():
+
+    global controllers, costJ
+
+    fig, (ax1, ax2) = plt.subplots(2)
+
+    ax1.plot(costJ, label="Cost J")
+
+    ax1.set_xlabel("Time")
+    ax1.set_ylabel("Value")
+
+    ax1.legend()
+
+    for ctrl in controllers:
+        ax2.plot(ctrl.getJiList(), label=ctrl.getName())
+
+    # ax2.set_ylim(-180,180)
+    ax2.set_xlabel("Time")
+    ax2.set_ylabel("Ji")
+    ax2.legend()
+
+    plt.tight_layout()
+
+    report_plot = os.path.join(os.getcwd(),f"results_{options.ip}", "report",
+                            f"report_{positionIdx}.png")
+    plt.savefig(report_plot)
+    # plt.show(block=False)
+    # plt.pause(5)
+    plt.close()
+
+    
 def globalView():
 
     global controllers
@@ -481,33 +512,7 @@ if __name__ == "__main__":
         print(f"----- elapsed time: {time.time() - ptime:.3f} ------")
         print("---------------------------------\n")
 
-        plotTime = time.time()
-
-        fig, (ax1, ax2) = plt.subplots(2)
-
-        ax1.plot(costJ, label="Cost J")
-
-        ax1.set_xlabel("Time")
-        ax1.set_ylabel("Value")
-
-        ax1.legend()
-
-        for ctrl in controllers:
-            ax2.plot(ctrl.getJiList(), label=ctrl.getName())
-
-        # ax2.set_ylim(-180,180)
-        ax2.set_xlabel("Time")
-        ax2.set_ylabel("Ji")
-        ax2.legend()
-
-        plt.tight_layout()
-
-        report_plot = os.path.join(os.getcwd(),f"results_{options.ip}", "report",
-                                f"report_{positionIdx}.png")
-        plt.savefig(report_plot)
-        # plt.show(block=False)
-        # plt.pause(5)
-        plt.close()
+        reportPlot()
 
         globalView()
 
