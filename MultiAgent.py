@@ -39,7 +39,7 @@ fenceZ = -14
 #positions of GlobalHawk
 Xglobal = fenceX
 Yglobal = fenceY
-Zglobal = -60
+Zglobal = -90
 
 
 SAVE_RAW_IMAGES = False
@@ -89,7 +89,70 @@ def reportPlot():
     # plt.pause(5)
     plt.close()
 
-    
+
+def globalViewScene():
+
+    global controllers, globalHawk
+
+    def scale(array, OldMax, OldMin, NewMax=127, NewMin=0):
+        # https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio
+        OldRange = (OldMax - OldMin)
+        NewRange = (NewMax - NewMin)
+        # NewValue = (((OldValue - OldMin) * NewRange) / OldRange) + NewMin
+
+        return [(((OldValue - OldMin) * NewRange) / OldRange) + NewMin for OldValue in array]
+
+    scene = globalHawk.imageScene
+    cameraInfo = globalHawk.cameraInfo
+    width, height, colors = scene.shape
+
+    altitude = abs(cameraInfo.pose.position.z_val)
+    fov = cameraInfo.fov
+
+    # what is the farest point global hawk can monitor
+    maxView = altitude*np.sin( np.radians(fov/2) )
+
+    OldMaxX = fenceX + maxView
+    OldMinX = fenceX - maxView
+
+    OldMaxY = fenceY + maxView
+    OldMinY = fenceY - maxView
+
+    # https://techtutorialsx.com/2019/04/21/python-opencv-flipping-an-image/
+    # flipedScene = cv2.flip(scene, 1)
+    flipedScene = cv2.flip(scene, 0)
+
+    flipedScene = cv2.cvtColor(flipedScene, cv2.COLOR_BGR2RGB)
+    plt.imshow(flipedScene)
+
+    for ctrl in controllers:
+        # x,y,z,col = ctrl.getPointCloud(x=100,y=100)
+        x,y,z,col = ctrl.getPointCloudList()
+
+        x = scale(x, OldMax=OldMaxX, OldMin=OldMinX, NewMax=(width-1))
+        y = scale(y, OldMax=OldMaxY, OldMin=OldMinY, NewMax=(width-1))
+
+        plt.scatter(y, x, s=0.2, alpha=0.4, label=ctrl.getName())
+
+    plt.xlim(0,width-1)
+    plt.ylim(0,width-1)
+
+    # plt.gca().invert_yaxis()
+
+    plt.grid(False)
+    plt.axis('off')
+    # ax1.set_xlabel("Y-Axis (NetWork)")
+    # ax1.set_ylabel("X-Axis (NetWork)")
+
+    plt.legend(markerscale=20)
+    plt.tight_layout()
+
+    globalView_file = os.path.join(os.getcwd(),f"results_{options.ip}", "globalView",
+                            f"globalView_{positionIdx}.png")
+    plt.savefig(globalView_file)
+    plt.close()
+
+
 def globalView():
 
     global controllers
@@ -514,7 +577,8 @@ if __name__ == "__main__":
 
         reportPlot()
 
-        globalView()
+        # globalView()
+        globalViewScene()
 
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
                             f"similarityList.pickle")
