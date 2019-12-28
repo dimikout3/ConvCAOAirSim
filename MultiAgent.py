@@ -42,7 +42,7 @@ Yglobal = fenceY
 Zglobal = -90
 
 
-SAVE_RAW_IMAGES = False
+SAVE_RAW_IMAGES = True
 
 def setGlobalHawk(client):
     """Setting the position and heading of the drone that will observer the Enviroment"""
@@ -110,7 +110,8 @@ def globalViewScene():
     fov = cameraInfo.fov
 
     # what is the farest point global hawk can monitor
-    maxView = altitude*np.sin( np.radians(fov/2) )
+    hypotenuse = altitude/np.cos( np.radians(fov/2) )
+    maxView = hypotenuse*np.sin( np.radians(fov/2) )
 
     OldMaxX = fenceX + maxView
     OldMinX = fenceX - maxView
@@ -148,7 +149,7 @@ def globalViewScene():
     plt.tight_layout()
 
     globalView_file = os.path.join(os.getcwd(),f"results_{options.ip}", "globalView",
-                            f"globalView_{positionIdx}.png")
+                            f"globalViewScene_{positionIdx}.png")
     plt.savefig(globalView_file)
     plt.close()
 
@@ -182,7 +183,7 @@ def globalView():
     plt.tight_layout()
 
     globalView_file = os.path.join(os.getcwd(),f"results_{options.ip}", "globalView",
-                            f"globalView_{positionIdx}.png")
+                            f"globalViewOriginal_{positionIdx}.png")
     plt.savefig(globalView_file)
     plt.close()
 
@@ -577,7 +578,7 @@ if __name__ == "__main__":
 
         reportPlot()
 
-        # globalView()
+        globalView()
         globalViewScene()
 
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
