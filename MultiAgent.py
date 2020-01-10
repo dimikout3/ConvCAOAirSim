@@ -43,6 +43,7 @@ Zglobal = -90
 
 
 SAVE_RAW_IMAGES = True
+MAX_EXPLORATION_STEPS = 50
 
 def setGlobalHawk(client):
     """Setting the position and heading of the drone that will observer the Enviroment"""
@@ -306,6 +307,18 @@ def updateDelta(ego="None", detectionsDict={}, excludedDict={}, delta=False):
     ego.appendJi(update)
 
 
+def checkPhase(posInd):
+    """Checking if we are in exploration or exploitation phase"""
+
+    if posInd>=MAX_EXPLORATION_STEPS:
+        return False, True
+
+    # TODO: check if the N last steps of survaillanceJ are within a range (deviation)
+    # their gradient is stable (h klish tous)
+
+    return True, False
+
+
 def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
     global options, controllers, evaluator, globalHawk
@@ -351,17 +364,21 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
                          detectionsDict = detectionsDict)
 
         informationScore = evaluator.detectionsScore()
-        costNoDetection = evaluator.noDetectionsCost()
-        # randomPointsCost = evaluator.randomPointsCost()
-        # hullCost = evaluator.hullDistanceCost()
-        # alphaShape = evaluator.alphaShapeDistanceCost()
+        # costNoDetection = evaluator.noDetectionsCost()
         randomCloudDistCost = evaluator.randomPointCloudCost()
 
         informationJ.append(informationScore)
         survaillanceJ.append(randomCloudDistCost)
 
-        # J = informationScore + costNoDetection
-        J = randomCloudDistCost
+        explorationActive, exploitationActive = checkPhase(posInd)
+
+        if explorationActive:
+            J = randomCloudDistCost
+            deltaUpdate = True
+        elif exploitationActive:
+            J = informationScore
+            deltaUpdate = False
+
         costJ.append(J)
         print(f"[INFO] Cost J:{J:.8f}")
 
@@ -370,7 +387,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
             argsDict = dict(ego = drone,
                             detectionsDict = detectionsDict.copy(),
                             excludedDict = excludedDict.copy(),
-                            delta=True)
+                            delta = deltaUpdate)
             thread = Thread(target = updateDelta, kwargs=argsDict)
             thread.start()
             threadList.append(thread)
