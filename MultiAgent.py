@@ -61,11 +61,11 @@ def setGlobalHawk(client):
 
 def reportPlot():
 
-    global controllers, costJ
+    global controllers, informationJ
 
     fig, (ax1, ax2) = plt.subplots(2)
 
-    ax1.plot(costJ, label="Cost J")
+    ax1.plot(informationJ, label="Cost J")
 
     ax1.set_xlabel("Time")
     ax1.set_ylabel("Value")
@@ -299,14 +299,14 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
     # detector = yoloDetector.yoloDetector()
 
-    global similarityList, informationScoreList, costJ
+    global similarityList, informationJ,survaillanceJ, costJ
 
     for timeStep in range(0,totalTime,timeInterval):
 
         detectionsDict = {}
 
         globalHawk.updateState(posInd, timeStep)
-        globalHawk.getImages(save_raw=True)
+        globalHawk.getImages(save_raw=False)
 
         for i,ctrl in enumerate(controllers):
             ctrl.updateState(posInd, timeStep)
@@ -342,12 +342,14 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         # alphaShape = evaluator.alphaShapeDistanceCost()
         randomCloudDistCost = evaluator.randomPointCloudCost()
 
+        informationJ.append(informationScore)
+        survaillanceJ.append(randomCloudDistCost)
+
         # J = informationScore + costNoDetection
         J = randomCloudDistCost
         costJ.append(J)
         print(f"[INFO] Cost J:{J:.8f}")
 
-        # TODO: multi thread here
         threadList = []
         for i,drone in enumerate(controllers):
             argsDict = dict(ego = drone,
@@ -395,6 +397,13 @@ def generatingResultsFolders():
         os.makedirs(information_folder)
     except OSError:
         if not os.path.isdir(information_folder):
+            raise
+
+    survaillance_folder = os.path.join(result_folder, "survaillance")
+    try:
+        os.makedirs(survaillance_folder)
+    except OSError:
+        if not os.path.isdir(survaillance_folder):
             raise
 
     costJ_folder = os.path.join(result_folder, "costJ")
@@ -518,9 +527,10 @@ if __name__ == "__main__":
 
     startTime = time.time()
 
-    global similarityList, informationScoreList, costJ, evaluator
+    global similarityList, informationJ, survaillanceJ, costJ, evaluator
     similarityList = []
-    informationScoreList = []
+    informationJ = []
+    survaillanceJ = []
     costJ = []
 
     evaluator = evaluate()
@@ -577,8 +587,9 @@ if __name__ == "__main__":
         print("---------------------------------\n")
 
         reportPlot()
+        # plotData(data=, folder=, file=)
 
-        globalView()
+        # globalView()
         globalViewScene()
 
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
@@ -586,12 +597,16 @@ if __name__ == "__main__":
     pickle.dump(similarityList,open(file_out,"wb"))
 
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "information",
-                            f"scoreAggregated.pickle")
-    pickle.dump(informationScoreList,open(file_out,"wb"))
+                            f"informationAggregated.pickle")
+    pickle.dump(informationJ,open(file_out,"wb"))
 
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "costJ",
                             f"costJ.pickle")
     pickle.dump(costJ,open(file_out,"wb"))
+
+    file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "survaillance",
+                            f"survaillanceJ.pickle")
+    pickle.dump(survaillanceJ,open(file_out,"wb"))
 
     print("\n[RESETING] to original state ....")
     for ctrl in controllers: ctrl.quit()
