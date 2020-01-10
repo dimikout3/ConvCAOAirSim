@@ -59,6 +59,21 @@ def setGlobalHawk(client):
     globalHawk.hover()
 
 
+def plotData(data=None, folder=None, file=None):
+
+    plt.plot(data)
+
+    plt.xlabel("Time")
+    plt.ylabel(file)
+
+    plt.tight_layout()
+
+    save_plot = os.path.join(os.getcwd(),f"results_{options.ip}", folder,
+                            f"{file}_{positionIdx}.png")
+    plt.savefig(save_plot)
+    plt.close()
+
+
 def reportPlot():
 
     global controllers, informationJ
@@ -586,8 +601,9 @@ if __name__ == "__main__":
         print(f"----- elapsed time: {time.time() - ptime:.3f} ------")
         print("---------------------------------\n")
 
-        reportPlot()
-        # plotData(data=, folder=, file=)
+        # reportPlot()
+        plotData(data=informationJ, folder="information", file="information")
+        plotData(data=survaillanceJ, folder="survaillance", file="survaillance")
 
         # globalView()
         globalViewScene()
