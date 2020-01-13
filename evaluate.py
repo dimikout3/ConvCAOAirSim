@@ -147,7 +147,7 @@ class evaluate:
         zeroDetections = len(cellsAssigned) - np.count_nonzero(cellsAssigned)
         # jList[jSorted[-int(zeroDetections*( len(self.targetPoints)/len(self.controllers) ) ):-1]] = self.avgDistance
 
-        return np.sum(jList) / self.worstDist
+        return 1/(np.sum(jList) / self.worstDist)
 
 
     def pointInHull(self, hull, point):

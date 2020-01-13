@@ -41,9 +41,9 @@ Xglobal = fenceX
 Yglobal = fenceY
 Zglobal = -90
 
-
-SAVE_RAW_IMAGES = True
+SAVE_RAW_IMAGES = False
 MAX_EXPLORATION_STEPS = 50
+
 
 def setGlobalHawk(client):
     """Setting the position and heading of the drone that will observer the Enviroment"""

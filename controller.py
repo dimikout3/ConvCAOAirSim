@@ -619,8 +619,8 @@ class controller:
 
         jEstimated, xCanditateList, yCanditateList, zCanditateList, yawCanditateList = canditatesData
 
-        # tartgetPointIndex = np.argmax(jEstimated)
-        tartgetPointIndex = np.argmin(jEstimated)
+        tartgetPointIndex = np.argmax(jEstimated)
+        # tartgetPointIndex = np.argmin(jEstimated)
 
         task = self.moveToPositionYawModeAsync(xCanditateList[tartgetPointIndex],
                                    yCanditateList[tartgetPointIndex],
