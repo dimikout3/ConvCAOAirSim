@@ -55,7 +55,7 @@ def setGlobalHawk(client):
     globalHawk.setCameraOrientation(-np.pi/2, 0., 0.)
     globalHawk.takeOff()
     #first climb to target altitude | avoid collision
-    globalHawk.moveToZ(Zglobal, 3).join()
+    globalHawk.moveToZ(Zglobal, 6).join()
     globalHawk.moveToPositionYawMode(Xglobal, Yglobal, Zglobal, 6)
     globalHawk.hover()
 
@@ -170,7 +170,7 @@ def globalViewScene():
     plt.close()
 
 
-def globalViewDetections():
+def globalViewDetections(excludedDict=[]):
 
     global controllers, globalHawk
 
@@ -212,9 +212,11 @@ def globalViewDetections():
         y = []
 
         detectionsCoordinates = ctrl.getDetectionsCoordinates()
-        for detection in detectionsCoordinates:
-            x.append(detection[0])
-            y.append(detection[1])
+        for i,detection in enumerate(detectionsCoordinates):
+
+            if i not in excludedDict[ctrl.getName()]:
+                x.append(detection[0])
+                y.append(detection[1])
 
         x = scale(x, OldMax=OldMaxX, OldMin=OldMinX, NewMax=(width-1))
         y = scale(y, OldMax=OldMaxY, OldMin=OldMinY, NewMax=(width-1))
@@ -425,6 +427,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         excludedDict = similarityOut(detectionsDict, similarityKPI="DistExhaustive", ip=options.ip)
 
         plotDetections(detectionsDict, excludedDict, posInd)
+        globalViewDetections(excludedDict = excludedDict)
 
         evaluator.update(controllers = controllers,
                          excludedDict = excludedDict,
@@ -698,7 +701,7 @@ if __name__ == "__main__":
 
         # globalView()
         globalViewScene()
-        globalViewDetections()
+        # globalViewDetections()
 
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
                             f"similarityList.pickle")
