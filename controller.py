@@ -24,7 +24,7 @@ ORIENTATION_DEV = 4
 # how may tries we will try to get images from AirSim
 IMAGES_TRIES = 10
 
-SAVE_DETECTED = False
+SAVE_DETECTED = True
 
 DEBUG_GEOFENCE = False
 DEBUG_RANDOMZ = False

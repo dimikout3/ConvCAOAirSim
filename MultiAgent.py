@@ -56,7 +56,7 @@ def setGlobalHawk(client):
     globalHawk.takeOff()
     #first climb to target altitude | avoid collision
     globalHawk.moveToZ(Zglobal, 3).join()
-    globalHawk.moveToPositionYawMode(Xglobal, Yglobal, Zglobal, 3)
+    globalHawk.moveToPositionYawMode(Xglobal, Yglobal, Zglobal, 6)
     globalHawk.hover()
 
 
@@ -166,6 +166,73 @@ def globalViewScene():
 
     globalView_file = os.path.join(os.getcwd(),f"results_{options.ip}", "globalView",
                             f"globalViewScene_{positionIdx}.png")
+    plt.savefig(globalView_file)
+    plt.close()
+
+
+def globalViewDetections():
+
+    global controllers, globalHawk
+
+    def scale(array, OldMax, OldMin, NewMax=127, NewMin=0):
+        # https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio
+        OldRange = (OldMax - OldMin)
+        NewRange = (NewMax - NewMin)
+        # NewValue = (((OldValue - OldMin) * NewRange) / OldRange) + NewMin
+
+        return [(((OldValue - OldMin) * NewRange) / OldRange) + NewMin for OldValue in array]
+
+    scene = globalHawk.imageScene
+    cameraInfo = globalHawk.cameraInfo
+    width, height, colors = scene.shape
+
+    altitude = abs(cameraInfo.pose.position.z_val)
+    fov = cameraInfo.fov
+
+    # what is the farest point global hawk can monitor
+    hypotenuse = altitude/np.cos( np.radians(fov/2) )
+    maxView = hypotenuse*np.sin( np.radians(fov/2) )
+
+    OldMaxX = fenceX + maxView
+    OldMinX = fenceX - maxView
+
+    OldMaxY = fenceY + maxView
+    OldMinY = fenceY - maxView
+
+    # https://techtutorialsx.com/2019/04/21/python-opencv-flipping-an-image/
+    # flipedScene = cv2.flip(scene, 1)
+    flipedScene = cv2.flip(scene, 0)
+
+    flipedScene = cv2.cvtColor(flipedScene, cv2.COLOR_BGR2RGB)
+    plt.imshow(flipedScene)
+
+    for ctrl in controllers:
+        # x,y,z,col = ctrl.getPointCloudList()
+        x = []
+        y = []
+
+        detectionsCoordinates = ctrl.getDetectionsCoordinates()
+        for detection in detectionsCoordinates:
+            x.append(detection[0])
+            y.append(detection[1])
+
+        x = scale(x, OldMax=OldMaxX, OldMin=OldMinX, NewMax=(width-1))
+        y = scale(y, OldMax=OldMaxY, OldMin=OldMinY, NewMax=(width-1))
+
+        plt.scatter(y, x, s=22.5, alpha=0.4, label=ctrl.getName())
+
+    plt.xlim(0,width-1)
+    plt.ylim(0,width-1)
+
+    plt.grid(False)
+    plt.axis('off')
+
+    # plt.legend(markerscale=20)
+    plt.legend()
+    plt.tight_layout()
+
+    globalView_file = os.path.join(os.getcwd(),f"results_{options.ip}", "globalViewDetections",
+                            f"globalViewDetection_{positionIdx}.png")
     plt.savefig(globalView_file)
     plt.close()
 
@@ -459,6 +526,13 @@ def generatingResultsFolders():
         if not os.path.isdir(globalView_folder):
             raise
 
+    globalViewDetection_folder = os.path.join(result_folder, "globalViewDetections")
+    try:
+        os.makedirs(globalViewDetection_folder)
+    except OSError:
+        if not os.path.isdir(globalViewDetection_folder):
+            raise
+
 
 def fillTemplate():
 
@@ -624,6 +698,7 @@ if __name__ == "__main__":
 
         # globalView()
         globalViewScene()
+        globalViewDetections()
 
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
                             f"similarityList.pickle")

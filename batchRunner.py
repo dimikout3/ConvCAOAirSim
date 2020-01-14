@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
         call = ["python","MultiAgent.py",
                 "--ip", str(ip),
-                "--waypoints", str(350)]
+                "--waypoints", str(450)]
 
         if SAVE_LOG:
             fout = open(f"stdOutput_{ip}.txt","w")
