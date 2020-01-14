@@ -77,6 +77,9 @@ class controller:
         self.contribution = []
         self.j_i = []
 
+        self.excludedList = []
+        self.informationJ = []
+
         self.timeStep = 0
         self.posIdx = 0
 
@@ -829,6 +832,29 @@ class controller:
                     min = dist
 
         return min
+
+
+    def setExcludedList(self, excludedList=[]):
+        self.excludedList.append(excludedList)
+
+
+    def storeInformationJ(self, KW=1., detectionsDict={} ):
+
+        score = self.scoreExcludingDetections(excludedList=self.excludedList[-1], minusDuplicates=False)
+
+        closestDetection = 0.
+
+        if score == 0.:
+            detectionsCoordinates = self.getDetectionsCoordinates()
+            closestDetection = self.getDistanceClosestDetection(detectionsDict)
+
+        update = score - KW*closestDetection
+
+        self.informationJ.append(score)
+
+
+    def getInformationJ(self,index=-1):
+        return self.informationJ[index]
 
 
     def scoreExcludingDetections(self, index=-1, excludedList=[], minusDuplicates = True):

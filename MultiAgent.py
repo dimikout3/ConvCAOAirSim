@@ -31,7 +31,7 @@ NORM = {'information':10.0, 'similarity':10.0}
 WEIGHT = {'information':1.0, 'similarity':-1.0}
 KW = 1
 
-fenceR = 90
+fenceR = 120
 fenceX = 25
 fenceY = -25
 fenceZ = -14
@@ -42,7 +42,7 @@ Yglobal = fenceY
 Zglobal = -90
 
 SAVE_RAW_IMAGES = False
-MAX_EXPLORATION_STEPS = 50
+MAX_EXPLORATION_STEPS = 90
 
 
 def setGlobalHawk(client):
@@ -317,33 +317,12 @@ def plotDetections(detectionsDict, excludedDict, posInd):
     plt.close()
 
 
-def updateDelta(ego="None", detectionsDict={}, excludedDict={}, delta=False):
+def updateDelta(ego="None", detectionsDict={}, excludedDict={}, updateRule="_"):
 
     global controllers
 
-    if delta:
+    if updateRule == "delta":
         """ Updating Using the delta differences, proposed in distributed CAO """
-
-        # detectionsCoordinates = ego.getDetectionsCoordinates(index=-2)
-        # detectionsInfo = ego.getDetectionsInfo(index=-2)
-        # detectionsData = [detectionsCoordinates, detectionsInfo]
-        # detectionsDict[ego.getName()] = detectionsData
-        #
-        # excludedDict = similarityOut(detectionsDict, similarityKPI="DistExhaustive", ip=options.ip)
-        #
-        # J_information = detectionsScore(ego = ego, excludedDict = excludedDict)
-        # # FIXME: no detections should change as in no-delta implementation
-        # J_costNoDetection = noDetectionsCost(ego=ego, detectionsDict=detectionsDict)
-        #
-        # J_isolation = J_information + J_costNoDetection
-        # delta = costJ[-1] - J_isolation
-        #
-        # if ego.posIdx == 0:
-        #     update = costJ[-1] + delta
-        # elif ego.posIdx > 0:
-        #     update = ego.getJi() + delta
-        #
-        # print(f"[INFO] {ego.getName()} has delta={update:.5f}")
 
         if ego.posIdx == 0:
             update = costJ[-1]
@@ -352,6 +331,18 @@ def updateDelta(ego="None", detectionsDict={}, excludedDict={}, delta=False):
             J_isolation = evaluator.randomPointCloudCost(ego=ego)
             delta = costJ[-1] - J_isolation
             update = ego.getJi() + delta
+
+    elif updateRule == "gradient":
+        """Update using gradient descent like operations (similar to BCD)"""
+
+        infromationJ = ego.getInformationJ(index=-1)
+
+        if ego.posIdx == 0:
+            update = infromationJ
+
+        elif ego.posIdx > 0:
+            infromationJprev = ego.getInformationJ(index=-2)
+            update = infromationJ - infromationJprev
 
     else:
         """ Update using direct values """
@@ -429,6 +420,10 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         plotDetections(detectionsDict, excludedDict, posInd)
         globalViewDetections(excludedDict = excludedDict)
 
+        for ctrl in controllers:
+            ctrl.setExcludedList(excludedDict[ctrl.getName()])
+            ctrl.storeInformationJ(detectionsDict=detectionsDict)
+
         evaluator.update(controllers = controllers,
                          excludedDict = excludedDict,
                          detectionsDict = detectionsDict)
@@ -444,10 +439,10 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
         if explorationActive:
             J = randomCloudDistCost
-            deltaUpdate = True
+            deltaUpdate = "delta"
         elif exploitationActive:
             J = informationScore
-            deltaUpdate = False
+            deltaUpdate = "gradient"
 
         costJ.append(J)
         print(f"[INFO] Cost J:{J:.8f}")
@@ -457,7 +452,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
             argsDict = dict(ego = drone,
                             detectionsDict = detectionsDict.copy(),
                             excludedDict = excludedDict.copy(),
-                            delta = deltaUpdate)
+                            updateRule = deltaUpdate)
             thread = Thread(target = updateDelta, kwargs=argsDict)
             thread.start()
             threadList.append(thread)
