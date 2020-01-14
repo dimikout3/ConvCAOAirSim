@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import time
 
 
-THRESHOLD_DIST = 7.0
+THRESHOLD_DIST = 2.5
 
 def compareCloudsIdeal(cloud1, cloud2):
 
