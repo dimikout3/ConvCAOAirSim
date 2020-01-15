@@ -86,6 +86,8 @@ class controller:
         self.posIdx = 0
 
         self.restrictingMovement = np.linspace(1,0.1,wayPointsSize)
+        # self.estimatorWeights = np.linspace(1,0.1,self.estimatorWindow)
+        self.estimatorWeights = np.logspace(1,0.1,self.estimatorWindow)
 
         self.parentRaw = os.path.join(os.getcwd(),f"results_{ip}", "swarm_raw_output")
         try:
@@ -666,7 +668,8 @@ class controller:
         if DEBUG_ESTIMATOR:
             print(f"\n[ESTIMATOR] {self.getName()} is using data:{[list(i) for i in dataDegrees[-self.estimatorWindow:]]} and Ji:{self.j_i[-self.estimatorWindow:]}")
 
-        weights = np.linspace(1,1,len(data[-self.estimatorWindow:]))
+        # weights = np.linspace(1,1,len(data[-self.estimatorWindow:]))
+        weights = self.estimatorWeights[-len(data):]
 
         self.estimator = self.model.fit(data[-self.estimatorWindow:],self.j_i[-self.estimatorWindow:], **{'linear__sample_weight': weights})
 
