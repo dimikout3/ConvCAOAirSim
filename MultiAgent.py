@@ -31,7 +31,7 @@ NORM = {'information':10.0, 'similarity':10.0}
 WEIGHT = {'information':1.0, 'similarity':-1.0}
 KW = 1
 
-fenceR = 120
+fenceR = 90
 fenceX = 25
 fenceY = -25
 fenceZ = -14
@@ -55,8 +55,8 @@ def setGlobalHawk(client):
     globalHawk.setCameraOrientation(-np.pi/2, 0., 0.)
     globalHawk.takeOff()
     #first climb to target altitude | avoid collision
-    globalHawk.moveToZ(Zglobal, 6).join()
-    globalHawk.moveToPositionYawMode(Xglobal, Yglobal, Zglobal, 6)
+    globalHawk.moveToZ(Zglobal, 3).join()
+    globalHawk.moveToPositionYawMode(Xglobal, Yglobal, Zglobal, 3)
     globalHawk.hover()
 
 
@@ -597,7 +597,9 @@ if __name__ == "__main__":
     controllers = []
     for drone in dronesID:
         controllers.append(controller(client, drone, OFFSETS[drone],
-                                      ip=options.ip, timeWindow=wayPointsSize))
+                                      ip=options.ip,
+                                      wayPointsSize=wayPointsSize,
+                                      estimatorWindow=55))
 
     # Setting Camera Orientation
     for ctrl in controllers: ctrl.setCameraOrientation(CAM_YAW, CAM_PITCH, CAM_ROOL)

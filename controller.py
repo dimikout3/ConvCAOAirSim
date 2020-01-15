@@ -16,7 +16,6 @@ from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neural_network import MLPRegressor
 
-ESTIMATORWINDOW = 55
 # the value wich will devide the field of view (constraing the yaw movement)
 CAM_DEV = 4
 ORIENTATION_DEV = 4
@@ -36,12 +35,15 @@ WEIGHTS = {"cars":1.0, "persons":0.0 , "trafficLights":1.0}
 
 class controller:
 
-    def __init__(self, clientIn, droneName, offSets, ip="1", timeWindow=200):
+    def __init__(self, clientIn, droneName, offSets, ip="1",
+                 wayPointsSize=200, estimatorWindow=55):
 
         self.client = clientIn
         self.name = droneName
 
         self.ip = ip
+
+        self.estimatorWindow = estimatorWindow
 
         self.detector = yoloDetector.yoloDetector()
 
@@ -83,7 +85,7 @@ class controller:
         self.timeStep = 0
         self.posIdx = 0
 
-        self.restrictingMovement = np.linspace(1,0.1,timeWindow)
+        self.restrictingMovement = np.linspace(1,0.1,wayPointsSize)
 
         self.parentRaw = os.path.join(os.getcwd(),f"results_{ip}", "swarm_raw_output")
         try:
@@ -662,11 +664,11 @@ class controller:
         dataDegrees = np.stack((xList,yList,yawListDegrees),axis=1)
 
         if DEBUG_ESTIMATOR:
-            print(f"\n[ESTIMATOR] {self.getName()} is using data:{[list(i) for i in dataDegrees[-ESTIMATORWINDOW:]]} and Ji:{self.j_i[-ESTIMATORWINDOW:]}")
+            print(f"\n[ESTIMATOR] {self.getName()} is using data:{[list(i) for i in dataDegrees[-self.estimatorWindow:]]} and Ji:{self.j_i[-self.estimatorWindow:]}")
 
-        weights = np.linspace(1,1,len(data[-ESTIMATORWINDOW:]))
+        weights = np.linspace(1,1,len(data[-self.estimatorWindow:]))
 
-        self.estimator = self.model.fit(data[-ESTIMATORWINDOW:],self.j_i[-ESTIMATORWINDOW:], **{'linear__sample_weight': weights})
+        self.estimator = self.model.fit(data[-self.estimatorWindow:],self.j_i[-self.estimatorWindow:], **{'linear__sample_weight': weights})
 
 
     def plotEstimator(self, xCanditate, yCanditate, yawCanditate, JCanditate):
@@ -702,8 +704,8 @@ class controller:
         v = np.sin(yaw)
         ji = self.j_i
 
-        ax_2 = ax2.quiver(y[-ESTIMATORWINDOW:],x[-ESTIMATORWINDOW:],v[-ESTIMATORWINDOW:],
-                   u[-ESTIMATORWINDOW:],ji[-ESTIMATORWINDOW:], cmap=plt.cm.seismic)
+        ax_2 = ax2.quiver(y[-self.estimatorWindow:],x[-self.estimatorWindow:],v[-self.estimatorWindow:],
+                   u[-self.estimatorWindow:],ji[-self.estimatorWindow:], cmap=plt.cm.seismic)
         # ax2.colorbar()
         fig.colorbar(ax_2, ax=ax2)
         ax2.set_xlabel("Y-Axis (network)")
