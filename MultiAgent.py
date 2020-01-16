@@ -42,7 +42,7 @@ Yglobal = fenceY
 Zglobal = -90
 
 SAVE_RAW_IMAGES = False
-MAX_EXPLORATION_STEPS = 50
+MAX_EXPLORATION_STEPS = 40
 
 
 def setGlobalHawk(client):
@@ -539,6 +539,9 @@ def get_options():
     optParser = optparse.OptionParser()
     optParser.add_option("--ip", dest="ip", default=0,type="int", help="the ip of the simulations launched")
     optParser.add_option("--waypoints", default=500, dest="waypoints",type="int", help="the number of waypoints provided")
+    optParser.add_option("--maxYaw", default=10, dest="maxYaw",type="float", help="max Yaw change")
+    optParser.add_option("--maxTravelTime", default=2.5, dest="maxTravelTime",type="float", help="max distance to be travelled in one step")
+    optParser.add_option("--estimatorWindow", default=30, dest="estimatorWindow",type="int", help="CAO estimator window")
     options, args = optParser.parse_args()
 
     return options
@@ -588,7 +591,7 @@ if __name__ == "__main__":
         controllers.append(controller(client, drone, OFFSETS[drone],
                                       ip=options.ip,
                                       wayPointsSize=wayPointsSize,
-                                      estimatorWindow=55))
+                                      estimatorWindow=options.estimatorWindow))
 
     # Setting Camera Orientation
     for ctrl in controllers: ctrl.setCameraOrientation(CAM_YAW, CAM_PITCH, CAM_ROOL)
@@ -638,8 +641,8 @@ if __name__ == "__main__":
 
         tasks = []
         for ctrl in controllers:
-            t = ctrl.moveOmniDirectional(maxTravelTime=2.5,
-                                         maxYaw=10.,
+            t = ctrl.moveOmniDirectional(maxTravelTime=options.maxTravelTime,
+                                         maxYaw=options.maxYaw,
                                          plotEstimator = True)
             tasks.append(t)
 
