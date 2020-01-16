@@ -580,7 +580,7 @@ class controller:
             for imageIdx,imageDepth in enumerate(imageDepthList):
 
                 # boundaries should be avoided for collision avoidance (thats what +/- 3 degrees do ...)
-                randomOrientation = np.random.uniform(np.radians(leftDeg + 3), np.radians(rightDeg - 3), randomPointsSize)
+                randomOrientation = np.random.uniform(np.radians(leftDeg + 5), np.radians(rightDeg - 5), randomPointsSize)
                 # travelTime = np.random.uniform(0, maxTravelTime, randomPointsSize)
                 travelTime = np.random.uniform(0., maxTravelTime, randomPointsSize)
                 yawCanditate = np.random.uniform(np.degrees(currentYaw) - (maxYaw/2)*a, np.degrees(currentYaw) + (maxYaw/2)*a, randomPointsSize)
@@ -638,7 +638,7 @@ class controller:
         task = self.moveToPositionYawModeAsync(xCanditateList[tartgetPointIndex],
                                    yCanditateList[tartgetPointIndex],
                                    zCanditateList[tartgetPointIndex],
-                                   2,
+                                   1,
                                    yawmode = yawCanditateList[tartgetPointIndex])
 
         if plotEstimator:
