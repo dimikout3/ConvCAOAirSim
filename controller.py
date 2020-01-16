@@ -263,6 +263,12 @@ class controller:
 
         self.j_i.append(Ji)
 
+    def resetJi(self, resetStyle=""):
+
+        if resetStyle == "gradientInformationJ":
+            self.j_i = np.gradient(self.informationJ)
+        elif resetStyle == "directInformationJ":
+            self.j_i = self.informationJ.copy()
 
     def getJi(self, index=-1):
 

@@ -42,7 +42,7 @@ Yglobal = fenceY
 Zglobal = -90
 
 SAVE_RAW_IMAGES = False
-MAX_EXPLORATION_STEPS = 90
+MAX_EXPLORATION_STEPS = 50
 
 
 def setGlobalHawk(client):
@@ -332,6 +332,8 @@ def updateDelta(ego="None", detectionsDict={}, excludedDict={}, updateRule="_"):
             delta = costJ[-1] - J_isolation
             update = ego.getJi() + delta
 
+        ego.appendJi(update)
+
     elif updateRule == "gradient":
         """Update using gradient descent like operations (similar to BCD)"""
 
@@ -344,27 +346,13 @@ def updateDelta(ego="None", detectionsDict={}, excludedDict={}, updateRule="_"):
             infromationJprev = ego.getInformationJ(index=-2)
             update = infromationJ - infromationJprev
 
-    else:
-        """ Update using direct values """
+        ego.appendJi(update)
 
-        score = ego.scoreExcludingDetections(excludedList=excludedDict[ego.getName()], minusDuplicates=False)
 
-        closestDetection = 0.
-        detectionsCoordinates = ego.getDetectionsCoordinates()
+    elif updateRule == "directInformationJ":
+        """ Update using direct values from informationJ """
 
-        if score == 0.:
-            print(f"[NO_DETECTIONS] {ego.getName()} has detectionsCoordinates:{detectionsCoordinates}")
-
-        if score == 0.:
-            # calculate the closest distance to a currently detcted object
-            print(f"[NO_DETECTIONS] {ego.getName()} has no detections")
-            closestDetection = ego.getDistanceClosestDetection(detectionsDict)
-
-        update = score - KW*closestDetection
-
-        print(f"[INFO] {ego.getName()} has direct update={update:.5f}")
-
-    ego.appendJi(update)
+        ego.resetJi(resetStyle="directInformationJ")
 
 
 def checkPhase(posInd):
@@ -375,6 +363,7 @@ def checkPhase(posInd):
 
     # TODO: check if the N last steps of survaillanceJ are within a range (deviation)
     # their gradient is stable (h klish tous)
+    # https://en.wikipedia.org/wiki/Root-mean-square_deviation
 
     return True, False
 
@@ -442,7 +431,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
             deltaUpdate = "delta"
         elif exploitationActive:
             J = informationScore
-            deltaUpdate = "gradient"
+            deltaUpdate = "directInformationJ"
 
         costJ.append(J)
         print(f"[INFO] Cost J:{J:.8f}")
