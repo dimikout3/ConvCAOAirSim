@@ -23,7 +23,7 @@ ORIENTATION_DEV = 4
 # how may tries we will try to get images from AirSim
 IMAGES_TRIES = 10
 
-SAVE_DETECTED = True
+SAVE_DETECTED = False
 
 DEBUG_GEOFENCE = False
 DEBUG_RANDOMZ = False
@@ -560,7 +560,7 @@ class controller:
         inGeoFenceCounter = 0
         inSafeDistCounter = 0
 
-        while (jEstimated == []) and (counter<38):
+        while (jEstimated == []) and (counter<360):
 
             counter += 1
 
