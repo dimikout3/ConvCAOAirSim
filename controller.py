@@ -81,6 +81,7 @@ class controller:
 
         self.excludedList = []
         self.informationJ = []
+        self.informationJi = []
 
         self.timeStep = 0
         self.posIdx = 0
@@ -269,6 +270,8 @@ class controller:
             self.j_i = np.gradient(self.informationJ)
         elif resetStyle == "directInformationJ":
             self.j_i = self.informationJ.copy()
+        elif resetStyle == "deltaInformationJi":
+            self.j_i = self.informationJi.copy()
 
     def getJi(self, index=-1):
 
@@ -866,6 +869,14 @@ class controller:
 
     def getInformationJ(self,index=-1):
         return self.informationJ[index]
+
+
+    def appendInforamtionJi(self,update):
+        self.informationJi.append(update)
+
+
+    def getinformationJi(self, index=-1):
+        return self.informationJi[index]
 
 
     def scoreExcludingDetections(self, index=-1, excludedList=[], minusDuplicates = True):
