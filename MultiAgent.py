@@ -31,7 +31,7 @@ NORM = {'information':10.0, 'similarity':10.0}
 WEIGHT = {'information':1.0, 'similarity':-1.0}
 KW = 1
 
-fenceR = 90
+fenceR = 70
 fenceX = 25
 fenceY = -25
 fenceZ = -14
@@ -42,7 +42,7 @@ Yglobal = fenceY
 Zglobal = -90
 
 SAVE_RAW_IMAGES = False
-MAX_EXPLORATION_STEPS = 40
+MAX_EXPLORATION_STEPS = 4
 
 
 def setGlobalHawk(client):
@@ -317,6 +317,28 @@ def plotDetections(detectionsDict, excludedDict, posInd):
     plt.close()
 
 
+def updateInformationDeltaJi(ego=None):
+
+    global controllers, informationJ
+
+    if ego.posIdx == 0:
+        update = informationJ[-1]
+    elif ego.posIdx > 0:
+
+        # J_isolation = evaluator.randomPointCloudCost(ego=ego)
+        J_isolation = 0.
+        for ctrl in controllers:
+            if ctrl.getName() == ego.getName():
+                J_isolation += ctrl.getInformationJ(index=-2)
+            else:
+                J_isolation += ctrl.getInformationJ(index=-1)
+
+        delta = informationJ[-1] - J_isolation
+        update = ego.getinformationJi() + delta
+
+    ego.appendInforamtionJi(update)
+
+
 def updateDelta(ego="None", detectionsDict={}, excludedDict={}, updateRule="_"):
 
     global controllers
@@ -348,11 +370,15 @@ def updateDelta(ego="None", detectionsDict={}, excludedDict={}, updateRule="_"):
 
         ego.appendJi(update)
 
-
     elif updateRule == "directInformationJ":
         """ Update using direct values from informationJ """
 
         ego.resetJi(resetStyle="directInformationJ")
+
+    elif updateRule == "deltaInformationJi":
+        """ Update using BCD jI values from informationJi """
+
+        ego.resetJi(resetStyle="deltaInformationJi")
 
 
 def checkPhase(posInd):
@@ -409,10 +435,6 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         plotDetections(detectionsDict, excludedDict, posInd)
         globalViewDetections(excludedDict = excludedDict)
 
-        for ctrl in controllers:
-            ctrl.setExcludedList(excludedDict[ctrl.getName()])
-            ctrl.storeInformationJ(detectionsDict=detectionsDict)
-
         evaluator.update(controllers = controllers,
                          excludedDict = excludedDict,
                          detectionsDict = detectionsDict)
@@ -426,12 +448,18 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
         explorationActive, exploitationActive = checkPhase(posInd)
 
+        for ctrl in controllers:
+            ctrl.setExcludedList(excludedDict[ctrl.getName()])
+            ctrl.storeInformationJ(detectionsDict=detectionsDict)
+            updateInformationDeltaJi(ego=ctrl)
+
         if explorationActive:
             J = randomCloudDistCost
             deltaUpdate = "delta"
         elif exploitationActive:
             J = informationScore
-            deltaUpdate = "directInformationJ"
+            # deltaUpdate = "directInformationJ"
+            deltaUpdate = "deltaInformationJi"
 
         costJ.append(J)
         print(f"[INFO] Cost J:{J:.8f}")
