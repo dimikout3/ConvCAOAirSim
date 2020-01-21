@@ -6,6 +6,8 @@
 /yolo-coco/*
 /__pycache__/*
 *stdOutput*
+gridSearchHyperparameters.txt
+utilities/imagesDetections.py
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
