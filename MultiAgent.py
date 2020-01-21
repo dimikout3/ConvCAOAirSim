@@ -42,8 +42,8 @@ Yglobal = fenceY
 Zglobal = -90
 
 SAVE_RAW_IMAGES = False
-MAX_EXPLORATION_STEPS = 4
-
+MAX_EXPLORATION_STEPS = 100
+GLOBAL_HAWK_ACTIVE = False
 
 def setGlobalHawk(client):
     """Setting the position and heading of the drone that will observer the Enviroment"""
@@ -408,8 +408,9 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
         detectionsDict = {}
 
-        globalHawk.updateState(posInd, timeStep)
-        globalHawk.getImages(save_raw=False)
+        if GLOBAL_HAWK_ACTIVE:
+            globalHawk.updateState(posInd, timeStep)
+            globalHawk.getImages(save_raw=False)
 
         for i,ctrl in enumerate(controllers):
             ctrl.updateState(posInd, timeStep)
@@ -433,7 +434,8 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
         excludedDict = similarityOut(detectionsDict, similarityKPI="DistExhaustive", ip=options.ip)
 
         plotDetections(detectionsDict, excludedDict, posInd)
-        globalViewDetections(excludedDict = excludedDict)
+        if GLOBAL_HAWK_ACTIVE:
+            globalViewDetections(excludedDict = excludedDict)
 
         evaluator.update(controllers = controllers,
                          excludedDict = excludedDict,
@@ -458,8 +460,8 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
             deltaUpdate = "delta"
         elif exploitationActive:
             J = informationScore
-            # deltaUpdate = "directInformationJ"
-            deltaUpdate = "deltaInformationJi"
+            deltaUpdate = "directInformationJ"
+            # deltaUpdate = "deltaInformationJi"
 
         costJ.append(J)
         print(f"[INFO] Cost J:{J:.8f}")
@@ -612,7 +614,8 @@ if __name__ == "__main__":
     client = airsim.MultirotorClient(ip = ip_id)
     client.confirmConnection()
 
-    setGlobalHawk(client)
+    if GLOBAL_HAWK_ACTIVE:
+        setGlobalHawk(client)
 
     controllers = []
     for drone in dronesID:
@@ -671,7 +674,8 @@ if __name__ == "__main__":
         for ctrl in controllers:
             t = ctrl.moveOmniDirectional(maxTravelTime=options.maxTravelTime,
                                          maxYaw=options.maxYaw,
-                                         plotEstimator = True)
+                                         plotEstimator=True,
+                                         minDist=7.5)
             tasks.append(t)
 
         # TODO: Chech if we have collision, if yes, then move drone to previous position
@@ -712,12 +716,12 @@ if __name__ == "__main__":
         print(f"----- elapsed time: {time.time() - ptime:.3f} ------")
         print("---------------------------------\n")
 
-        # reportPlot()
         plotData(data=informationJ, folder="information", file="information")
         plotData(data=survaillanceJ, folder="survaillance", file="survaillance")
 
         # globalView()
-        globalViewScene()
+        if GLOBAL_HAWK_ACTIVE:
+            globalViewScene()
         # globalViewDetections()
 
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
