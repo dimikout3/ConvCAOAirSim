@@ -9,6 +9,8 @@ import utilities.utils as utils
 import matplotlib.pyplot as plt
 import yoloDetector
 
+import scipy
+
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
@@ -40,6 +42,8 @@ class controller:
 
         self.client = clientIn
         self.name = droneName
+
+        self.lidarName = "Lidar1"
 
         self.ip = ip
 
@@ -88,7 +92,8 @@ class controller:
 
         self.restrictingMovement = np.linspace(1,0.1,wayPointsSize)
         # self.estimatorWeights = np.linspace(1,0.1,self.estimatorWindow)
-        self.estimatorWeights = np.logspace(1,0.1,self.estimatorWindow)
+        # self.estimatorWeights = np.logspace(1,0.1,self.estimatorWindow)
+        self.estimatorWeights = np.linspace(1,1,self.estimatorWindow)
 
         self.parentRaw = os.path.join(os.getcwd(),f"results_{ip}", "swarm_raw_output")
         try:
@@ -625,13 +630,122 @@ class controller:
         return jEstimated, xCanditateList, yCanditateList, zCanditateList, yawCanditateList
 
 
-    def moveOmniDirectional(self, randomPointsSize=70, maxTravelTime=5.,
-                            minDist=5., plotEstimator=True, maxYaw=15.):
+    def getLidarData(self):
 
-        canditatesData = self.getCanditates(randomPointsSize=randomPointsSize,
-                                            maxTravelTime=maxTravelTime,
-                                            minDist=minDist,
-                                            maxYaw=maxYaw)
+        print(f"Getting lidar data for {self.getName()} from {self.lidarName}")
+
+        lidarData = self.client.getLidarData(lidar_name = self.lidarName,
+                                             vehicle_name = self.getName())
+
+        points = np.array(lidarData.point_cloud, dtype=np.dtype('f4'))
+        points = np.reshape(points, (int(points.shape[0]/3), 3))
+
+        return points
+
+
+    def clearLidarPoints(self, lidarPoints=[], maxTravelTime=5.):
+
+        xCurrent = self.state.kinematics_estimated.position.x_val
+        yCurrent = self.state.kinematics_estimated.position.y_val
+        zCurrent = self.state.kinematics_estimated.position.z_val
+
+        droneCurrent = np.array([xCurrent, yCurrent, zCurrent])
+
+        distLidar2Drone = scipy.spatial.distance.cdist(lidarPoints, [droneCurrent])
+
+        return lidarPoints[np.where(distLidar2Drone<=maxTravelTime*1.1)[0]]
+
+
+    def distLine2Point(self, p1, p2, p3):
+        """Distance from line p1p2 and point p3"""
+        return np.linalg.norm(np.cross(p2-p1, p1-p3))/np.linalg.norm(p2-p1)
+
+
+    def isSafeDist(self,canditate=[], lidarPoints=[], minDist=5.):
+
+        xCurrent = self.state.kinematics_estimated.position.x_val
+        yCurrent = self.state.kinematics_estimated.position.y_val
+        zCurrent = self.state.kinematics_estimated.position.z_val
+
+        droneCurrent = np.array([xCurrent, yCurrent, zCurrent])
+
+        for point in lidarPoints:
+            dist = self.distLine2Point(droneCurrent, canditate, point)
+            if dist<minDist:
+                return False
+
+        return True
+
+
+    def getCanditatesLidar(self, randomPointsSize=70, maxTravelTime=5., minDist=5., maxYaw=15.):
+
+        speedScalar = 1
+        np.random.seed()
+
+        self.updateMultirotorState()
+        _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
+
+        xCurrent = self.state.kinematics_estimated.position.x_val
+        yCurrent = self.state.kinematics_estimated.position.y_val
+        zCurrent = self.state.kinematics_estimated.position.z_val
+
+        jEstimated = []
+        xCanditateList = []
+        yCanditateList = []
+        zCanditateList = []
+        yawCanditateList = []
+
+        # decreasing the available movement because we are getting closer to convergence point
+        # initialy we wan to explore and then exploit more carefully
+        a = self.restrictingMovement[self.timeStep]
+
+        # [-np.pi, np.pi] canditates are inside a shpere with radius=maxTravelTime
+        randomOrientation = np.random.uniform(-np.pi, np.pi, randomPointsSize)
+        travelTime = np.random.uniform(0., maxTravelTime, randomPointsSize)
+        yawCanditate = np.random.uniform(np.degrees(currentYaw) - (maxYaw/2)*a, np.degrees(currentYaw) + (maxYaw/2)*a, randomPointsSize)
+
+        lidarPoints = self.getLidarData()
+        lidarPoints = self.clearLidarPoints(lidarPoints=lidarPoints,
+                                            maxTravelTime=maxTravelTime)
+
+        for i in range(randomPointsSize):
+
+            xCanditate = xCurrent + np.cos((randomOrientation[i]) + currentYaw)*speedScalar*travelTime[i]*a
+            yCanditate = yCurrent + np.sin((randomOrientation[i]) + currentYaw)*speedScalar*travelTime[i]*a
+            zCanditate = zCurrent
+
+            canditates = [xCanditate,yCanditate,zCanditate]
+            inGeoFence = self.insideGeoFence(c = canditates, d = minDist)
+            isSafeDist = self.isSafeDist(canditate = np.array(canditates),
+                                         lidarPoints = lidarPoints,
+                                         minDist = minDist)
+
+            # the estimated score each canditate point has
+            if isSafeDist and inGeoFence:
+
+                jEstimated.append(self.estimate(xCanditate, yCanditate, np.radians(yawCanditate[i]) ))
+                xCanditateList.append(xCanditate)
+                yCanditateList.append(yCanditate)
+                zCanditateList.append(zCanditate)
+                yawCanditateList.append(yawCanditate[i])
+
+        return jEstimated, xCanditateList, yCanditateList, zCanditateList, yawCanditateList
+
+
+    def moveOmniDirectional(self, randomPointsSize=70, maxTravelTime=5.,
+                            minDist=5., plotEstimator=True, maxYaw=15.,
+                            lidar=False):
+
+        if lidar:
+            canditatesData = self.getCanditatesLidar(randomPointsSize=randomPointsSize,
+                                                     maxTravelTime=maxTravelTime,
+                                                     minDist=minDist,
+                                                     maxYaw=maxYaw)
+        else:
+            canditatesData = self.getCanditates(randomPointsSize=randomPointsSize,
+                                                maxTravelTime=maxTravelTime,
+                                                minDist=minDist,
+                                                maxYaw=maxYaw)
 
         jEstimated, xCanditateList, yCanditateList, zCanditateList, yawCanditateList = canditatesData
 

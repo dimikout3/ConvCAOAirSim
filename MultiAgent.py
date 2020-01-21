@@ -675,7 +675,8 @@ if __name__ == "__main__":
             t = ctrl.moveOmniDirectional(maxTravelTime=options.maxTravelTime,
                                          maxYaw=options.maxYaw,
                                          plotEstimator=True,
-                                         minDist=7.5)
+                                         minDist=5.,
+                                         lidar=True)
             tasks.append(t)
 
         # TODO: Chech if we have collision, if yes, then move drone to previous position
