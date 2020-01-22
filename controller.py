@@ -770,6 +770,16 @@ class controller:
             validCandidatesIndex = np.intersect1d(geoFenceSafe, safeDistTrue)
             # print(f"{self.getName()} validCandidatesIndex={validCandidatesIndex} ")
 
+            if validCandidatesIndex.size == 0:
+                # something went wrong ...
+                if helperIcreasedMove<4.:
+                    # increase helperIcreasedMove, check further canditates
+                    continue
+                else:
+                    # if further canditates also fail, go to debug mode ...
+                    import pdb
+                    pdb.set_trace()
+
             xCanditate = xCanditate[validCandidatesIndex]
             yCanditate = yCanditate[validCandidatesIndex]
             zCanditate = zCanditate[validCandidatesIndex]
