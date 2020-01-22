@@ -33,6 +33,8 @@ DEBUG_MOVE = False
 DEBUG_MOVE1DOF = False
 DEBUG_MOVE_OMNI = False
 DEBUG_ESTIMATOR = False
+DEBUG_CANDITATE_LIDAR = False
+DEBUG_CLEAR_LIDAR = False
 WEIGHTS = {"cars":1.0, "persons":0.0 , "trafficLights":1.0}
 
 class controller:
@@ -356,8 +358,12 @@ class controller:
 
     def insideGeoFence(self, d=5., c=[]):
 
-        x,y,z = c
-        dist = np.sqrt( (self.fenceX-x)**2 + (self.fenceY-y)**2 + (self.fenceZ-z)**2)
+        if type(c) is list:
+            x,y,z = c
+            dist = np.sqrt( (self.fenceX-x)**2 + (self.fenceY-y)**2 + (self.fenceZ-z)**2)
+        elif type(c) is np.ndarray:
+            # in that case c=[[x1,y1,z1],[x2,y2,z2],[x3,y3,z3] ...]
+            dist = scipy.spatial.distance.cdist(c, [np.array([self.fenceX, self.fenceY, self.fenceZ])])
 
         return (dist+d) < self.fenceR
 
@@ -632,7 +638,7 @@ class controller:
 
     def getLidarData(self):
 
-        print(f"Getting lidar data for {self.getName()} from {self.lidarName}")
+        # print(f"Getting lidar data for {self.getName()} from {self.lidarName}")
 
         lidarData = self.client.getLidarData(lidar_name = self.lidarName,
                                              vehicle_name = self.getName())
@@ -643,7 +649,7 @@ class controller:
         return points
 
 
-    def clearLidarPoints(self, lidarPoints=[], maxTravelTime=5.):
+    def clearLidarPoints(self, lidarPoints=[], maxTravelTime=5., controllers=[]):
 
         xCurrent = self.state.kinematics_estimated.position.x_val
         yCurrent = self.state.kinematics_estimated.position.y_val
@@ -653,7 +659,25 @@ class controller:
 
         distLidar2Drone = scipy.spatial.distance.cdist(lidarPoints, [droneCurrent])
 
-        return lidarPoints[np.where(distLidar2Drone<=maxTravelTime*1.1)[0]]
+        lidarPoints = lidarPoints[np.where(distLidar2Drone<=maxTravelTime*3.)[0]]
+
+        for ctrl in controllers:
+            if ctrl.getName() != self.getName():
+
+                state = ctrl.getState()
+                xCurrent = state.kinematics_estimated.position.x_val
+                yCurrent = state.kinematics_estimated.position.y_val
+                zCurrent = state.kinematics_estimated.position.z_val
+                ctrlCurrent = np.array([xCurrent, yCurrent, zCurrent])
+
+                distLidar2Drone = scipy.spatial.distance.cdist(lidarPoints, [ctrlCurrent])
+
+                lidarPoints = lidarPoints[np.where(distLidar2Drone>=2.)[0]]
+
+                if DEBUG_CLEAR_LIDAR:
+                    print(f"{self.getName()} excluding lidar from {ctrl.getName()} excluded size {len(np.where(distLidar2Drone<2.)[0])}")
+
+        return lidarPoints
 
 
     def distLine2Point(self, p1, p2, p3):
@@ -669,15 +693,29 @@ class controller:
 
         droneCurrent = np.array([xCurrent, yCurrent, zCurrent])
 
-        for point in lidarPoints:
-            dist = self.distLine2Point(droneCurrent, canditate, point)
-            if dist<minDist:
-                return False
+        if canditate.shape==(3,):
+            for point in lidarPoints:
+                dist = self.distLine2Point(droneCurrent, canditate, point)
+                if dist<minDist:
+                    return False
+            return True
+        else:
+            # canditate = [[x1,y1,z1],[x2,y2,z2],[]]
+            canditateList = []
+            for x,y,z in canditate:
+                cand = [x,y,z]
+                for point in lidarPoints:
+                    dist = self.distLine2Point(droneCurrent, canditate, point)
+                    if dist<minDist:
+                        canditateList.append(False)
+                        break
+                canditateList.append(True)
+            return canditateList
 
-        return True
 
 
-    def getCanditatesLidar(self, randomPointsSize=70, maxTravelTime=5., minDist=5., maxYaw=15.):
+    def getCanditatesLidar(self, randomPointsSize=70, maxTravelTime=5.,
+                           minDist=5., maxYaw=15., controllers=[]):
 
         speedScalar = 1
         np.random.seed()
@@ -699,48 +737,91 @@ class controller:
         # initialy we wan to explore and then exploit more carefully
         a = self.restrictingMovement[self.timeStep]
 
-        # [-np.pi, np.pi] canditates are inside a shpere with radius=maxTravelTime
-        randomOrientation = np.random.uniform(-np.pi, np.pi, randomPointsSize)
-        travelTime = np.random.uniform(0., maxTravelTime, randomPointsSize)
-        yawCanditate = np.random.uniform(np.degrees(currentYaw) - (maxYaw/2)*a, np.degrees(currentYaw) + (maxYaw/2)*a, randomPointsSize)
+        for helperIcreasedMove in np.linspace(1,5,40):
 
-        lidarPoints = self.getLidarData()
-        lidarPoints = self.clearLidarPoints(lidarPoints=lidarPoints,
-                                            maxTravelTime=maxTravelTime)
+            if DEBUG_CANDITATE_LIDAR:
+                print(f"{self.getName()} has helperIcreasedMove={helperIcreasedMove}")
 
-        for i in range(randomPointsSize):
+            # [-np.pi, np.pi] canditates are inside a shpere with radius=maxTravelTime
+            randomOrientation = np.random.uniform(-np.pi, np.pi, randomPointsSize)
+            travelTime = np.random.uniform(0., maxTravelTime, randomPointsSize)
+            yawCanditate = np.random.uniform(np.degrees(currentYaw) - (maxYaw/2)*a, np.degrees(currentYaw) + (maxYaw/2)*a, randomPointsSize)
 
-            xCanditate = xCurrent + np.cos((randomOrientation[i]) + currentYaw)*speedScalar*travelTime[i]*a
-            yCanditate = yCurrent + np.sin((randomOrientation[i]) + currentYaw)*speedScalar*travelTime[i]*a
-            zCanditate = zCurrent
+            lidarPoints = self.getLidarData()
+            lidarPoints = self.clearLidarPoints(lidarPoints=lidarPoints,
+                                                maxTravelTime=maxTravelTime,
+                                                controllers=controllers)
 
-            canditates = [xCanditate,yCanditate,zCanditate]
+            xCanditate = xCurrent + np.cos(randomOrientation)*speedScalar*travelTime*a*helperIcreasedMove
+            yCanditate = yCurrent + np.sin(randomOrientation)*speedScalar*travelTime*a*helperIcreasedMove
+            zCanditate = np.repeat(zCurrent,len(xCanditate))
+            canditates = np.stack((xCanditate,yCanditate,zCanditate),axis=1)
+
             inGeoFence = self.insideGeoFence(c = canditates, d = minDist)
-            isSafeDist = self.isSafeDist(canditate = np.array(canditates),
+            isSafeDist = self.isSafeDist(canditate = canditates,
                                          lidarPoints = lidarPoints,
                                          minDist = minDist)
+            # print(f"{self.getName()} isSafeDist={isSafeDist} inGeoFence={inGeoFence}")
 
-            # the estimated score each canditate point has
-            if isSafeDist and inGeoFence:
+            geoFenceSafe = np.where(inGeoFence==True)[0]
+            safeDistTrue = np.where(np.array(isSafeDist)==True)[0]
+            # print(f"{self.getName()} safeDistTrue={safeDistTrue} geoFenceSafe={geoFenceSafe}")
 
-                jEstimated.append(self.estimate(xCanditate, yCanditate, np.radians(yawCanditate[i]) ))
-                xCanditateList.append(xCanditate)
-                yCanditateList.append(yCanditate)
-                zCanditateList.append(zCanditate)
-                yawCanditateList.append(yawCanditate[i])
+            validCandidatesIndex = np.intersect1d(geoFenceSafe, safeDistTrue)
+            # print(f"{self.getName()} validCandidatesIndex={validCandidatesIndex} ")
 
-        return jEstimated, xCanditateList, yCanditateList, zCanditateList, yawCanditateList
+            xCanditate = xCanditate[validCandidatesIndex]
+            yCanditate = yCanditate[validCandidatesIndex]
+            zCanditate = zCanditate[validCandidatesIndex]
+
+            # print(f"{self.getName()} type(xCanditate)={xCanditate}")
+            jEstimated = self.estimate(xCanditate, yCanditate, np.radians(yawCanditate))
+
+            # print(f"{self.getName()} jEstimated={jEstimated}")
+
+            return jEstimated,xCanditate,yCanditate,zCanditate,yawCanditate
+
+        #     for i in range(randomPointsSize):
+        #
+        #         xCanditate = xCurrent + np.cos(randomOrientation[i])*speedScalar*travelTime[i]*a*helperIcreasedMove
+        #         yCanditate = yCurrent + np.sin(randomOrientation[i])*speedScalar*travelTime[i]*a*helperIcreasedMove
+        #         zCanditate = zCurrent
+        #
+        #         canditates = [xCanditate,yCanditate,zCanditate]
+        #         inGeoFence = self.insideGeoFence(c = canditates, d = minDist)
+        #         isSafeDist = self.isSafeDist(canditate = np.array(canditates),
+        #                                      lidarPoints = lidarPoints,
+        #                                      minDist = minDist)
+        #
+        #         # the estimated score each canditate point has
+        #         if isSafeDist and inGeoFence:
+        #
+        #             jEstimated.append(self.estimate(xCanditate, yCanditate, np.radians(yawCanditate[i]) ))
+        #             xCanditateList.append(xCanditate)
+        #             yCanditateList.append(yCanditate)
+        #             zCanditateList.append(zCanditate)
+        #             yawCanditateList.append(yawCanditate[i])
+        #
+        #     if xCanditateList != []:
+        #         if DEBUG_CANDITATE_LIDAR:
+        #             print(f" xCanditateList has size {len(xCanditateList)}")
+        #         break
+        #
+        # if DEBUG_CANDITATE_LIDAR:
+        #     print(f"{self.getName()} jEstimated size to be used {len(jEstimated)}")
+        # return jEstimated, xCanditateList, yCanditateList, zCanditateList, yawCanditateList
 
 
     def moveOmniDirectional(self, randomPointsSize=70, maxTravelTime=5.,
                             minDist=5., plotEstimator=True, maxYaw=15.,
-                            lidar=False):
+                            lidar=False, controllers=[]):
 
         if lidar:
             canditatesData = self.getCanditatesLidar(randomPointsSize=randomPointsSize,
                                                      maxTravelTime=maxTravelTime,
                                                      minDist=minDist,
-                                                     maxYaw=maxYaw)
+                                                     maxYaw=maxYaw,
+                                                     controllers=controllers)
         else:
             canditatesData = self.getCanditates(randomPointsSize=randomPointsSize,
                                                 maxTravelTime=maxTravelTime,
@@ -769,12 +850,22 @@ class controller:
 
     def estimate(self,x,y,yaw):
 
-        if yaw > np.pi:
-            yaw = -np.pi*2 + yaw
-        if yaw < -np.pi:
-            yaw = np.pi*2 - yaw
+        if type(x) is np.ndarray:
 
-        return float(self.estimator.predict([[x,y,yaw]]))
+            yaw[yaw > np.pi] = -np.pi*2 + yaw[yaw > np.pi]
+            yaw[yaw < -np.pi] = np.pi*2 - yaw[yaw < -np.pi]
+
+            canditates = np.stack((x,y,yaw),axis=1)
+            return self.estimator.predict(canditates)
+
+        else:
+
+            if yaw > np.pi:
+                yaw = -np.pi*2 + yaw
+            if yaw < -np.pi:
+                yaw = np.pi*2 - yaw
+
+            return float(self.estimator.predict([[x,y,yaw]]))
 
 
     def updateEstimator(self):
