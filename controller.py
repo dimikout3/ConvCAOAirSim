@@ -773,6 +773,7 @@ class controller:
             xCanditate = xCanditate[validCandidatesIndex]
             yCanditate = yCanditate[validCandidatesIndex]
             zCanditate = zCanditate[validCandidatesIndex]
+            yawCanditate = yawCanditate[validCandidatesIndex]
 
             # print(f"{self.getName()} type(xCanditate)={xCanditate}")
             jEstimated = self.estimate(xCanditate, yCanditate, np.radians(yawCanditate))
