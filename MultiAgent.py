@@ -707,11 +707,13 @@ if __name__ == "__main__":
 
             print(f"[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{np.degrees(yaw):.2f}) with Ji:{ctrl.getJi():.2f}")
 
-
-        # for ctrl in controllers: ctrl.updateEstimator()
+        threadList = []
         for ctrl in controllers:
-            # ctrl.updateEstimator1DoF()
-            ctrl.updateEstimator()
+            thread = Thread(target = ctrl.updateEstimator)
+            thread.start()
+            threadList.append(thread)
+        for thread in threadList:
+            thread.join()
 
         # for ctrl in controllers: ctrl.plotEstimator1DoF()
 
