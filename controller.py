@@ -639,11 +639,15 @@ class controller:
     def getLidarData(self):
 
         # print(f"Getting lidar data for {self.getName()} from {self.lidarName}")
-
-        lidarData = self.client.getLidarData(lidar_name = self.lidarName,
+        for test in range(10):
+            lidarData = self.client.getLidarData(lidar_name = self.lidarName,
                                              vehicle_name = self.getName())
 
-        points = np.array(lidarData.point_cloud, dtype=np.dtype('f4'))
+            points = np.array(lidarData.point_cloud, dtype=np.dtype('f4'))
+            if points.size != 0:
+                break
+            # getLidarData failed ... wait and try to get lidar data again
+            time.sleep(1)
         points = np.reshape(points, (int(points.shape[0]/3), 3))
 
         return points
