@@ -568,7 +568,7 @@ class controller:
 
         # decreasing the available movement because we are getting closer to convergence point
         # initialy we wan to explore and then exploit more carefully
-        a = self.restrictingMovement[self.timeStep]
+        a = self.restrictingMovement[self.posIdx]
 
         counter = 0
         inGeoFenceCounter = 0
@@ -739,7 +739,7 @@ class controller:
 
         # decreasing the available movement because we are getting closer to convergence point
         # initialy we wan to explore and then exploit more carefully
-        a = self.restrictingMovement[self.timeStep]
+        a = self.restrictingMovement[self.posIdx]
 
         for helperIcreasedMove in np.linspace(1,5,40):
 
@@ -1198,6 +1198,14 @@ class controller:
 
             return stateDrone.kinematics_estimated.position
 
+
+    def getTimeStep(self):
+        return self.timeStep
+
+
+    def getWayPoint(self):
+        return self.posIdx
+        
 
     def getOrientation(self):
 
