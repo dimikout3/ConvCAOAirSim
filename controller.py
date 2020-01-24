@@ -66,6 +66,8 @@ class controller:
         self.offSetY = offSets[1]
         self.offSetZ = offSets[2]
 
+        self.wayPointSize = wayPointsSize
+
         self.updateMultirotorState()
         self.updateCameraInfo()
         # self.state = self.getState()
@@ -279,6 +281,7 @@ class controller:
             self.j_i = self.informationJ.copy()
         elif resetStyle == "deltaInformationJi":
             self.j_i = self.informationJi.copy()
+
 
     def getJi(self, index=-1):
 
@@ -684,6 +687,14 @@ class controller:
         return lidarPoints
 
 
+    def addOffsetLidar(self, lidarPoints=[]):
+
+        offset = np.array([self.offSetX, self.offSetY, self.offSetZ])
+        points = lidarPoints + offset
+
+        return points
+
+
     def distLine2Point(self, p1, p2, p3):
         """Distance from line p1p2 and point p3"""
         return np.linalg.norm(np.cross(p2-p1, p1-p3))/np.linalg.norm(p2-p1)
@@ -731,12 +742,6 @@ class controller:
         yCurrent = self.state.kinematics_estimated.position.y_val
         zCurrent = self.state.kinematics_estimated.position.z_val
 
-        jEstimated = []
-        xCanditateList = []
-        yCanditateList = []
-        zCanditateList = []
-        yawCanditateList = []
-
         # decreasing the available movement because we are getting closer to convergence point
         # initialy we wan to explore and then exploit more carefully
         a = self.restrictingMovement[self.posIdx]
@@ -755,6 +760,7 @@ class controller:
             lidarPoints = self.clearLidarPoints(lidarPoints=lidarPoints,
                                                 maxTravelTime=maxTravelTime,
                                                 controllers=controllers)
+            lidarPoints = self.addOffsetLidar(lidarPoints=lidarPoints)
 
             xCanditate = xCurrent + np.cos(randomOrientation)*speedScalar*travelTime*a*helperIcreasedMove
             yCanditate = yCurrent + np.sin(randomOrientation)*speedScalar*travelTime*a*helperIcreasedMove
@@ -1205,7 +1211,7 @@ class controller:
 
     def getWayPoint(self):
         return self.posIdx
-        
+
 
     def getOrientation(self):
 
