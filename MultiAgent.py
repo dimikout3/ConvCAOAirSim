@@ -17,6 +17,7 @@ from threading import Thread
 import optparse
 import json
 import subprocess as sp
+from multiprocessing import Process
 
 # TODO: rename to ruuner.py and kill airsim env when finished
 
@@ -42,8 +43,64 @@ Yglobal = fenceY
 Zglobal = -90
 
 SAVE_RAW_IMAGES = False
-MAX_EXPLORATION_STEPS = 100
-GLOBAL_HAWK_ACTIVE = False
+MAX_EXPLORATION_STEPS = 70
+GLOBAL_HAWK_ACTIVE = True
+
+
+def collisionCorrection(timeOutCollision=300):
+
+    global controllers
+
+    wayPointDict = {}
+    for ctrl in controllers:
+        wayPointDict[ctrl.getName()] = 0
+    time.sleep(timeOutCollision)
+
+    running = True
+
+    while running:
+
+        time.sleep(timeOutCollision)
+
+        for ctrl in controllers:
+
+            if ctrl.getWayPoint() == wayPointDict[ctrl.getName()]:
+
+                print(f"{ctrl.getName()} is at the same spot after {timeOutCollision}[sec]. Check collision")
+
+                try:
+                    state = ctrl.getState()
+                    print(f"{ctrl.getName()} got state")
+                except:
+                    print(f"{ctrl.getName()} could not get state and failed")
+
+                try:
+                    if state.collision.has_collided:
+
+                        print(f"{ctrl.getName()} has collided ...")
+
+                        stateList = ctrl.getStateList()
+                        x = stateList[-2].kinecmatics_estimated.position.x_val
+                        y = stateList[-2].kinecmatics_estimated.position.y_val
+                        z = stateList[-2].kinecmatics_estimated.position.z_val
+                        _,_,yaw = airsim.to_eularian_angles(stateList[-3].kinematics_estimated.orientation)
+
+                        task = ctrl.moveToPositionYawModeAsync(x,y,z,1,yaw)
+                        task.join()
+
+                        print(f"{ctrl.getName()}moved successfully to previous position")
+
+                except:
+                    print(f"{ctrl.getName()} failed at moving drone. Debug ...")
+                    # import pdb; pdb.set_trace()
+
+            else:
+                print(f"{ctrl.getName()} has changed spot. Update wayPointDict")
+                wayPointDict[ctrl.getName()] = ctrl.getWayPoint()
+
+            if ctrl.getWayPoint() >= (ctrl.wayPointSize-2):
+                running = False
+
 
 def setGlobalHawk(client):
     """Setting the position and heading of the drone that will observer the Enviroment"""
@@ -653,6 +710,8 @@ if __name__ == "__main__":
         # no need for task list (just setting values here)
         ctrl.getImages()
 
+    # collisionCorrectionThread = Thread(target = collisionCorrection)
+    # collisionCorrectionThread.start()
 
     startTime = time.time()
 
@@ -675,7 +734,7 @@ if __name__ == "__main__":
             t = ctrl.moveOmniDirectional(maxTravelTime=options.maxTravelTime,
                                          maxYaw=options.maxYaw,
                                          plotEstimator=True,
-                                         minDist=2.,
+                                         minDist=options.maxTravelTime*2.5,
                                          lidar=True,
                                          controllers=controllers)
             tasks.append(t)
@@ -727,6 +786,8 @@ if __name__ == "__main__":
         if GLOBAL_HAWK_ACTIVE:
             globalViewScene()
         # globalViewDetections()
+
+    # collisionCorrectionThread.join()
 
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
                             f"similarityList.pickle")
