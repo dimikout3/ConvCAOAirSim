@@ -35,6 +35,8 @@ DEBUG_MOVE_OMNI = False
 DEBUG_ESTIMATOR = False
 DEBUG_CANDITATE_LIDAR = False
 DEBUG_CLEAR_LIDAR = False
+DEBUG_LIDAR_DIST = False
+PLOT_CANDITATES = True
 WEIGHTS = {"cars":1.0, "persons":0.0 , "trafficLights":1.0}
 
 class controller:
@@ -639,6 +641,45 @@ class controller:
         return jEstimated, xCanditateList, yCanditateList, zCanditateList, yawCanditateList
 
 
+    def plotCanditates(self, xCanditate, yCanditate, zCanditate, isSafeDist, lidarPoints):
+
+        report_canditates = os.path.join(os.getcwd(),f"results_{self.ip}", f"canditates_{self.getName()}")
+        try:
+            os.makedirs(report_canditates)
+        except OSError:
+            if not os.path.isdir(report_canditates):
+                raise
+
+        # add the lidar point cloud
+        plt.scatter( lidarPoints[:,1], lidarPoints[:,0], c="green", label="Lidar")
+
+        # safe canditates plot
+        safeDistTrue = np.where(np.array(isSafeDist)==True)[0]
+        # print(f"[DEBUG_CANDITATES]{self.getName()} has safeDist={len(safeDistTrue)}")
+        plt.scatter(yCanditate[safeDistTrue], xCanditate[safeDistTrue], c="blue", label="Safe")
+
+        # not safe canditates
+        safeDistFalse = np.where(np.array(isSafeDist)==False)[0]
+        # print(f"[DEBUG_CANDITATES]{self.getName()} has not safe ={len(safeDistFalse)}")
+        plt.scatter(yCanditate[safeDistFalse], xCanditate[safeDistFalse], c="red", label="Not Safe")
+
+
+        plt.xlabel("Y-Axis (network)")
+        plt.ylabel("X-Axis (network)")
+
+        try:
+            canditates_file = os.path.join(report_canditates, f"canditates_{self.posIdx}.png")
+            # plt.title(f"{self.getName()} - Time:{self.timeStep} - Canditates")
+        except:
+            canditates_file = os.path.join(report_canditates, f"canditates_{0}.png")
+
+        plt.tight_layout()
+        plt.legend()
+
+        plt.savefig(canditates_file)
+        plt.close()
+
+
     def getLidarData(self):
 
         # print(f"Getting lidar data for {self.getName()} from {self.lidarName}")
@@ -658,6 +699,8 @@ class controller:
 
     def clearLidarPoints(self, lidarPoints=[], maxTravelTime=5., controllers=[]):
 
+        initialSize = len(lidarPoints)
+
         xCurrent = self.state.kinematics_estimated.position.x_val
         yCurrent = self.state.kinematics_estimated.position.y_val
         zCurrent = self.state.kinematics_estimated.position.z_val
@@ -666,7 +709,7 @@ class controller:
 
         distLidar2Drone = scipy.spatial.distance.cdist(lidarPoints, [droneCurrent])
 
-        lidarPoints = lidarPoints[np.where(distLidar2Drone<=maxTravelTime*3.)[0]]
+        lidarPoints = lidarPoints[np.where(distLidar2Drone<=maxTravelTime*10.)[0]]
 
         for ctrl in controllers:
             if ctrl.getName() != self.getName():
@@ -681,8 +724,11 @@ class controller:
 
                 lidarPoints = lidarPoints[np.where(distLidar2Drone>=2.)[0]]
 
-                if DEBUG_CLEAR_LIDAR:
-                    print(f"{self.getName()} excluding lidar from {ctrl.getName()} excluded size {len(np.where(distLidar2Drone<2.)[0])}")
+                # if DEBUG_CLEAR_LIDAR:
+                #     print(f"{self.getName()} excluding lidar from {ctrl.getName()} excluded size {len(np.where(distLidar2Drone<2.)[0])}")
+
+        if DEBUG_CLEAR_LIDAR:
+            print(f"[DEBUG_CLEAR_LIDAR]{self.getName()} initial lidar points {initialSize} cleared {len(lidarPoints)}")
 
         return lidarPoints
 
@@ -697,7 +743,9 @@ class controller:
 
     def distLine2Point(self, p1, p2, p3):
         """Distance from line p1p2 and point p3"""
-        return np.linalg.norm(np.cross(p2-p1, p1-p3))/np.linalg.norm(p2-p1)
+        # return np.linalg.norm(np.cross(p2-p1, p1-p3))/np.linalg.norm(p2-p1)
+        """Distance from line p2(canditate) and point p3(lidar point)"""
+        return np.linalg.norm(p2-p3)
 
 
     def isSafeDist(self,canditate=[], lidarPoints=[], minDist=5.):
@@ -716,17 +764,19 @@ class controller:
             return True
         else:
             # canditate = [[x1,y1,z1],[x2,y2,z2],[]]
-            canditateList = []
-            for x,y,z in canditate:
-                cand = [x,y,z]
-                for point in lidarPoints:
-                    dist = self.distLine2Point(droneCurrent, canditate, point)
-                    if dist<minDist:
-                        canditateList.append(False)
-                        break
-                canditateList.append(True)
-            return canditateList
-
+            # canditateList = []
+            # for x,y,z in canditate:
+            #     cand = np.array([x,y,z])
+            #     for point in lidarPoints:
+            #         dist = self.distLine2Point(droneCurrent, cand, point)
+            #         if dist<minDist:
+            #             canditateList.append(False)
+            #             break
+            #     canditateList.append(True)
+            # return canditateList
+            dist = scipy.spatial.distance.cdist(lidarPoints, canditate)
+            distMin = np.min(dist, axis=0)
+            return distMin>minDist
 
 
     def getCanditatesLidar(self, randomPointsSize=70, maxTravelTime=5.,
@@ -762,6 +812,11 @@ class controller:
                                                 controllers=controllers)
             lidarPoints = self.addOffsetLidar(lidarPoints=lidarPoints)
 
+            if DEBUG_LIDAR_DIST:
+                droneCurrent = np.array([xCurrent, yCurrent, zCurrent])
+                dist = scipy.spatial.distance.cdist(lidarPoints, [droneCurrent])
+                print(f"[DEBUG_LIDAR_DIST]{self.getName()} has minDist={minDist} min.dist.(drone,lidar)={np.min(dist)}")
+
             xCanditate = xCurrent + np.cos(randomOrientation)*speedScalar*travelTime*a*helperIcreasedMove
             yCanditate = yCurrent + np.sin(randomOrientation)*speedScalar*travelTime*a*helperIcreasedMove
             zCanditate = np.repeat(zCurrent,len(xCanditate))
@@ -771,14 +826,17 @@ class controller:
             isSafeDist = self.isSafeDist(canditate = canditates,
                                          lidarPoints = lidarPoints,
                                          minDist = minDist)
-            # print(f"{self.getName()} isSafeDist={isSafeDist} inGeoFence={inGeoFence}")
+            # print(f"{self.getName()} isSafeDist={len(isSafeDist)}")
+            # print(f"{self.getName()} inGeoFence={len(inGeoFence)}")
 
             geoFenceSafe = np.where(inGeoFence==True)[0]
             safeDistTrue = np.where(np.array(isSafeDist)==True)[0]
-            # print(f"{self.getName()} safeDistTrue={safeDistTrue} geoFenceSafe={geoFenceSafe}")
 
             validCandidatesIndex = np.intersect1d(geoFenceSafe, safeDistTrue)
             # print(f"{self.getName()} validCandidatesIndex={validCandidatesIndex} ")
+
+            if PLOT_CANDITATES:
+                self.plotCanditates(xCanditate, yCanditate, zCanditate, isSafeDist, lidarPoints)
 
             if validCandidatesIndex.size == 0:
                 # something went wrong ...
