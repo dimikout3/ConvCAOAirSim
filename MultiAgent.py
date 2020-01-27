@@ -733,8 +733,9 @@ if __name__ == "__main__":
         for ctrl in controllers:
             t = ctrl.moveOmniDirectional(maxTravelTime=options.maxTravelTime,
                                          maxYaw=options.maxYaw,
-                                         plotEstimator=True,
-                                         minDist=options.maxTravelTime*2.5,
+                                         plotEstimator=False,
+                                         # minDist=options.maxTravelTime*2.5,
+                                         minDist=2.5,
                                          lidar=True,
                                          controllers=controllers)
             tasks.append(t)
