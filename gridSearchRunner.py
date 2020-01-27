@@ -9,7 +9,7 @@ import itertools
 import numpy as np
 
 # Number of simulations
-SAVE_LOG = True
+SAVE_LOG = False
 
 def deleteExistingResults():
 
@@ -23,21 +23,26 @@ def deleteExistingResults():
             path = os.path.join(os.getcwd(),file)
             shutil.rmtree(path)
 
-def getGridList():
+def getGridList(repeat=5):
 
-    maxYaw = np.linspace(2.5,7.5,3)
-    maxTravelTime = np.linspace(1.,5.,3)
-    estimatorWindow = np.linspace(10,30,3)
+    maxYaw = np.linspace(6.5,8.5,2)
+    maxTravelTime = np.linspace(3.5,5.,2)
+    estimatorWindow = [75]
 
     gridList = list(itertools.product(maxYaw,maxTravelTime,estimatorWindow))
 
-    return gridList
+    finalList = []
+    for yaw, time, window in gridList:
+        for i in range(repeat):
+            finalList.append((yaw,time,window))
+
+    return finalList
 
 def gridListReport(gridList):
 
     fout = open(f"gridSearchHyperparameters.txt","w")
     for ip, (maxYaw, maxTravelTime, estimatorWindow) in enumerate(gridList):
-        simString = f"Results_{ip}:\n  maxYaw={maxYaw}\n  maxTravelTime={maxTravelTime}\n  estimatorWindow={estimatorWindow}\n--------------\n"
+        simString = f"Results_{ip+1}:\n  maxYaw={maxYaw}\n  maxTravelTime={maxTravelTime}\n  estimatorWindow={estimatorWindow}\n--------------\n"
         print(simString,file=fout)
     fout.close()
 
