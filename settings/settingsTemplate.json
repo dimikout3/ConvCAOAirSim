@@ -8,40 +8,40 @@
       "CaptureSettings": [
         {
           "ImageType": 0,
-          "Width": 128,
-          "Height": 128	,
+          "Width": 1024,
+          "Height": 1024	,
           "FOV_Degrees": 90,
           "AutoExposureSpeed": 100,
           "MotionBlurAmount": 0
         },
 				{
 					"ImageType": 2,
-					"Width": 128,
-					"Height": 128	,
+					"Width": 1024,
+					"Height": 1024	,
 					"FOV_Degrees": 90,
 					"AutoExposureSpeed": 100,
 					"MotionBlurAmount": 0
 				},
 				{
 					"ImageType": 2,
-					"Width": 128,
-					"Height": 128	,
+					"Width": 1024,
+					"Height": 1024	,
 					"FOV_Degrees": 90,
 					"AutoExposureSpeed": 100,
 					"MotionBlurAmount": 0
 				},
 				{
 					"ImageType": 2,
-					"Width": 128,
-					"Height": 128	,
+					"Width": 1024,
+					"Height": 1024	,
 					"FOV_Degrees": 90,
 					"AutoExposureSpeed": 100,
 					"MotionBlurAmount": 0
 				},
 				{
 					"ImageType": 2,
-					"Width": 128,
-					"Height": 128	,
+					"Width": 1024,
+					"Height": 1024	,
 					"FOV_Degrees": 90,
 					"AutoExposureSpeed": 100,
 					"MotionBlurAmount": 0
@@ -49,30 +49,51 @@
     ]
   },
 
+	"DefaultSensors": {
+	    "Lidar1": {
+	         "SensorType": 6,
+	         "Enabled" : true,
+	         "NumberOfChannels": 16,
+					 "RotationsPerSecond": 20,
+	         "PointsPerSecond": 10000,
+					 "X": 0, "Y": 0, "Z": -1,
+					 "Roll": 0, "Pitch": 0, "Yaw" : 0,
+					 "Range":70,
+					 "VerticalFOVUpper": 45,
+					 "VerticalFOVLower": -45,
+					 "HorizontalFOVStart": -180,
+					 "HorizontalFOVEnd": 180,
+					 "DrawDebugPoints": true
+	    }
+	},
 	"ClockSpeed": 1.0,
 	"LocalHostIp": "127.0.0.1",
 
 	"Vehicles": {
+		"GlobalHawk": {
+		  "VehicleType": "SimpleFlight",
+			"AutoCreate": true,
+		  "X": 10, "Y": 10, "Z": 0
+		},
 		"Drone1": {
 		  "VehicleType": "SimpleFlight",
+			"AutoCreate": true,
 		  "X": 0, "Y": 0, "Z": 0
 		},
 		"Drone2": {
 		  "VehicleType": "SimpleFlight",
+			"AutoCreate": true,
 		  "X": 0, "Y": -5, "Z": 0
 		},
 		"Drone3": {
 		  "VehicleType": "SimpleFlight",
+			"AutoCreate": true,
 		  "X": 5, "Y": 0, "Z": 0
 		},
 		"Drone4": {
 		  "VehicleType": "SimpleFlight",
+			"AutoCreate": true,
 		  "X": 5, "Y": 5, "Z": 0
-		},
-		"GlobalHawk": {
-		  "VehicleType": "SimpleFlight",
-		  "X": 10, "Y": 10, "Z": 0
 		}
-
-    }
+  }
 }
