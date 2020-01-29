@@ -8,6 +8,7 @@
 *stdOutput*
 gridSearchHyperparameters.txt
 utilities/imagesDetections.py
+*.p
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
