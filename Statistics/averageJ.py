@@ -8,12 +8,15 @@ import pickle
 import scipy
 import pandas as pd
 import seaborn as sns
-# from scipy.signal import savgol_filter
 
 PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\GridSearch\V07"
 # PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\2Drones"
 DRONES_NUM = "Drones: 4"
 PICKLE_OUT = "Drones_4.p"
+
+plotstyle="ggplot"
+# sns.set_style(f"{plotstyle}")
+plt.style.use(f"{plotstyle}")
 
 if __name__ == "__main__":
 
@@ -57,4 +60,5 @@ if __name__ == "__main__":
     print(f"[SAVE] Dumping pickle object")
     pickle.dump(dataFrame,open(PICKLE_OUT, "wb"))
 
-    plt.show()
+    # plt.show()
+    plt.savefig(f"AverageJ_{plotstyle}.png")

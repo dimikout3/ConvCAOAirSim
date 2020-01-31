@@ -22,7 +22,7 @@ Yglobal = fenceY
 Zglobal = -90
 
 if __name__ == "__main__":
-
+    
     global simulation_dir
     if PATH == "":
         simulation_dir = os.path.join(os.getcwd(), "..")
