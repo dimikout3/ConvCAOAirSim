@@ -25,7 +25,7 @@ ORIENTATION_DEV = 4
 # how may tries we will try to get images from AirSim
 IMAGES_TRIES = 10
 
-SAVE_DETECTED = False
+SAVE_DETECTED = True
 
 DEBUG_GEOFENCE = False
 DEBUG_RANDOMZ = False
@@ -59,6 +59,7 @@ class controller:
         self.scoreDetectionsNum = []
         self.detectionsInfo = []
         self.detectionsCoordinates = []
+        self.detectionsWidthHeight = []
         self.pointCloud = []
 
         self.client.enableApiControl(True, self.name)
@@ -1053,21 +1054,34 @@ class controller:
 
         detections = self.detector.detect(self.imageScene, display=False, save=detected_file_name)
 
-        # detections = {'cars':[(pixel_x,pixel_y,detecions_id,confidece),(pixel_x,pixel_y,detecions_id,confidece), ...]}
-        # val[4] -> confidence of each detections
-        # score = sum([val[4]*WEIGHTS[key] for key,val in detections.items()])
-        # score = 0.0
+        # detections = {'cars':[(pixel_x,pixel_y,detecions_id,confidece,width, height),(pixel_x,pixel_y,detecions_id,confidece), ...]}
         pixelX = []
         pixelY = []
+        width = []
+        height = []
         # scoreNum -> number of detected objects (int)
         scoreNum = 0
+        detection_copy = {}
         for detectionClass, objects in detections.items():
+            detection_copy[detectionClass] = []
             for object in objects:
                 # object = (pixel_x,pixel_y,detecions_id,confidece)
                 # score += object[3]*WEIGHTS[detectionClass]
                 pixelX.append(object[0])
                 pixelY.append(object[1])
+                width.append(object[4])
+                height.append(object[5])
+                detection_copy[detectionClass].append((object[0],object[1],object[2],object[3]))
                 # scoreNum += WEIGHTS[detectionClass]
+
+        # XXX: bad technique here, but width and height were added on later stages,
+        # there was no compatibility. Defenitely we must improve that
+        # detection_copy = {}
+        # for detectionClass, objects in detections.items():
+        #     detection_copy[detectionClass] = []
+        #     for object in objects:
+        #         detection_copy[detectionClass].append(object[0:4])
+        # detections = detection_copy.copy()
 
         # depthImage = self.getDepthImage()
         depthImage = self.imageDepthCamera
@@ -1089,6 +1103,7 @@ class controller:
         # self.scoreDetectionsNum.append(scoreNum)
         self.detectionsInfo.append(detectionsInfo)
         self.detectionsCoordinates.append(detectionsCoordinates)
+        self.detectionsWidthHeight.append([width,height])
         # self.stateList.append([self.getState(), self.getCameraInfo()])
         self.stateList.append([self.state, self.cameraInfo])
 
@@ -1328,6 +1343,10 @@ class controller:
         detections_file = os.path.join(os.getcwd(), f"results_{self.ip}","detected_objects",
                                        f"detectionsCoordinates_{self.name}.pickle")
         pickle.dump(self.detectionsCoordinates,open(detections_file,"wb"))
+
+        detections_file = os.path.join(self.parentRaw,
+                                       self.getName(), f"detectionsWidthHeight_{self.name}.pickle")
+        pickle.dump(self.detectionsWidthHeight,open(detections_file,"wb"))
 
         state_file = os.path.join(self.parentRaw,
                                   self.getName(), f"state_{self.name}.pickle")
