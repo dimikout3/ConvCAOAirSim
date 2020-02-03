@@ -43,7 +43,7 @@ Yglobal = fenceY
 Zglobal = -90
 
 SAVE_RAW_IMAGES = False
-MAX_EXPLORATION_STEPS = 70
+MAX_EXPLORATION_STEPS = 50
 GLOBAL_HAWK_ACTIVE = True
 
 
@@ -338,7 +338,7 @@ def plotDetections(detectionsDict, excludedDict, posInd):
 
     fig, ax = plt.subplots(2,2,figsize=(10,10))
 
-    xUnraveled, yUnraveled = np.unravel_index(np.arange(4),(2,2))
+    xUnraveled, yUnraveled = np.unravel_index(np.arange(len(detectionsDect.keys())),(2,2))
 
     for j,drone in enumerate(dronesID):
 
@@ -490,7 +490,7 @@ def monitor(droneList, posInd, timeInterval = 1, totalTime = 1):
 
         excludedDict = similarityOut(detectionsDict, similarityKPI="DistExhaustive", ip=options.ip)
 
-        plotDetections(detectionsDict, excludedDict, posInd)
+        # plotDetections(detectionsDict, excludedDict, posInd)
         if GLOBAL_HAWK_ACTIVE:
             globalViewDetections(excludedDict = excludedDict)
 
@@ -662,7 +662,8 @@ if __name__ == "__main__":
     OFFSETS = {"Drone1":[0,0,0],
                "Drone2":[0,-5,0],
                "Drone3":[5,0,0],
-               "Drone4":[5,5,0]
+               "Drone4":[5,5,0],
+               "Drone5":[10,5,0]
               }
 
     dronesID = list(OFFSETS.keys())
@@ -735,7 +736,7 @@ if __name__ == "__main__":
                                          maxYaw=options.maxYaw,
                                          plotEstimator=False,
                                          # minDist=options.maxTravelTime*2.5,
-                                         minDist=2.5,
+                                         minDist=options.maxTravelTime*1.2,
                                          lidar=True,
                                          controllers=controllers)
             tasks.append(t)
