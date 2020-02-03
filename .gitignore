@@ -9,6 +9,9 @@
 gridSearchHyperparameters.txt
 utilities/imagesDetections.py
 *.p
+/Statistics/*.png
+/objectiveFunctionDiagram/*.asc
+/objectiveFunctionDiagram/*.png
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
