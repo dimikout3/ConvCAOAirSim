@@ -87,7 +87,7 @@ def to3D(pixelX, pixelY, camInfo, depthImage, color=[]):
     # turn
     phi = pixelYaw
 
-    r = depth[ pointsH , pointsW ]
+    r = depth[ pointsH, pointsW]
     idx = np.where(r<100)
 
     x = r*np.sin(theta)*np.cos(phi)

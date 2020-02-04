@@ -241,7 +241,7 @@ class controller:
         halfWidth = width/2
         halfHeight= height/2
 
-        r = np.random.uniform(0,halfHeight,randomPointsSize)
+        r = np.random.uniform(0,min(halfHeight,halfWidth),randomPointsSize)
         thetas = np.random.uniform(0,2*np.pi,randomPointsSize)
 
         pointsH = r*np.sin(thetas)
