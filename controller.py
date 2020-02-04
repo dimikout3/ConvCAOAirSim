@@ -127,6 +127,19 @@ class controller:
         return self.client.hoverAsync(vehicle_name=self.name)
 
 
+    def setPose(self, x, y, z, pitch, roll, yaw):
+
+        x -= self.offSetX
+        y -= self.offSetY
+        z -= self.offSetZ
+
+        position = airsim.Vector3r(x , y, z)
+        heading = airsim.to_quaternion(pitch, roll, yaw)
+        pose = airsim.Pose(position, heading)
+
+        return self.client.simSetVehiclePose(pose, True,vehicle_name=self.name)
+
+
     def moveToPositionYawModeAsync(self, x, y, z, speed=1, yawmode = 0):
         # moveToPositionAsync works only for relative coordinates, therefore we must
         # subtrack the offset (which corresponds to global coordinates)
