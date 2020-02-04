@@ -38,9 +38,9 @@ fenceY = -25
 fenceZ = -14
 
 #positions of GlobalHawk
-Xglobal = 25
-Yglobal = 35
-Zglobal = -17
+Xglobal = fenceX
+Yglobal = fenceY
+Zglobal = -90
 
 SAVE_RAW_IMAGES = True
 MAX_EXPLORATION_STEPS = 50
@@ -111,6 +111,7 @@ def setGlobalHawk(client):
     # The camera orientation of the global view | yaw,pitch,roll | radians
     globalHawk.setCameraOrientation(-np.pi/2, 0., 0.)
     globalHawk.takeOff()
+    # globalHawk.setPose(Xglobal, Yglobal, Zglobal, -np.pi/2, 0., 0.)
     #first climb to target altitude | avoid collision
     globalHawk.moveToZ(Zglobal, 3).join()
     globalHawk.moveToPositionYawMode(Xglobal, Yglobal, Zglobal, 3)
@@ -167,6 +168,58 @@ def globalViewScene():
 
     global controllers, globalHawk
 
+    scene = globalHawk.imageScene
+    cameraInfo = globalHawk.cameraInfo
+    width, height, colors = scene.shape
+
+    altitude = abs(cameraInfo.pose.position.z_val)
+    fov = cameraInfo.fov
+
+    # what is the farest point global hawk can monitor
+    hypotenuse = altitude/np.cos( np.radians(fov/2) )
+    maxView = hypotenuse*np.sin( np.radians(fov/2) )
+
+    left, right = -maxView + fenceY, maxView + fenceY
+    bottom, top = -maxView + fenceX, maxView + fenceX
+    # https://techtutorialsx.com/2019/04/21/python-opencv-flipping-an-image/
+    # flipedScene = cv2.flip(scene, 1)
+    # flipedScene = cv2.flip(scene, 0)
+    flipedScene = scene
+    print(f"left={left} right={right} bot={bottom} top={top}")
+
+    flipedScene = cv2.cvtColor(flipedScene, cv2.COLOR_BGR2RGB)
+    plt.imshow(flipedScene,extent=[left, right, bottom, top])
+
+    for ctrl in controllers:
+        # x,y,z,col = ctrl.getPointCloud(x=100,y=100)
+        x,y,z,col = ctrl.getPointCloudList()
+        plt.scatter(y, x, s=0.2, alpha=0.4, label=ctrl.getName())
+
+    plt.xlim(left, right)
+    plt.ylim(bottom, top)
+
+    # plt.gca().invert_yaxis()
+
+    plt.grid(False)
+    plt.axis('off')
+    # ax1.set_xlabel("Y-Axis (NetWork)")
+    # ax1.set_ylabel("X-Axis (NetWork)")
+    # plt.margins(0,0)
+    plt.legend(markerscale=20)
+    # plt.tight_layout()
+
+    globalView_file = os.path.join(os.getcwd(),f"results_{options.ip}", "globalView",
+                            f"globalViewScene_{positionIdx}.png")
+
+    plt.savefig(globalView_file, bbox_inches = 'tight', dpi=1000)
+    plt.close()
+
+
+
+def globalViewSceneOriginal():
+
+    global controllers, globalHawk
+
     def scale(array, OldMax, OldMin, NewMax=127, NewMin=0):
         # https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio
         OldRange = (OldMax - OldMin)
@@ -213,8 +266,8 @@ def globalViewScene():
 
     # plt.gca().invert_yaxis()
 
-    plt.grid(False)
-    plt.axis('off')
+    # plt.grid(False)
+    # plt.axis('off')
     # ax1.set_xlabel("Y-Axis (NetWork)")
     # ax1.set_ylabel("X-Axis (NetWork)")
 
