@@ -170,17 +170,26 @@ def globalViewScene():
 
     scene = globalHawk.imageScene
     cameraInfo = globalHawk.cameraInfo
-    width, height, colors = scene.shape
+    height, width, colors = scene.shape
+    print(f"height={height} width={width} ")
 
     altitude = abs(cameraInfo.pose.position.z_val)
-    fov = cameraInfo.fov
+    hfov = cameraInfo.fov
+    vFoV = (height/width)*hfov
+    print(f"altitude={altitude} hFoV={hfov} vFoV={vFoV}")
 
     # what is the farest point global hawk can monitor
-    hypotenuse = altitude/np.cos( np.radians(fov/2) )
-    maxView = hypotenuse*np.sin( np.radians(fov/2) )
+    Horizontalhypotenuse = altitude/np.cos( np.radians(hfov/2) )
+    maxViewHorizontal = Horizontalhypotenuse*np.sin( np.radians(hfov/2) )
+    print(f"Horizontalhypotenuse={Horizontalhypotenuse} maxViewHorizontal={maxViewHorizontal}")
 
-    left, right = -maxView + fenceY, maxView + fenceY
-    bottom, top = -maxView + fenceX, maxView + fenceX
+    verticalhypotenuse = altitude/np.cos( np.radians(vFoV/2) )
+    maxViewVertical = verticalhypotenuse*np.sin( np.radians(vFoV/2) )
+    maxViewVertical = maxViewHorizontal/2
+    print(f"verticalhypotenuse={verticalhypotenuse} maxViewVertical={maxViewVertical}")
+
+    left, right = -maxViewHorizontal + fenceY, maxViewHorizontal + fenceY
+    bottom, top = -maxViewVertical + fenceX, maxViewVertical + fenceX
     # https://techtutorialsx.com/2019/04/21/python-opencv-flipping-an-image/
     # flipedScene = cv2.flip(scene, 1)
     # flipedScene = cv2.flip(scene, 0)
@@ -190,10 +199,11 @@ def globalViewScene():
     flipedScene = cv2.cvtColor(flipedScene, cv2.COLOR_BGR2RGB)
     plt.imshow(flipedScene,extent=[left, right, bottom, top])
 
-    for ctrl in controllers:
+    colors = ['r','b','m', 'c']
+    for ind, ctrl in enumerate(controllers):
         # x,y,z,col = ctrl.getPointCloud(x=100,y=100)
         x,y,z,col = ctrl.getPointCloudList()
-        plt.scatter(y, x, s=0.2, alpha=0.4, label=ctrl.getName())
+        plt.scatter(y, x, s=0.2, alpha=0.4, label=ctrl.getName(), c = colors[ind])
 
     plt.xlim(left, right)
     plt.ylim(bottom, top)
@@ -205,13 +215,22 @@ def globalViewScene():
     # ax1.set_xlabel("Y-Axis (NetWork)")
     # ax1.set_ylabel("X-Axis (NetWork)")
     # plt.margins(0,0)
+
+    # Add line with operations area
+    theta = np.linspace(0,2*np.pi,500)
+    # r = np.sqrt(fenceR)
+    r = fenceR
+    y = fenceY + r*np.cos(theta)
+    x = fenceX + r*np.sin(theta)
+    plt.plot(y,x,'r--')
+
     plt.legend(markerscale=20)
     # plt.tight_layout()
 
     globalView_file = os.path.join(os.getcwd(),f"results_{options.ip}", "globalView",
                             f"globalViewScene_{positionIdx}.png")
 
-    plt.savefig(globalView_file, bbox_inches = 'tight', dpi=1000)
+    plt.savefig(globalView_file, bbox_inches = 'tight', dpi=1500)
     plt.close()
 
 
@@ -713,9 +732,9 @@ if __name__ == "__main__":
     wayPointsSize = options.waypoints
 
     OFFSETS = {"Drone1":[0,0,0],
-               "Drone2":[0,-5,0]
-               # "Drone3":[5,0,0]
-               # "Drone4":[5,5,0]
+               "Drone2":[0,-5,0],
+               "Drone3":[5,0,0],
+               "Drone4":[5,5,0]
               }
 
     dronesID = list(OFFSETS.keys())
@@ -772,11 +791,16 @@ if __name__ == "__main__":
 
     totalSteps = 2
 
-    # d = {"Drone1":{"x":np.linspace(0,40,totalSteps), "y": np.array([-1]*totalSteps),"yaw":90.},
-    #       "Drone2":{"x":np.array([5]*totalSteps), "y": np.linspace(0,40,totalSteps),"yaw":0.}}
-    d = {"Drone1":{"x":[27], "y": [17],"yaw":90.},
-         "Drone2":{"x":[10], "y": [35],"yaw":0.}}
-    alt = -5.
+    # OFFSETS = {"Drone1":[0,0,0],
+    #            "Drone2":[0,-5,0],
+    #            "Drone3":[5,0,0],
+    #            "Drone4":[5,5,0]
+    #           }
+    d = {"Drone1":{"x":[0, -10], "y": [0, 0],"yaw":[90., 45.]},
+         "Drone2":{"x":[0, 60], "y": [-5, -50],"yaw":[90., 70.]},
+         "Drone3":{"x":[5, -10], "y": [0, -70],"yaw":[90, 90.]},
+         "Drone4":{"x":[5, 5], "y": [5 ,-70],"yaw":[90., -10.]}}
+    alt = -15.
 
     for positionIdx in range(0,len(d["Drone1"]["x"])):
 
@@ -786,7 +810,7 @@ if __name__ == "__main__":
         for ctrl in controllers:
             t = ctrl.moveToPositionYawModeAsync( float(d[ctrl.getName()]["x"][positionIdx]),
                                                  float(d[ctrl.getName()]["y"][positionIdx]),
-                                                 alt, speed=3, yawmode = d[ctrl.getName()]["yaw"])
+                                                 alt, speed=3, yawmode = d[ctrl.getName()]["yaw"][positionIdx])
             tasks.append(t)
 
         # TODO: Chech if we have collision, if yes, then move drone to previous position
