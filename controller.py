@@ -874,36 +874,6 @@ class controller:
 
             return jEstimated,xCanditate,yCanditate,zCanditate,yawCanditate
 
-        #     for i in range(randomPointsSize):
-        #
-        #         xCanditate = xCurrent + np.cos(randomOrientation[i])*speedScalar*travelTime[i]*a*helperIcreasedMove
-        #         yCanditate = yCurrent + np.sin(randomOrientation[i])*speedScalar*travelTime[i]*a*helperIcreasedMove
-        #         zCanditate = zCurrent
-        #
-        #         canditates = [xCanditate,yCanditate,zCanditate]
-        #         inGeoFence = self.insideGeoFence(c = canditates, d = minDist)
-        #         isSafeDist = self.isSafeDist(canditate = np.array(canditates),
-        #                                      lidarPoints = lidarPoints,
-        #                                      minDist = minDist)
-        #
-        #         # the estimated score each canditate point has
-        #         if isSafeDist and inGeoFence:
-        #
-        #             jEstimated.append(self.estimate(xCanditate, yCanditate, np.radians(yawCanditate[i]) ))
-        #             xCanditateList.append(xCanditate)
-        #             yCanditateList.append(yCanditate)
-        #             zCanditateList.append(zCanditate)
-        #             yawCanditateList.append(yawCanditate[i])
-        #
-        #     if xCanditateList != []:
-        #         if DEBUG_CANDITATE_LIDAR:
-        #             print(f" xCanditateList has size {len(xCanditateList)}")
-        #         break
-        #
-        # if DEBUG_CANDITATE_LIDAR:
-        #     print(f"{self.getName()} jEstimated size to be used {len(jEstimated)}")
-        # return jEstimated, xCanditateList, yCanditateList, zCanditateList, yawCanditateList
-
 
     def moveOmniDirectional(self, randomPointsSize=70, maxTravelTime=5.,
                             minDist=5., plotEstimator=True, maxYaw=15.,
@@ -1275,6 +1245,8 @@ class controller:
         self.cameraInfo.pose.position.x_val += self.offSetX
         self.cameraInfo.pose.position.y_val += self.offSetY
         self.cameraInfo.pose.position.z_val += self.offSetZ
+
+        self.cameraInfo.fov = max(120,self.cameraInfo.fov)
 
 
     def getPositions(self, index=None):
