@@ -10,20 +10,22 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.image as mpimg
 
-PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\GridSearch\V07"
+# older boundaries
+# left, right = -114.43489074707031, 64.43489074707031
+# bot, top = -64.43489074707031, 114.43489074707031
 
-fenceR = 70
-fenceX = 25
-fenceY = -25
-fenceZ = -14
-#positions of GlobalHawk
-Xglobal = fenceX
-Yglobal = fenceY
-Zglobal = -90
+# ultrawide boundaries
+# left=-180.28102687023934 right=130.28102687023934 bot=-52.64051343511967 top=102.6405134351196
+
+DRONE2_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\2Drones"
+DRONE3_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\3Drones"
+DRONE4_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\GridSearch\V07"
+DRONE5_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\5Drones"
+
+PATH = DRONE4_PATH
 
 if __name__ == "__main__":
-    
-    global simulation_dir
+
     if PATH == "":
         simulation_dir = os.path.join(os.getcwd(), "..")
     else:
@@ -62,36 +64,49 @@ if __name__ == "__main__":
             file.close()
 
             for time, state in enumerate(stateList):
+
+                x_val = state[0].kinematics_estimated.position.x_val
+                y_val = state[0].kinematics_estimated.position.y_val
+
+                if (y_val>25) or (-40<x_val<10 and -40<y_val<-20):
+                    continue
+
+                data["x_val"].append(x_val)
+                data["y_val"].append(y_val)
+
                 #  state = [multirotorState, cameraState]
                 data["Simulation"].append(sim)
                 data["Time"].append(time*3.)
                 data["State"].append(state)
 
-                x_val = state[0].kinematics_estimated.position.x_val
-                y_val = state[0].kinematics_estimated.position.y_val
-                data["x_val"].append(x_val)
-                data["y_val"].append(y_val)
-
                 data["droneID"].append(droneID)
 
-    image_path = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\GridSearch\V07\results_1\globalViewDetections\globalViewDetection_0.png"
-    map_img = mpimg.imread(image_path)
-    # plt.imshow(map_img)
+    image_path = "scene_time_0.png"
+    map_img = cv2.imread(image_path)
+    map_img = cv2.cvtColor(map_img, cv2.COLOR_BGR2RGB)
 
     df = pd.DataFrame(data)
     # print(df.info)
-    df = df[df.Time>(350*3)]
+    df = df[df.Time>(380*3)]
+
     # https://seaborn.pydata.org/generated/seaborn.kdeplot.html
     hmax = sns.kdeplot(df.y_val , df.x_val, cmap="Reds",
                        shade=False,
-                       shade_lowest=False)
-    hmax.collections[0].set_alpha(.0)
-
-    # hmax.imshow(map_img,
-    #       aspect = hmax.get_aspect(),
-    #       extent = hmax.get_xlim() + hmax.get_ylim(),
-    #       zorder = 0) #put the map under the heatmap
+                       shade_lowest=True,
+                       kernel="gau",
+                       bw = 7.)
+    # hmax.collections[0].set_alpha(.7)
 
     # The extent kwarg controls the bounding box in data coordinates that the image will fill specified as (left, right, bottom, top)
-    plt.imshow(map_img, zorder=1, extent=[-100, 100, -100.0, 100.0])
-    plt.show()
+    left, right = -114.43489074707031, 64.43489074707031
+    bot, top = -64.43489074707031, 114.43489074707031
+    plt.imshow(map_img, zorder=0, extent=[left, right, bot, top])
+
+    # sns.jointplot(df.y_val, df.x_val, kind="hex", color="#4CB391")
+    # hmax.collections[0].set_alpha(.0)
+
+    plt.grid(False)
+    plt.axis('off')
+
+    # plt.show()
+    plt.savefig("densityConvergence.png",dpi=2000)
