@@ -9,56 +9,70 @@ import scipy
 import pandas as pd
 import seaborn as sns
 
-PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\GridSearch\V07"
-# PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\2Drones"
-DRONES_NUM = "Drones: 4"
-PICKLE_OUT = "Drones_4.p"
+DRONE2_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\2Drones"
+DRONE3_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\3Drones"
+DRONE4_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\GridSearch\V07"
+DRONE5_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\5Drones"
+
+DRONES_PATH = {"UAVs 2":DRONE2_PATH,
+               "UAVs 3":DRONE3_PATH,
+               "UAVs 4":DRONE4_PATH,
+               "UAVs 5":DRONE5_PATH}
 
 plotstyle="ggplot"
-# sns.set_style(f"{plotstyle}")
 plt.style.use(f"{plotstyle}")
 
 if __name__ == "__main__":
 
-    global simulation_dir
-    if PATH == "":
-        simulation_dir = os.path.join(os.getcwd(), "..")
-    else:
-        simulation_dir = PATH
+    dataFrameList = []
 
-    directories = os.listdir(simulation_dir)
-    print(f"directories {directories}")
-    result_dirs = [i for i in directories if 'results_' in i]
-    # for safety reasons, last simulation is usally corrupted
-    # result_dirs = result_dirs[0:-2]
+    for drones_number,simulation_dir in DRONES_PATH.items():
 
-    data = {}
-    data["Simulation"] = []
-    data["Time[sec]"] = []
-    data["Confidence Interval"] = []
-    data["Drones Number"] = []
+        directories = os.listdir(simulation_dir)
+        # print(f"directories {directories}")
+        print(f"___ Drones Number Average J: {drones_number} ____")
+        result_dirs = [i for i in directories if 'results_' in i]
 
-    for sim in result_dirs:
+        data = {}
+        data["Simulation"] = []
+        data["Time[sec]"] = []
+        data["Confidence Interval"] = []
+        data["UAV Number"] = []
 
-        sim_dir = os.path.join(simulation_dir, sim)
-        pickle_in = os.path.join(sim_dir, "information", "informationAggregated.pickle")
-        file = open(pickle_in, "rb")
-        informationJ = np.array(pickle.load(file))
-        file.close()
+        for sim in result_dirs:
 
-        for time, confJ in enumerate(informationJ):
-            data["Simulation"].append(sim)
-            data["Time[sec]"].append(time*3.)
-            data["Confidence Interval"].append(confJ)
-            data["Drones Number"].append(DRONES_NUM)
-            # data["state"].append(steteList[time])
-            # data["droneID"].append(droneID)
+            sim_dir = os.path.join(simulation_dir, sim)
+            try:
+                pickle_in = os.path.join(sim_dir, "information", "informationAggregated.pickle")
+                file = open(pickle_in, "rb")
+                informationJ = np.array(pickle.load(file))
+                file.close()
+            except:
+                print(f"#### FAILED LOADING SIMULATION {sim_dir}")
+                continue
 
-    dataFrame = pd.DataFrame(data)
-    sns.lineplot(x="Time[sec]", y="Confidence Interval", data=dataFrame)
+            for time, confJ in enumerate(informationJ):
+                data["Simulation"].append(sim)
+                data["Time[sec]"].append(time*3.)
+                data["Confidence Interval"].append(confJ)
+                data["UAV Number"].append(drones_number)
 
-    print(f"[SAVE] Dumping pickle object")
-    pickle.dump(dataFrame,open(PICKLE_OUT, "wb"))
+        dataFrame = pd.DataFrame(data)
+        dataFrameList.append(dataFrame)
 
-    # plt.show()
-    plt.savefig(f"AverageJ_{plotstyle}.png")
+        sns.lineplot(x="Time[sec]", y="Confidence Interval", data=dataFrame)
+
+        print(f"[SAVE] Dumping pickle object")
+        pickle.dump(dataFrame,open(f"{drones_number}.p", "wb"))
+
+        # plt.show()
+        plt.savefig(f"AverageJ_{drones_number}.png")
+        plt.close()
+
+    dataFrameCommon = pd.concat(dataFrameList)
+    sns.lineplot(x="Time[sec]",
+                 y="Confidence Interval",
+                 hue="UAV Number",
+                 data=dataFrameCommon[ dataFrameCommon['Time[sec]']<300*3])
+    plt.savefig(f"AverageJ_AllUav.png", dpi=1000)
+    plt.close()

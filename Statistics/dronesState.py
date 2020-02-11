@@ -105,8 +105,8 @@ if __name__ == "__main__":
     # sns.jointplot(df.y_val, df.x_val, kind="hex", color="#4CB391")
     # hmax.collections[0].set_alpha(.0)
 
-    plt.grid(False)
-    plt.axis('off')
+    # plt.grid(False)
+    # plt.axis('off')
 
     # plt.show()
     plt.savefig("densityConvergence.png",dpi=2000)
