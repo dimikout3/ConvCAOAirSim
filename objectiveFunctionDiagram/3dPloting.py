@@ -8,6 +8,8 @@ import airsim
 import cv2
 import math
 
+LIDAR = True
+
 # color = (0,255,0)
 # rgb = "%d %d %d" % color
 Width=1200
@@ -45,7 +47,7 @@ def restriction(image, drone_id):
     return xPixels, yPixels
 
 
-def savePointCloud(image, ImageRGB, fileName, drone_id):
+def savePointCloud(points, ImageRGB, fileName, drone_id):
    f = open(fileName, "w")
    xPixels, yPixels = restriction(image, drone_id)
    for x in xPixels:
@@ -70,6 +72,21 @@ def savePointCloud(image, ImageRGB, fileName, drone_id):
           f.write("%f %f %f %s\n" % (pt[0], pt[1], pt[2]-1, rgb))
    f.close()
 
+
+def saveLidar(points, fileName, drone_id):
+    f = open(fileName, "w")
+    for pt in points:
+       if drone_id == "Drone1":
+           color = (255, 0,0)
+       elif drone_id == "Drone2":
+           color = (0, 0, 255)
+
+       rgb = "%d %d %d" % color
+       # print(f"rgb={rgb} color={color}")
+
+       f.write("%f %f %f %s\n" % (pt[0], pt[1], pt[2], rgb))
+    f.close()
+
 def plot3D(image_file):
     # https://stackoverflow.com/questions/50965673/python-display-3d-point-cloud
     # https://github.com/intel-isl/Open3D/issues/921
@@ -83,15 +100,24 @@ if __name__ == "__main__":
     for DRONE_ID in DRONE_ID_LIST:
         path = os.path.join(os.getcwd(), "results_1", "swarm_raw_output", DRONE_ID, f"position_{TIME_STEP}")
 
-        cloudFile = os.path.join(path,"depth_time_0.pfm")
-        rawImage,scale = airsim.read_pfm(cloudFile)
-        Image3D = cv2.reprojectImageTo3D(rawImage, projectionMatrix)
+        if LIDAR:
 
-        rgbFile = os.path.join(path,"scene_time_0.png")
-        ImageRGB = cv2.imread(rgbFile)
+            cloudFile = os.path.join(path,"lidar_time_0.npy")
+            points = np.load(cloudFile)
+            outputFile = f"lidar_{DRONE_ID}.asc"
+            saveLidar(points, outputFile, DRONE_ID)
 
-        ImageRGB = cv2.cvtColor(ImageRGB, cv2.COLOR_BGR2RGB)
+        else:
 
-        outputFile = f"cloud_{DRONE_ID}.asc"
-        savePointCloud(Image3D, ImageRGB, outputFile, DRONE_ID)
+            cloudFile = os.path.join(path,"depth_time_0.pfm")
+            rawImage,scale = airsim.read_pfm(cloudFile)
+            Image3D = cv2.reprojectImageTo3D(rawImage, projectionMatrix)
+
+            rgbFile = os.path.join(path,"scene_time_0.png")
+            ImageRGB = cv2.imread(rgbFile)
+            ImageRGB = cv2.cvtColor(ImageRGB, cv2.COLOR_BGR2RGB)
+
+            outputFile = f"cloud_{DRONE_ID}.asc"
+            savePointCloud(Image3D, ImageRGB, outputFile, DRONE_ID)
+
         plot3D(outputFile)
