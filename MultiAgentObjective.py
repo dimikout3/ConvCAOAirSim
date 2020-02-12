@@ -185,7 +185,7 @@ def globalViewScene():
 
     verticalhypotenuse = altitude/np.cos( np.radians(vFoV/2) )
     maxViewVertical = verticalhypotenuse*np.sin( np.radians(vFoV/2) )
-    maxViewVertical = maxViewHorizontal/2
+    maxViewVertical = maxViewHorizontal*(height/width)
     print(f"verticalhypotenuse={verticalhypotenuse} maxViewVertical={maxViewVertical}")
 
     left, right = -maxViewHorizontal + fenceY, maxViewHorizontal + fenceY
@@ -222,7 +222,7 @@ def globalViewScene():
     r = fenceR
     y = fenceY + r*np.cos(theta)
     x = fenceX + r*np.sin(theta)
-    plt.plot(y,x,'r--')
+    plt.plot(y,x,'k--')
 
     plt.legend(markerscale=20)
     # plt.tight_layout()
@@ -232,7 +232,6 @@ def globalViewScene():
 
     plt.savefig(globalView_file, bbox_inches = 'tight', dpi=1500)
     plt.close()
-
 
 
 def globalViewSceneOriginal():
@@ -731,10 +730,10 @@ if __name__ == "__main__":
 
     wayPointsSize = options.waypoints
 
-    OFFSETS = {"Drone1":[0,0,0],
-               "Drone2":[0,-5,0],
-               "Drone3":[5,0,0],
-               "Drone4":[5,5,0]
+    OFFSETS = {"UAV1":[0,0,0],
+               "UAV2":[0,-5,0],
+               "UAV3":[5,0,0],
+               "UAV4":[5,5,0]
               }
 
     dronesID = list(OFFSETS.keys())
@@ -791,18 +790,16 @@ if __name__ == "__main__":
 
     totalSteps = 2
 
-    # OFFSETS = {"Drone1":[0,0,0],
-    #            "Drone2":[0,-5,0],
-    #            "Drone3":[5,0,0],
-    #            "Drone4":[5,5,0]
-    #           }
-    d = {"Drone1":{"x":[0, -10], "y": [0, 0],"yaw":[90., 45.]},
-         "Drone2":{"x":[0, 60], "y": [-5, -50],"yaw":[90., 70.]},
-         "Drone3":{"x":[5, -10], "y": [0, -70],"yaw":[90, 90.]},
-         "Drone4":{"x":[5, 5], "y": [5 ,-70],"yaw":[90., -10.]}}
+    d = {"UAV1":{"x":[0, -10], "y": [0, 0],"yaw":[90., 45.]},
+         "UAV2":{"x":[0, 60], "y": [-5, -50],"yaw":[90., 70.]},
+         "UAV3":{"x":[5, -10], "y": [0, -70],"yaw":[90, 90.]},
+         "UAV4":{"x":[5, 5], "y": [5 ,-70],"yaw":[90., -10.]}}
+    # d = {"Drone1":{"x":[25.], "y": [15],"yaw":[90.]},
+    #      "Drone2":{"x":[15], "y": [33.],"yaw":[0.]},
+    #      }
     alt = -15.
 
-    for positionIdx in range(0,len(d["Drone1"]["x"])):
+    for positionIdx in range(0,len(d["UAV1"]["x"])):
 
         ptime = time.time()
 
@@ -818,6 +815,9 @@ if __name__ == "__main__":
             task.join()
 
         monitor(dronesID, positionIdx)
+
+        for ctrl in controllers:
+            ctrl.getLidarData(save_lidar=True)
 
         for ctrl in controllers:
 
