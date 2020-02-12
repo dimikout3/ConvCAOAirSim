@@ -694,7 +694,7 @@ class controller:
         plt.close()
 
 
-    def getLidarData(self):
+    def getLidarData(self, save_lidar=False):
 
         # print(f"Getting lidar data for {self.getName()} from {self.lidarName}")
         for test in range(10):
@@ -707,6 +707,10 @@ class controller:
             # getLidarData failed ... wait and try to get lidar data again
             time.sleep(1)
         points = np.reshape(points, (int(points.shape[0]/3), 3))
+
+        if save_lidar:
+            filenameLidar = os.path.join(self.raw_dir, f"lidar_time_{self.timeStep}" )
+            np.save(filenameLidar, points)
 
         return points
 
@@ -794,7 +798,8 @@ class controller:
 
 
     def getCanditatesLidar(self, randomPointsSize=70, maxTravelTime=5.,
-                           minDist=5., maxYaw=15., controllers=[]):
+                           minDist=5., maxYaw=15., controllers=[],
+                           saveLidar=False):
 
         speedScalar = 1
         np.random.seed()
@@ -820,7 +825,7 @@ class controller:
             travelTime = np.random.uniform(0., maxTravelTime, randomPointsSize)
             yawCanditate = np.random.uniform(np.degrees(currentYaw) - (maxYaw/2)*a, np.degrees(currentYaw) + (maxYaw/2)*a, randomPointsSize)
 
-            lidarPoints = self.getLidarData()
+            lidarPoints = self.getLidarData(save_lidar=saveLidar)
             lidarPoints = self.clearLidarPoints(lidarPoints=lidarPoints,
                                                 maxTravelTime=maxTravelTime,
                                                 controllers=controllers)
@@ -877,14 +882,15 @@ class controller:
 
     def moveOmniDirectional(self, randomPointsSize=70, maxTravelTime=5.,
                             minDist=5., plotEstimator=True, maxYaw=15.,
-                            lidar=False, controllers=[]):
+                            lidar=False, controllers=[], saveLidar=False):
 
         if lidar:
             canditatesData = self.getCanditatesLidar(randomPointsSize=randomPointsSize,
                                                      maxTravelTime=maxTravelTime,
                                                      minDist=minDist,
                                                      maxYaw=maxYaw,
-                                                     controllers=controllers)
+                                                     controllers=controllers,
+                                                     saveLidar=saveLidar)
         else:
             canditatesData = self.getCanditates(randomPointsSize=randomPointsSize,
                                                 maxTravelTime=maxTravelTime,
@@ -1246,7 +1252,7 @@ class controller:
         self.cameraInfo.pose.position.y_val += self.offSetY
         self.cameraInfo.pose.position.z_val += self.offSetZ
 
-        self.cameraInfo.fov = max(120,self.cameraInfo.fov)
+        self.cameraInfo.fov = max(110,self.cameraInfo.fov)
 
 
     def getPositions(self, index=None):
