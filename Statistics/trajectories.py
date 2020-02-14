@@ -75,7 +75,7 @@ if __name__ == "__main__":
                 data["Time"].append(time*3.)
                 data["State"].append(state)
 
-                data["droneID"].append(droneID)
+                data["droneID"].append(droneID.replace("Drone","UAV"))
 
     image_path = "scene_time_0.png"
     map_img = cv2.imread(image_path)
