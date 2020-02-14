@@ -38,7 +38,7 @@ if __name__ == "__main__":
         data = {}
         data["Simulation"] = []
         data["Time Steps"] = []
-        data["Confidence Interval"] = []
+        data["Objective Function"] = []
         data["UAV Number"] = []
 
         for sim in result_dirs:
@@ -56,13 +56,13 @@ if __name__ == "__main__":
             for time, confJ in enumerate(informationJ):
                 data["Simulation"].append(sim)
                 data["Time Steps"].append(time)
-                data["Confidence Interval"].append(confJ)
+                data["Objective Function"].append(confJ)
                 data["UAV Number"].append(drones_number)
 
         dataFrame = pd.DataFrame(data)
         dataFrameList.append(dataFrame)
 
-        sns.lineplot(x="Time Steps", y="Confidence Interval", data=dataFrame)
+        sns.lineplot(x="Time Steps", y="Objective Function", data=dataFrame)
 
         print(f"[SAVE] Dumping pickle object")
         pickle.dump(dataFrame,open(f"{drones_number}.p", "wb"))
@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     dataFrameCommon = pd.concat(dataFrameList)
     sns.lineplot(x="Time Steps",
-                 y="Confidence Interval",
+                 y="Objective Function",
                  hue="UAV Number",
                  data=dataFrameCommon[ dataFrameCommon['Time Steps']<300])
     plt.savefig(f"AverageJ_AllUav.png", dpi=1000)
