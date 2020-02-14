@@ -663,7 +663,8 @@ if __name__ == "__main__":
                "Drone2":[0,-5,0],
                "Drone3":[5,0,0],
                "Drone4":[5,5,0],
-               "Drone5":[10,5,0]
+               "Drone5":[10,5,0],
+               "Drone6":[5,10,0]
               }
 
     dronesID = list(OFFSETS.keys())
