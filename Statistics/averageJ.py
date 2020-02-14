@@ -13,11 +13,13 @@ DRONE2_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\2Dron
 DRONE3_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\3Drones"
 DRONE4_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\GridSearch\V07"
 DRONE5_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\5Drones"
+DRONE6_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\6Drones"
 
-DRONES_PATH = {"UAVs 2":DRONE2_PATH,
-               "UAVs 3":DRONE3_PATH,
-               "UAVs 4":DRONE4_PATH,
-               "UAVs 5":DRONE5_PATH}
+DRONES_PATH = {"2 UAVs":DRONE2_PATH,
+               "3 UAVs":DRONE3_PATH,
+               "4 UAVs":DRONE4_PATH,
+               "5 UAVs":DRONE5_PATH,
+               "6 UAVs":DRONE6_PATH}
 
 plotstyle="ggplot"
 plt.style.use(f"{plotstyle}")

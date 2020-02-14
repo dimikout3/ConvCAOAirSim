@@ -1252,7 +1252,7 @@ class controller:
         self.cameraInfo.pose.position.y_val += self.offSetY
         self.cameraInfo.pose.position.z_val += self.offSetZ
 
-        self.cameraInfo.fov = max(110,self.cameraInfo.fov)
+        # self.cameraInfo.fov = max(110,self.cameraInfo.fov)
 
 
     def getPositions(self, index=None):

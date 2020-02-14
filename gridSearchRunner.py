@@ -23,7 +23,7 @@ def deleteExistingResults():
             path = os.path.join(os.getcwd(),file)
             shutil.rmtree(path)
 
-def getGridList(repeat=5):
+def getGridList(repeat=3):
 
     maxYaw = np.linspace(6.5,8.5,2)
     maxTravelTime = np.linspace(3.5,5.,2)
@@ -64,7 +64,7 @@ if __name__ == "__main__":
 
         call = ["python","MultiAgent.py",
                 "--ip", str(ip),
-                "--waypoints", str(400),
+                "--waypoints", str(300),
                 "--maxYaw",str(maxYaw),
                 "--maxTravelTime",str(maxTravelTime),
                 "--estimatorWindow",str(int(estimatorWindow))]
