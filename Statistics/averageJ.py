@@ -72,9 +72,14 @@ if __name__ == "__main__":
         plt.close()
 
     dataFrameCommon = pd.concat(dataFrameList)
-    sns.lineplot(x="Time Steps",
+    ax = sns.lineplot(x="Time Steps",
                  y="Objective Function",
                  hue="UAV Number",
                  data=dataFrameCommon[ dataFrameCommon['Time Steps']<300])
+    h,l = ax.get_legend_handles_labels()
+    # https://stackoverflow.com/questions/58224508/remove-legend-title-from-seaborn-plot
+    plt.legend(h[1:],l[1:],ncol=1,
+           fancybox=True, shadow=False)
+
     plt.savefig(f"AverageJ_AllUav.png", dpi=1000)
     plt.close()
