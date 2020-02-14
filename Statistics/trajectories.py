@@ -24,8 +24,6 @@ DRONE5_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\5Dron
 
 PATH = DRONE4_PATH
 
-CLUSTERS = [[40,-80], [-10,75], [0,0], [80,-50]]
-
 if __name__ == "__main__":
 
     if PATH == "":
@@ -93,14 +91,20 @@ if __name__ == "__main__":
 
         tempDF = df[df.Simulation == sim]
         # for drone in dronesList:
-        sns.lineplot(x="y_val", y="x_val",
-                     hue="droneID", data=tempDF[tempDF.Time % 5 == 0],
-                     alpha=np.linspace(0,1,400), lw=0.9)
+        ax = sns.lineplot(x="y_val", y="x_val",
+                          hue="droneID", data=tempDF[tempDF.Time % 5 == 0],
+                          alpha=0.8, lw=0.9)
 
+        h,l = ax.get_legend_handles_labels()
+        plt.legend(h[1:],l[1:],ncol=1,
+                   fancybox=True, shadow=False)
         # The extent kwarg controls the bounding box in data coordinates that the image will fill specified as (left, right, bottom, top)
         left, right = -114.43489074707031, 64.43489074707031
         bot, top = -64.43489074707031, 114.43489074707031
         plt.imshow(map_img, zorder=0, extent=[left, right, bot, top])
+
+        plt.grid(False)
+        plt.axis('off')
 
         # plt.show()
         plt.savefig(f"trajectories/{sim}.png",dpi=1000)
