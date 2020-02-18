@@ -17,6 +17,11 @@ import matplotlib.image as mpimg
 # ultrawide boundaries
 # left=-180.28102687023934 right=130.28102687023934 bot=-52.64051343511967 top=102.6405134351196
 
+# 2:3 width
+# left=-152.73627428994772 right=102.73627428994772 bot=-60.15751619329848 top=110.15751619329848
+
+RESOLUTION = "2:3"
+
 DRONE2_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\2Drones"
 DRONE3_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\3Drones"
 DRONE4_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\GridSearch\V07"
@@ -98,15 +103,21 @@ if __name__ == "__main__":
     # hmax.collections[0].set_alpha(.7)
 
     # The extent kwarg controls the bounding box in data coordinates that the image will fill specified as (left, right, bottom, top)
-    left, right = -114.43489074707031, 64.43489074707031
-    bot, top = -64.43489074707031, 114.43489074707031
+    if RESOLUTION == "sqr":
+        left, right = -114.43489074707031, 64.43489074707031
+        bot, top = -64.43489074707031, 114.43489074707031
+    elif RESOLUTION == "2:3":
+        left, right = -152.73627428994772, 102.73627428994772
+        bot, top = -60.15751619329848, 110.15751619329848
+
     plt.imshow(map_img, zorder=0, extent=[left, right, bot, top])
 
     # sns.jointplot(df.y_val, df.x_val, kind="hex", color="#4CB391")
     # hmax.collections[0].set_alpha(.0)
 
-    # plt.grid(False)
-    # plt.axis('off')
+    plt.grid(False)
+    plt.axis('off')
 
     # plt.show()
+    plt.tight_layout()
     plt.savefig("densityConvergence.png",dpi=2000)
