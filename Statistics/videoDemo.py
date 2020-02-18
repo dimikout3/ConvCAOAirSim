@@ -37,7 +37,7 @@ def detectedImages(positionIdx):
             dronePics.append(frame_detected)
 
     frameTop = np.concatenate((dronePics[0],dronePics[1]), axis = 1 )
-    frameBot = np.concatenate((dronePics[1],dronePics[2]), axis = 1 )
+    frameBot = np.concatenate((dronePics[2],dronePics[3]), axis = 1 )
 
     frameOut = np.concatenate((frameTop, frameBot))
 
