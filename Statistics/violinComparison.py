@@ -21,11 +21,16 @@ if __name__ == "__main__":
 
     dataFrame = pd.concat(dataFrameList)
 
-    # https://stackoverflow.com/questions/22591174/pandas-multiple-conditions-while-indexing-data-frame-unexpected-behavior
-    dataFrame = dataFrame.drop(dataFrame.index[ (dataFrame['UAV Number']=="6 UAVs") & (dataFrame['Objective Function']>82) ])
+    # plt.figure(num=None, figsize=(6, 4), dpi=80)
+    fig, ax = plt.subplots(figsize=(6,4))
 
-    g = sns.catplot(x="UAV Number", y="Objective Function",kind="violin",inner=None, data=dataFrame[dataFrame['Time Steps']>150])
-    sns.swarmplot(x="UAV Number", y="Objective Function", color="k", size=0.4, data=dataFrame, ax=g.ax)
+    # https://stackoverflow.com/questions/22591174/pandas-multiple-conditions-while-indexing-data-frame-unexpected-behavior
+    dataFrame = dataFrame.drop(dataFrame.index[ (dataFrame['Swarm Size']=="6 UAVs") & (dataFrame['Objective Function']>82) ])
+
+    g = sns.catplot(x="Swarm Size", y="Objective Function",kind="violin",inner=None, data=dataFrame[dataFrame['Time Steps']>150])
+    sns.swarmplot(x="Swarm Size", y="Objective Function", color="k", size=0.4, data=dataFrame, ax=g.ax)
 
     # plt.show()
+    plt.gcf().set_size_inches((6,4))
+    plt.tight_layout()
     plt.savefig(f"Compare.png")
