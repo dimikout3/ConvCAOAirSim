@@ -9,8 +9,8 @@ import pickle
 # Enters all directories and creates 3d plots (saves them as pickle objects)
 # and pickle object with the x,y,z,colors data (relative and absolute)
 
-WIDTH = int(2100*2/4)
-HEIGHT = int(900*2/4)
+WIDTH = int(2100*5/4)
+HEIGHT = int(900*5/4)
 TOTAL_TIME = 120
 RESUTLS_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\GridSearch\V07\results_6_1"
 
@@ -32,7 +32,16 @@ def detectedImages(positionIdx):
             detected_image_path = os.path.join(current_detected_dir, f"detected_time_{time}.png")
 
             frame_detected = cv2.imread(detected_image_path)
-            cv2.putText(frame_detected, f"{drone}", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (36,255,12), 5)
+
+            textOffsetX, textOffsetY = 50, 50
+            rectangleWidth = 230
+            rectangleHeight = 48
+            # transparency
+            # https://gist.github.com/IAmSuyogJadhav/305bfd9a0605a4c096383408bee7fd5c
+            cv2.rectangle(frame_detected, (textOffsetX - 5, textOffsetY + 5),
+                                          (textOffsetX + rectangleWidth, textOffsetY - rectangleHeight),
+                                          (127,127,115), cv2.FILLED)
+            cv2.putText(frame_detected, f"{drone}", (textOffsetX, textOffsetY), cv2.FONT_HERSHEY_SIMPLEX, 2, (50,50,50), 5)
 
             dronePics.append(frame_detected)
 
