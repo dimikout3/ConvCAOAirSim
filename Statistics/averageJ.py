@@ -39,7 +39,7 @@ if __name__ == "__main__":
         data["Simulation"] = []
         data["Time Steps"] = []
         data["Objective Function"] = []
-        data["UAV Number"] = []
+        data["Swarm Size"] = []
 
         for sim in result_dirs:
 
@@ -57,7 +57,7 @@ if __name__ == "__main__":
                 data["Simulation"].append(sim)
                 data["Time Steps"].append(time)
                 data["Objective Function"].append(confJ)
-                data["UAV Number"].append(drones_number)
+                data["Swarm Size"].append(drones_number)
 
         dataFrame = pd.DataFrame(data)
         dataFrameList.append(dataFrame)
@@ -71,15 +71,18 @@ if __name__ == "__main__":
         plt.savefig(f"AverageJ_{drones_number}.png")
         plt.close()
 
+    plt.figure(num=None, figsize=(6, 4), dpi=80)
+
     dataFrameCommon = pd.concat(dataFrameList)
     ax = sns.lineplot(x="Time Steps",
                  y="Objective Function",
-                 hue="UAV Number",
+                 hue="Swarm Size",
                  data=dataFrameCommon[ dataFrameCommon['Time Steps']<300])
     h,l = ax.get_legend_handles_labels()
     # https://stackoverflow.com/questions/58224508/remove-legend-title-from-seaborn-plot
     plt.legend(h[1:],l[1:],ncol=1,
            fancybox=True, shadow=False)
 
+    plt.tight_layout()
     plt.savefig(f"AverageJ_AllUav.png", dpi=1000)
     plt.close()
