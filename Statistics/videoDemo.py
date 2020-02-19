@@ -5,15 +5,16 @@ import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import pickle
+from tqdm import tqdm
 
 # Enters all directories and creates 3d plots (saves them as pickle objects)
 # and pickle object with the x,y,z,colors data (relative and absolute)
 
-WIDTH = int(2100*5/4)
-HEIGHT = int(900*5/4)
-TOTAL_TIME = 120
-RESUTLS_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\GridSearch\V07\results_6_1"
-
+WIDTH = int(2100*2/4)
+HEIGHT = int(900*2/4)
+TOTAL_TIME = 60
+# RESUTLS_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\GridSearch\V07\results_6_1"
+RESUTLS_PATH = "results_1"
 def detectedImages(positionIdx):
 
     global dronesID, wayPointsID, parent_dir
@@ -34,7 +35,7 @@ def detectedImages(positionIdx):
             frame_detected = cv2.imread(detected_image_path)
 
             textOffsetX, textOffsetY = 50, 50
-            rectangleWidth = 230
+            rectangleWidth = 155
             rectangleHeight = 48
             # transparency
             # https://gist.github.com/IAmSuyogJadhav/305bfd9a0605a4c096383408bee7fd5c
@@ -42,6 +43,15 @@ def detectedImages(positionIdx):
                                           (textOffsetX + rectangleWidth, textOffsetY - rectangleHeight),
                                           (127,127,115), cv2.FILLED)
             cv2.putText(frame_detected, f"{drone}", (textOffsetX, textOffsetY), cv2.FONT_HERSHEY_SIMPLEX, 2, (50,50,50), 5)
+
+            bordersize = 10
+            frame_detected = cv2.copyMakeBorder(frame_detected,
+                                        top=bordersize,
+                                        bottom=bordersize,
+                                        left=bordersize,
+                                        right=bordersize,
+                                        borderType=cv2.BORDER_CONSTANT,
+                                        value=[255, 255, 255])
 
             dronePics.append(frame_detected)
 
@@ -95,8 +105,8 @@ if __name__ == "__main__":
     file_out = os.path.join(video_dir,f"demo.avi")
     out = cv2.VideoWriter(file_out, fourcc, len(wayPointsID)/TOTAL_TIME, (WIDTH,HEIGHT))
 
-    for positionIdx, position in enumerate(wayPointsID):
-        print(f"{4*' '}[POSITION]: position_{positionIdx}")
+    for positionIdx, position in enumerate(tqdm(wayPointsID)):
+        # print(f"{4*' '}[POSITION]: position_{positionIdx}")
 
         frame1 = detectedImages(positionIdx)
         frame2 = globalView(positionIdx)
@@ -106,7 +116,8 @@ if __name__ == "__main__":
         frame_globalView = cv2.resize(frame2,(int(WIDTH),int(HEIGHT)))
         frame_information = cv2.resize(frame3,(int(WIDTH),int(HEIGHT)))
 
-        frame_concated = np.concatenate((frame_detections, frame_globalView, frame_information), axis=1)
+        # frame_concated = np.concatenate((frame_detections, frame_globalView, frame_information), axis=1)
+        frame_concated = np.concatenate((frame_detections, frame_globalView), axis=1)
         frame_out = cv2.resize(frame_concated,(WIDTH,HEIGHT))
 
         out.write(frame_out)
