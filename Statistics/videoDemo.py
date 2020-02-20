@@ -10,11 +10,13 @@ from tqdm import tqdm
 # Enters all directories and creates 3d plots (saves them as pickle objects)
 # and pickle object with the x,y,z,colors data (relative and absolute)
 
-WIDTH = int(2100*2/4)
-HEIGHT = int(900*2/4)
+WIDTH = int(4000*2/4)
+HEIGHT = int(3000*2/4)
 TOTAL_TIME = 60
 # RESUTLS_PATH = r"E:\Users\DKoutas\ownCloudConvCao\CREST_Shared\results\IROS\GridSearch\V07\results_6_1"
 RESUTLS_PATH = "results_1"
+
+
 def detectedImages(positionIdx):
 
     global dronesID, wayPointsID, parent_dir
@@ -74,15 +76,52 @@ def globalView(positionIdx):
     return frame_detected
 
 
-def information(positionIdx):
+def information(positionIdx, local=True):
 
-    global simulation_dir
+    if local:
 
-    globalView_dir = os.path.join(simulation_dir, "information", f"information_{positionIdx}.png")
+        frame_detected = cv2.imread(f"Videos/Information/info_{positionIdx}.png")
+        # frame_detected = cv2.resize(frame_detected,(int(WIDTH/2),int(HEIGHT/3)))
 
-    frame_detected = cv2.imread(globalView_dir)
+        bordersize = int(WIDTH/2)
+        frame_detected = cv2.copyMakeBorder(frame_detected,
+                                    top=0,
+                                    bottom=0,
+                                    left=bordersize,
+                                    right=15,
+                                    borderType=cv2.BORDER_CONSTANT,
+                                    value=[255, 255, 255])
+
+    else:
+
+        global simulation_dir
+
+        globalView_dir = os.path.join(simulation_dir, "information", f"information_{positionIdx}.png")
+
+        frame_detected = cv2.imread(globalView_dir)
 
     return frame_detected
+
+def generateInfos(positions):
+
+    print("Generating Objective Function Time Plots")
+    data = pickle.load(open("4 UAVs.p","rb"))
+
+    jList = []
+    for pos in tqdm(range(positions)):
+        jList.append(data[data["Time Steps"] == pos]["Objective Function"].mean())
+
+        plt.style.use("ggplot")
+
+        plt.plot(jList)
+
+        plt.ylabel("Objective Function")
+        plt.xlabel("Time Step")
+
+        plt.gcf().set_size_inches((8,4))
+        plt.tight_layout()
+        plt.savefig(f"Videos/information/info_{pos}.png")
+        plt.close()
 
 
 if __name__ == "__main__":
@@ -100,6 +139,9 @@ if __name__ == "__main__":
     dronesID = os.listdir(parent_dir)
     wayPointsID = os.listdir(os.path.join(detected_dir, dronesID[0]))
 
+    wayPointsID = wayPointsID[0:10]
+    # generateInfos(len(wayPointsID))
+
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
     file_out = os.path.join(video_dir,f"demo.avi")
@@ -114,10 +156,18 @@ if __name__ == "__main__":
 
         frame_detections = cv2.resize(frame1,(int(WIDTH),int(HEIGHT)))
         frame_globalView = cv2.resize(frame2,(int(WIDTH),int(HEIGHT)))
-        frame_information = cv2.resize(frame3,(int(WIDTH),int(HEIGHT)))
+        frame_information = cv2.resize(frame3,(int(WIDTH),int(HEIGHT/3)))
 
+        # print(f"frame_information.shape={frame_information.shape}")
+        # print(f"frame_detections.shape={frame_detections.shape}")
+        # print(f"frame_globalView.shape={frame_globalView.shape}")
+        frame_top = np.concatenate((frame_detections, frame_globalView), axis=1)
+        frame_bot = frame_information
+
+        frame_top = cv2.resize(frame_top,(int(WIDTH),int(HEIGHT*(2/3))))
         # frame_concated = np.concatenate((frame_detections, frame_globalView, frame_information), axis=1)
-        frame_concated = np.concatenate((frame_detections, frame_globalView), axis=1)
+        # frame_concated = np.concatenate((frame_detections, frame_globalView), axis=1)
+        frame_concated = np.concatenate((frame_top, frame_bot))
         frame_out = cv2.resize(frame_concated,(WIDTH,HEIGHT))
 
         out.write(frame_out)
