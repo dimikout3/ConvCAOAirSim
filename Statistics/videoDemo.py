@@ -22,6 +22,7 @@ def detectedImages(positionIdx):
     global dronesID, wayPointsID, parent_dir
 
     dronePics = []
+    colors = [(255,0,0),(0,0,255),(255,0,255),(0,255,255)]
 
     for droneIdx, drone in enumerate(dronesID):
 
@@ -44,14 +45,15 @@ def detectedImages(positionIdx):
             cv2.rectangle(frame_detected, (textOffsetX - 5, textOffsetY + 5),
                                           (textOffsetX + rectangleWidth, textOffsetY - rectangleHeight),
                                           (127,127,115), cv2.FILLED)
-            cv2.putText(frame_detected, f"{drone}", (textOffsetX, textOffsetY), cv2.FONT_HERSHEY_SIMPLEX, 2, (50,50,50), 5)
+            cv2.putText(frame_detected, f"{drone}", (textOffsetX, textOffsetY),
+                        cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,0), 5)
 
-            bordersize = 10
+            bordersize = 40
             frame_detected = cv2.copyMakeBorder(frame_detected,
                                         top=bordersize,
-                                        bottom=bordersize,
+                                        bottom=0,
                                         left=bordersize,
-                                        right=bordersize,
+                                        right=0,
                                         borderType=cv2.BORDER_CONSTANT,
                                         value=[255, 255, 255])
 
@@ -101,6 +103,7 @@ def information(positionIdx, local=True):
         frame_detected = cv2.imread(globalView_dir)
 
     return frame_detected
+
 
 def generateInfos(positions):
 
@@ -169,6 +172,17 @@ if __name__ == "__main__":
         # frame_concated = np.concatenate((frame_detections, frame_globalView), axis=1)
         frame_concated = np.concatenate((frame_top, frame_bot))
         frame_out = cv2.resize(frame_concated,(WIDTH,HEIGHT))
+
+        bordersize = 40
+        frame_out = cv2.copyMakeBorder(frame_out,
+                                    top=bordersize,
+                                    bottom=0,
+                                    left=0,
+                                    right=0,
+                                    borderType=cv2.BORDER_CONSTANT,
+                                    value=[255, 255, 255])
+
+        frame_out = cv2.resize(frame_out,(WIDTH,HEIGHT))
 
         out.write(frame_out)
 
