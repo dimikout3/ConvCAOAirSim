@@ -5,7 +5,7 @@ This project deals with the problem of positioning a swarm of UAVs inside a comp
 Example:
 ![RA-L_mainFigure](http://kapoutsis.info/wp-content/uploads/2020/02/RA-L_mainFigure.png)
 
-[Video demonstration](https://www.youtube.com/watch?v=L8ycmS20rZs)
+[![Video demonstration](http://kapoutsis.info/wp-content/uploads/2020/02/video_thumbnail.png)](https://www.youtube.com/watch?v=L8ycmS20rZs)
 
 [AirSim platform](https://github.com/microsoft/AirSim) was utilized to evaluate the perfmance of the swarm. 
 
