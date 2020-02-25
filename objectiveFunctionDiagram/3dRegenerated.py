@@ -9,9 +9,9 @@ import open3d as o3d
 import airsim
 import cv2
 from itertools import product
+from tqdm import tqdm
 
-POSITION = 0
-DRONE = "Drone1"
+"""Parses all the position and reconstructs 3D model of the depth map"""
 
 def savePointCloud(data, fileName):
 
@@ -92,25 +92,39 @@ def getPixels(img_dir):
 
 if __name__ == "__main__":
 
-    path = os.path.join(os.getcwd(), "..","results_1")
+    simulation_dir = os.path.join(os.getcwd(), "..","results_1")
 
-    data_dir = os.path.join(path, "swarm_raw_output",f"{DRONE}")
-    img_dir = os.path.join(path, "swarm_raw_output",f"{DRONE}", f"position_{POSITION}")
+    parent_dir = os.path.join(simulation_dir, "swarm_raw_output")
+    detected_dir = os.path.join(simulation_dir, "swarm_detected")
 
-    camera_dir = os.path.join(path, "swarm_raw_output",f"{DRONE}",f"state_{DRONE}.pickle")
-    state = pickle.load(open(camera_dir,"rb"))
+    dronesID = os.listdir(parent_dir)
+    dronesID = [drone for drone in dronesID if drone!="GlobalHawk"]
+    wayPointsID = os.listdir(os.path.join(detected_dir, dronesID[0]))
 
-    pointsW, pointsH, colors = getPixels(img_dir)
+    for drone in dronesID:
 
-    depth_dir = os.path.join(path, "swarm_raw_output",f"{DRONE}", f"position_{POSITION}", f"depth_time_0.pfm")
-    xRelative, yRelative, zRelative, colors = utils.to3D(pointsW, pointsH,
-                                      state[POSITION][1], depth_dir,
-                                      color = colors)
-    x, y, z = utils.to_absolute_coordinates(xRelative, yRelative, zRelative,
-                                            state[POSITION][1])
+        print(f"=== Woriking on {drone} ===")
 
-    data = [x,y,z,colors]
-    outputFile = f"pointCloud_XXX.asc"
-    savePointCloud(data, outputFile)
+        camera_dir = os.path.join(simulation_dir, "swarm_raw_output",f"{drone}",f"state_{drone}.pickle")
+        state = pickle.load(open(camera_dir,"rb"))
 
-    plot3D(outputFile)
+        for posIndex, position in enumerate(tqdm(wayPointsID)):
+
+            data_dir = os.path.join(simulation_dir, "swarm_raw_output",f"{drone}")
+            img_dir = os.path.join(simulation_dir, "swarm_raw_output",f"{drone}", f"{position}")
+
+            pointsW, pointsH, colors = getPixels(img_dir)
+
+            depth_dir = os.path.join(simulation_dir, "swarm_raw_output",f"{drone}", f"{position}", f"depth_time_0.pfm")
+            xRelative, yRelative, zRelative, colors = utils.to3D(pointsW, pointsH,
+                                              state[posIndex][1], depth_dir,
+                                              color = colors)
+            x, y, z = utils.to_absolute_coordinates(xRelative, yRelative, zRelative,
+                                                    state[posIndex][1])
+
+            data = [x,y,z,colors]
+
+            outputFile = os.path.join(img_dir, f"pointCloud.asc")
+            savePointCloud(data, outputFile)
+
+    # plot3D(outputFile)
