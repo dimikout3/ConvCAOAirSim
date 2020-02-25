@@ -62,7 +62,7 @@ if __name__ == "__main__":
 
         print(f"Running simulation {ip}")
 
-        call = ["python","MultiAgent.py",
+        call = ["python","MultiAgentObjective.py",
                 "--ip", str(ip),
                 "--waypoints", str(300),
                 "--maxYaw",str(maxYaw),

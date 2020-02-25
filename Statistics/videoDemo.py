@@ -142,7 +142,7 @@ if __name__ == "__main__":
     dronesID = os.listdir(parent_dir)
     wayPointsID = os.listdir(os.path.join(detected_dir, dronesID[0]))
 
-    wayPointsID = wayPointsID[0:10]
+    # wayPointsID = wayPointsID[0:10]
     # generateInfos(len(wayPointsID))
 
     fourcc = cv2.VideoWriter_fourcc(*'XVID')

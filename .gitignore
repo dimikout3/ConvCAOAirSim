@@ -14,6 +14,7 @@ utilities/imagesDetections.py
 /objectiveFunctionDiagram/*.png
 
 /Statistics/Videos/*.avi
+/Statistics/VIdeos/Information/*.png
 /*.pickle
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template

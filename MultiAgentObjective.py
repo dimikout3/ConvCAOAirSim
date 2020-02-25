@@ -852,6 +852,8 @@ if __name__ == "__main__":
             globalViewScene()
         # globalViewDetections()
 
+        time.sleep(300)
+
     # collisionCorrectionThread.join()
 
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
