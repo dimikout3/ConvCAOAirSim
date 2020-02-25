@@ -10,7 +10,7 @@ import airsim
 import cv2
 from itertools import product
 
-TIME_STEP = 0
+POSITION = 0
 DRONE = "Drone1"
 
 def savePointCloud(data, fileName):
@@ -38,7 +38,7 @@ def plot3D(image_file):
 
 def getPixelsLegacy(img_dir):
 
-    image = os.path.join(img_dir, f"scene_time_{TIME_STEP}.png")
+    image = os.path.join(img_dir, f"scene_time_0.png")
     scene = cv2.imread(image)
 
     width, height, _ = scene.shape
@@ -70,7 +70,7 @@ def getPixels(img_dir):
             if x**2 + y**2 <= radius**2:
                  yield from set(((x, y), (x, -y), (-x, y), (-x, -y),))
 
-    image = os.path.join(img_dir, f"scene_time_{TIME_STEP}.png")
+    image = os.path.join(img_dir, f"scene_time_0.png")
     scene = cv2.imread(image)
 
     width, height, _ = scene.shape
@@ -92,22 +92,22 @@ def getPixels(img_dir):
 
 if __name__ == "__main__":
 
-    path = os.path.join(os.getcwd(),"results_1")
+    path = os.path.join(os.getcwd(), "..","results_1")
 
     data_dir = os.path.join(path, "swarm_raw_output",f"{DRONE}")
-    img_dir = os.path.join(path, "swarm_raw_output",f"{DRONE}", f"position_{TIME_STEP}")
+    img_dir = os.path.join(path, "swarm_raw_output",f"{DRONE}", f"position_{POSITION}")
 
     camera_dir = os.path.join(path, "swarm_raw_output",f"{DRONE}",f"state_{DRONE}.pickle")
     state = pickle.load(open(camera_dir,"rb"))
 
     pointsW, pointsH, colors = getPixels(img_dir)
 
-    depth_dir = os.path.join(path, "swarm_raw_output",f"{DRONE}", f"position_{TIME_STEP}", f"depth_time_{TIME_STEP}.pfm")
+    depth_dir = os.path.join(path, "swarm_raw_output",f"{DRONE}", f"position_{POSITION}", f"depth_time_0.pfm")
     xRelative, yRelative, zRelative, colors = utils.to3D(pointsW, pointsH,
-                                      state[TIME_STEP][1], depth_dir,
+                                      state[POSITION][1], depth_dir,
                                       color = colors)
     x, y, z = utils.to_absolute_coordinates(xRelative, yRelative, zRelative,
-                                            state[TIME_STEP][1])
+                                            state[POSITION][1])
 
     data = [x,y,z,colors]
     outputFile = f"pointCloud_XXX.asc"
