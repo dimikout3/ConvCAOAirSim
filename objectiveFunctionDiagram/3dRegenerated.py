@@ -11,7 +11,7 @@ import cv2
 from itertools import product
 from tqdm import tqdm
 
-"""Parses all the position and reconstructs 3D model of the depth map"""
+"""Parses all the position and reconstructs 3D model of the full(!) depth map"""
 
 def savePointCloud(data, fileName):
 

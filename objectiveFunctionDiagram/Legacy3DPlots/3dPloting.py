@@ -8,10 +8,11 @@ import airsim
 import cv2
 import math
 
-LIDAR = True
+LIDAR = False
 
 # color = (0,255,0)
 # rgb = "%d %d %d" % color
+
 Width=1200
 Height=1200
 focal_length=Width/2
@@ -23,10 +24,16 @@ projectionMatrix =  np.array([
         [0, 0, -1/B, 0]
     ])
 
+# projectionMatrix = np.array([[-0.501202762, 0.000000000, 0.000000000, 0.000000000],
+#                               [0.000000000, -0.501202762, 0.000000000, 0.000000000],
+#                               [0.000000000, 0.000000000, 10.00000000, 100.00000000],
+#                               [0.000000000, 0.000000000, -10.0000000, 0.000000000]])
+
+
 TIME_STEP = 0
 
 DRONE_ID_LIST = ["Drone1", "Drone2"]
-DRONE_ID_LIST = ["Drone2"]
+# DRONE_ID_LIST = ["Drone2"]
 
 def restriction(image, drone_id):
     """Restricting the original image"""
@@ -49,17 +56,14 @@ def restriction(image, drone_id):
 
 def savePointCloud(points, ImageRGB, fileName, drone_id):
    f = open(fileName, "w")
-   xPixels, yPixels = restriction(image, drone_id)
-   for x in xPixels:
-     for y in yPixels:
-        pt = image[x,y]
+   # xPixels, yPixels = restriction(ImageRGB, drone_id)
+   for x in range(points.shape[0]):
+     for y in range(points.shape[1]):
+        pt = points[x,y]
         if (math.isinf(pt[0]) or math.isnan(pt[0])):
           # skip it
           None
         else:
-          # rgb = ImageRGB[x][y]
-          # color = (int(ImageRGB[x][y][2]), int(ImageRGB[x][y][1]), int(ImageRGB[x][y][0]))
-          # rgb = "%d %d %d" % color
 
           if drone_id == "Drone1":
               color = (255, 0,0)
@@ -69,7 +73,7 @@ def savePointCloud(points, ImageRGB, fileName, drone_id):
           rgb = "%d %d %d" % color
           # print(f"rgb={rgb} color={color}")
 
-          f.write("%f %f %f %s\n" % (pt[0], pt[1], pt[2]-1, rgb))
+          f.write("%f %f %f %s\n" % (pt[0], pt[1], pt[2], rgb))
    f.close()
 
 
