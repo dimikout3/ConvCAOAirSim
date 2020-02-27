@@ -7,7 +7,20 @@ import cv2
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
+import optparse
+
 """Parses all the position and reconstructs 3D model of the full(!) depth map"""
+
+
+def get_options():
+
+    optParser = optparse.OptionParser()
+    optParser.add_option("--plot",action="store_true", default=False, dest="plot", help="Ploting every single point cloud")
+    optParser.add_option("--NoSave",action="store_true", default=False, dest="NoSave", help="Do not save the output *.png")
+    optParser.add_option("--quit", default=500, dest="quit", type="int", help="Quit after specified number")
+    options, args = optParser.parse_args()
+
+    return options
 
 
 def capture_depth(vis):
@@ -26,6 +39,9 @@ def capture_image(vis):
 
 
 def custom_draw_geometry(pcd, position_dir):
+
+    global options
+
     # The following code achieves the same effect as:
     # o3d.visualization.draw_geometries([pcd])
     # http://www.open3d.org/docs/release/tutorial/Advanced/customized_visualization.html#customized-visualization
@@ -62,10 +78,14 @@ def custom_draw_geometry(pcd, position_dir):
     vis.update_geometry()
     vis.poll_events()
     vis.update_renderer()
-    # vis.run()
+
+    if options.plot:
+        vis.run()
     # capture_image(vis)
-    pcdPNG_dir = os.path.join(position_dir, "pointCloud.png")
-    vis.capture_screen_image(pcdPNG_dir)
+    if not options.NoSave:
+        pcdPNG_dir = os.path.join(position_dir, "pointCloud.png")
+        vis.capture_screen_image(pcdPNG_dir)
+
     vis.destroy_window()
 
 
@@ -77,6 +97,9 @@ def plot3D(position_dir):
 
 
 if __name__ == "__main__":
+
+    global options
+    options = get_options()
 
     simulation_dir = os.path.join(os.getcwd(), "..","results_pointCloud")
 
@@ -99,3 +122,6 @@ if __name__ == "__main__":
             position_dir = os.path.join(simulation_dir, "swarm_raw_output",f"{drone}", f"{position}")
 
             plot3D(position_dir)
+
+            if posIndex >= options.quit:
+                quit()
