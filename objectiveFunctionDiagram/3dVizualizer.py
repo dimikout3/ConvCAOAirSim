@@ -1,14 +1,9 @@
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-import utilities.utils as utils
-
 import numpy as np
 import pickle
 import open3d as o3d
-import airsim
 import cv2
-from itertools import product
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
@@ -102,5 +97,3 @@ if __name__ == "__main__":
             position_dir = os.path.join(simulation_dir, "swarm_raw_output",f"{drone}", f"{position}")
 
             plot3D(position_dir)
-
-            # if posIndex == 10:quit()
