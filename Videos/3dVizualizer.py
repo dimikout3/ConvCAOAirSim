@@ -6,10 +6,13 @@ import open3d as o3d
 import cv2
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+import airsim
+
+from scipy.spatial.transform import Rotation as R
 
 import optparse
 
-"""Parses all the position and reconstructs 3D model of the full(!) depth map"""
+"""Parses all the pointCloud.asc and generates a png image"""
 
 
 def get_options():
@@ -38,6 +41,67 @@ def capture_image(vis):
     return False
 
 
+def getParamExtrinsicFollow():
+
+    # http://ksimek.github.io/2012/08/22/extrinsic/
+    global state, posIndex
+
+    uavX = state[posIndex][0].kinematics_estimated.position.x_val
+    uavY = state[posIndex][0].kinematics_estimated.position.y_val
+    uavZ = state[posIndex][0].kinematics_estimated.position.z_val
+
+    uavPitch, uavRoll, uavYaw = airsim.to_eularian_angles(state[posIndex][0].kinematics_estimated.orientation)
+
+    # rotation = R.from_euler('xyz', [90, 0, 180], degrees=True)
+    rotationX = 90 + np.degrees(uavPitch)
+    rotationY = np.degrees(uavRoll)
+    rotationZ = 90 + np.degrees(uavYaw)
+
+    rotation = R.from_euler('xyz', [rotationX, rotationY, rotationZ], degrees=True)
+    Rc = rotation.as_dcm()
+    C = np.array([uavX, uavY, uavZ])
+
+    t = np.dot(-Rc.T,C)
+
+    # Note that Rc here should be Transpose, but I can not figure out how to do it
+    # in numpy ... (fail me ...)
+    params = np.vstack((Rc,[t])).T
+
+    # to have a square matrix
+    params = np.vstack((params,[[0,0,0,1]]))
+
+    return params
+
+
+def getParamExtrinsicConst():
+
+    # http://ksimek.github.io/2012/08/22/extrinsic/
+
+    constX = -300
+    constY = -25
+    constZ = -300
+
+    # rotation = R.from_euler('xyz', [90, 0, 180], degrees=True)
+    rotationX = 90 - 40
+    rotationY = 0
+    rotationZ = 90
+
+    rotation = R.from_euler('xyz', [rotationX, rotationY, rotationZ], degrees=True)
+    Rc = rotation.as_dcm()
+    C = np.array([constX, constY, constZ])
+
+    t = np.dot(-Rc.T,C)
+
+    # Note that Rc here should be Transpose, but I can not figure out how to do it
+    # in numpy ... (fail me ...)
+    params = np.vstack((Rc,[t])).T
+
+    # to have a square matrix
+    params = np.vstack((params,[[0,0,0,1]]))
+
+    return params
+
+
 def custom_draw_geometry(pcd, position_dir):
 
     global options
@@ -64,10 +128,12 @@ def custom_draw_geometry(pcd, position_dir):
     # http://ftp.cs.toronto.edu/pub/psala/VM/camera-parameters.pdf
     param = ctr.convert_to_pinhole_camera_parameters()
     # print(f"param={param.extrinsic}")
-    param.extrinsic = np.array([[ -0.63849157945929502, -0.76679317172116246, -0.06600556613934061, 50.221199759940745],
-                                [ 0.43757735236884049, -0.43223326149844726, 0.78847984650737302, 32.636292824133406],
-                                [-0.63313076347106256, 0.47455520169545601, 0.61150862372523795, 128.65327749719455],
-                                [ 0., 0. ,0., 1.]])
+    # param.extrinsic = np.array([[ -0.63849157945929502, -0.76679317172116246, -0.06600556613934061, 50.221199759940745],
+    #                             [ 0.43757735236884049, -0.43223326149844726, 0.78847984650737302, 32.636292824133406],
+    #                             [-0.63313076347106256, 0.47455520169545601, 0.61150862372523795, 128.65327749719455],
+    #                             [ 0., 0. ,0., 1.]])
+    # param.extrinsic = getParamExtrinsic()
+    param.extrinsic = getParamExtrinsicConst()
     ctr.convert_from_pinhole_camera_parameters(param)
     # Read camera params
     # https://github.com/intel-isl/Open3D/issues/1110
@@ -98,7 +164,7 @@ def plot3D(position_dir):
 
 if __name__ == "__main__":
 
-    global options
+    global options, state, posIndex
     options = get_options()
 
     simulation_dir = os.path.join(os.getcwd(), "..","results_pointCloud")

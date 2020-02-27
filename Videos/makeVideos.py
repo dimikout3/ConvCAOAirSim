@@ -39,5 +39,4 @@ if __name__ == "__main__":
         heatVideo.generate(path=simulation_dir, time=60)
 
     if options.pointCloud:
-        # TODO: check if depth.PNG exists, else generate it (heatGenerated.py)
         pointCloud.generate(path=simulation_dir, time=60)
