@@ -92,7 +92,7 @@ def getPixels(img_dir):
 
 if __name__ == "__main__":
 
-    simulation_dir = os.path.join(os.getcwd(), "..","results_1")
+    simulation_dir = os.path.join(os.getcwd(), "..","results_pointCloud")
 
     parent_dir = os.path.join(simulation_dir, "swarm_raw_output")
     detected_dir = os.path.join(simulation_dir, "swarm_detected")
@@ -108,14 +108,14 @@ if __name__ == "__main__":
         camera_dir = os.path.join(simulation_dir, "swarm_raw_output",f"{drone}",f"state_{drone}.pickle")
         state = pickle.load(open(camera_dir,"rb"))
 
-        for posIndex, position in enumerate(tqdm(wayPointsID)):
+        for posIndex in tqdm(range(len(wayPointsID))):
 
             data_dir = os.path.join(simulation_dir, "swarm_raw_output",f"{drone}")
-            img_dir = os.path.join(simulation_dir, "swarm_raw_output",f"{drone}", f"{position}")
+            img_dir = os.path.join(simulation_dir, "swarm_raw_output",f"{drone}", f"position_{posIndex}")
 
             pointsW, pointsH, colors = getPixels(img_dir)
 
-            depth_dir = os.path.join(simulation_dir, "swarm_raw_output",f"{drone}", f"{position}", f"depth_time_0.pfm")
+            depth_dir = os.path.join(simulation_dir, "swarm_raw_output",f"{drone}", f"position_{posIndex}", f"depth_time_0.pfm")
             xRelative, yRelative, zRelative, colors = utils.to3D(pointsW, pointsH,
                                               state[posIndex][1], depth_dir,
                                               color = colors)
