@@ -85,14 +85,41 @@ def getPixels(img_dir):
     pointsW = points[:,0]
     pointsH = points[:,1]
 
+    # colors = scene[pointsH, pointsW]
+
+    DETECTIONS = True
+    if DETECTIONS:
+        scene = getDetections(scene)
+
     colors = scene[pointsH, pointsW]
 
     return pointsW, pointsH, colors
 
 
+def getDetections(scene):
+
+    global posIndex, detections
+
+    for objectIndex in range(len(detections[posIndex][0])):
+
+        xList = np.arange(detections[posIndex][0][objectIndex]-detections[posIndex][2][objectIndex]/2,
+                                                       detections[posIndex][0][objectIndex]+detections[posIndex][2][objectIndex]/2,
+                                                       dtype=int)
+        yList = np.arange(detections[posIndex][1][objectIndex]-detections[posIndex][3][objectIndex]/2,
+                                                       detections[posIndex][1][objectIndex]+detections[posIndex][3][objectIndex]/2,
+                                                       dtype=int)
+        for x in xList:
+            for y in yList:
+                scene[y, x] = [255, 0, 0]
+
+    return scene
+
+
 if __name__ == "__main__":
 
-    simulation_dir = os.path.join(os.getcwd(), "..","results_pointCloud")
+    global posIndex, detections
+
+    simulation_dir = os.path.join(os.getcwd(), "..","results_Objective")
 
     parent_dir = os.path.join(simulation_dir, "swarm_raw_output")
     detected_dir = os.path.join(simulation_dir, "swarm_detected")
@@ -107,6 +134,9 @@ if __name__ == "__main__":
 
         camera_dir = os.path.join(simulation_dir, "swarm_raw_output",f"{drone}",f"state_{drone}.pickle")
         state = pickle.load(open(camera_dir,"rb"))
+
+        detections_dir = os.path.join(simulation_dir, "swarm_raw_output",f"{drone}",f"detectionsWidthHeight_{drone}.pickle")
+        detections = pickle.load(open(detections_dir,"rb"))
 
         for posIndex in tqdm(range(len(wayPointsID))):
 
