@@ -1092,7 +1092,7 @@ class controller:
         # self.scoreDetectionsNum.append(scoreNum)
         self.detectionsInfo.append(detectionsInfo)
         self.detectionsCoordinates.append(detectionsCoordinates)
-        self.detectionsWidthHeight.append([width,height])
+        self.detectionsWidthHeight.append([pixelX, pixelY, width,height])
         # self.stateList.append([self.getState(), self.getCameraInfo()])
         self.stateList.append([self.state, self.cameraInfo])
 
