@@ -4,7 +4,7 @@ import numpy as np
 import pickle
 import cv2
 
-"""  """
+""" Generates a video for each UAV (input from 3dVizualizer.py "pointCloud.png") """
 
 def generate(path="", time=60):
 

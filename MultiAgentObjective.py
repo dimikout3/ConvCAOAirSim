@@ -38,9 +38,10 @@ fenceY = -25
 fenceZ = -14
 
 #positions of GlobalHawk
-Xglobal = fenceX
-Yglobal = fenceY
-Zglobal = -90
+# (25, 33, -20)
+Xglobal = 25
+Yglobal = 33
+Zglobal = -30
 
 SAVE_RAW_IMAGES = True
 MAX_EXPLORATION_STEPS = 50
@@ -731,9 +732,9 @@ if __name__ == "__main__":
     wayPointsSize = options.waypoints
 
     OFFSETS = {"UAV1":[0,0,0],
-               "UAV2":[0,-5,0],
-               "UAV3":[5,0,0],
-               "UAV4":[5,5,0]
+               "UAV2":[0,-5,0]
+               # "UAV3":[5,0,0],
+               # "UAV4":[5,5,0]
               }
 
     dronesID = list(OFFSETS.keys())
@@ -788,18 +789,30 @@ if __name__ == "__main__":
     evaluator.setGeoFence(x=fenceX, y=fenceY,z=fenceZ,r=fenceR)
     evaluator.randomPoints(pointsSize = 500)
 
-    totalSteps = 2
+    totalSteps = 50
 
-    d = {"UAV1":{"x":[0, -10], "y": [0, 0],"yaw":[90., 45.]},
-         "UAV2":{"x":[0, 60], "y": [-5, -50],"yaw":[90., 70.]},
-         "UAV3":{"x":[5, -10], "y": [0, -70],"yaw":[90, 90.]},
-         "UAV4":{"x":[5, 5], "y": [5 ,-70],"yaw":[90., -10.]}}
+    # d = {"UAV1":{"x":[0, -10], "y": [0, 0],"yaw":[90., 45.]},
+    #      "UAV2":{"x":[0, 60], "y": [-5, -50],"yaw":[90., 70.]},
+    #      "UAV3":{"x":[5, -10], "y": [0, -70],"yaw":[90, 90.]},
+    #      "UAV4":{"x":[5, 5], "y": [5 ,-70],"yaw":[90., -10.]}}
     # d = {"Drone1":{"x":[25.], "y": [15],"yaw":[90.]},
     #      "Drone2":{"x":[15], "y": [33.],"yaw":[0.]},
     #      }
+    width_scan = 40
+    d = {"UAV1":{"x":np.linspace(25-width_scan/2, 25+width_scan/2, totalSteps),
+                 "y": np.linspace(15, 15, totalSteps),
+                 "z":np.linspace(-15, -15, totalSteps),
+                 "yaw":np.linspace(90, 90, totalSteps)},
+         "UAV2":{"x":np.linspace(10, 10, totalSteps),
+                 "y": np.linspace(33.-width_scan/2, 33.+width_scan/2, totalSteps),
+                 "z":np.linspace(-10, -10, totalSteps),
+                 "yaw":np.linspace(0, 0, totalSteps)},
+         }
+    # In that case globla hawk position is (25, 33, -20)
     alt = -15.
 
-    for positionIdx in range(0,len(d["UAV1"]["x"])):
+    # for positionIdx in range(0,len(d["UAV1"]["x"])):
+    for positionIdx in range(0,totalSteps):
 
         ptime = time.time()
 
@@ -807,7 +820,8 @@ if __name__ == "__main__":
         for ctrl in controllers:
             t = ctrl.moveToPositionYawModeAsync( float(d[ctrl.getName()]["x"][positionIdx]),
                                                  float(d[ctrl.getName()]["y"][positionIdx]),
-                                                 alt, speed=3, yawmode = d[ctrl.getName()]["yaw"][positionIdx])
+                                                 float(d[ctrl.getName()]["z"][positionIdx]),
+                                                 speed=3, yawmode = d[ctrl.getName()]["yaw"][positionIdx])
             tasks.append(t)
 
         # TODO: Chech if we have collision, if yes, then move drone to previous position
@@ -852,7 +866,8 @@ if __name__ == "__main__":
             globalViewScene()
         # globalViewDetections()
 
-        time.sleep(300)
+        # print("Sleeping simulation ... ")
+        # time.sleep(300)
 
     # collisionCorrectionThread.join()
 

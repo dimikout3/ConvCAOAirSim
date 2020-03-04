@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     options = get_options()
 
-    simulation_dir = os.path.join(os.getcwd(), "..","results_pointCloud")
+    simulation_dir = os.path.join(os.getcwd(), "..","results_Objective")
 
     if options.scene:
         sceneVideo.generate(path=simulation_dir, time=60)

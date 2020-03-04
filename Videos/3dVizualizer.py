@@ -12,7 +12,7 @@ from scipy.spatial.transform import Rotation as R
 
 import optparse
 
-"""Parses all the pointCloud.asc and generates a png image"""
+"""Parses all the pointCloud.asc and generates a png image for each UAV pointCloud.png """
 
 
 def get_options():
@@ -77,14 +77,24 @@ def getParamExtrinsicConst():
 
     # http://ksimek.github.io/2012/08/22/extrinsic/
 
-    constX = -300
-    constY = -25
-    constZ = -300
+    # Global View
+    # constX = -300
+    # constY = -25
+    # constZ = -300
+    #
+    # # rotation = R.from_euler('xyz', [90, 0, 180], degrees=True)
+    # rotationX = 90 - 40
+    # rotationY = 0
+    # rotationZ = 90
+
+    constX = 0
+    constY = 10
+    constZ = -35
 
     # rotation = R.from_euler('xyz', [90, 0, 180], degrees=True)
     rotationX = 90 - 40
     rotationY = 0
-    rotationZ = 90
+    rotationZ = 90 + 60
 
     rotation = R.from_euler('xyz', [rotationX, rotationY, rotationZ], degrees=True)
     Rc = rotation.as_dcm()
@@ -167,7 +177,7 @@ if __name__ == "__main__":
     global options, state, posIndex
     options = get_options()
 
-    simulation_dir = os.path.join(os.getcwd(), "..","results_pointCloud")
+    simulation_dir = os.path.join(os.getcwd(), "..","results_Objective")
 
     parent_dir = os.path.join(simulation_dir, "swarm_raw_output")
     detected_dir = os.path.join(simulation_dir, "swarm_detected")

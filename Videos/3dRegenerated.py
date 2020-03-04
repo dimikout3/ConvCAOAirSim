@@ -110,6 +110,7 @@ def getDetections(scene):
                                                        dtype=int)
         for x in xList:
             for y in yList:
+                if x>=1000 or y>=1000:continue
                 scene[y, x] = [255, 0, 0]
 
     return scene

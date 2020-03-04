@@ -9,22 +9,26 @@ import matplotlib.pyplot as plt
 
 """Parses all the position and generates a heatmap from depth pfm"""
 
+DEPTH_MAX = 75
+
+
 def saveDepthPNG(data, depth_dir):
 
     plt.imshow(data, cmap="gist_heat")
 
     depth_name = os.path.join(depth_dir, f"depth.png")
 
-    plt.tight_layout()
     plt.grid(False)
     plt.axis('off')
 
+    plt.tight_layout()
     plt.savefig(depth_name)
     plt.close()
 
+
 if __name__ == "__main__":
 
-    simulation_dir = os.path.join(os.getcwd(), "..","results_pointCloud")
+    simulation_dir = os.path.join(os.getcwd(), "..","results_Objective")
 
     parent_dir = os.path.join(simulation_dir, "swarm_raw_output")
     detected_dir = os.path.join(simulation_dir, "swarm_detected")
@@ -44,6 +48,6 @@ if __name__ == "__main__":
             depth_pfm = os.path.join(simulation_dir, "swarm_raw_output",f"{drone}", f"{position}", f"depth_time_0.pfm")
             data, scale = airsim.read_pfm(depth_pfm)
 
-            data[data>75] = 75
+            data[data>DEPTH_MAX] = DEPTH_MAX
 
             saveDepthPNG(data, depth_dir)
