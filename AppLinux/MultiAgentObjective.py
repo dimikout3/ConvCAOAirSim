@@ -1,8 +1,11 @@
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
 import setup_path
 import airsim
 
 import numpy as np
-import os
 import cv2
 import time
 from tqdm import tqdm
@@ -18,10 +21,14 @@ import json
 import subprocess as sp
 from multiprocessing import Process
 
-# TODO: rename to ruuner.py and kill airsim env when finished
-
-settingsDir = r"C:/Users/" + os.getlogin() + "/Documents/AirSim"
-envDir = r"C:/Users/" + os.getlogin() + "/Documents/AirSim/CityEnviron"
+if os.name == 'nt':
+    settingsDir = r"C:/Users/" + os.getlogin() + "/Documents/AirSim"
+    envDir = r"C:/Users/" + os.getlogin() + "/Documents/AirSim/CityEnviron"
+    call = f"{envDir}\\CityEnviron -windowed -ResX=640 -ResY=480"
+else:
+    settingsDir = r"/home/" + os.getlogin() + "/Documents/AirSim"
+    envDir = r"/home/" + os.getlogin() + "/Downloads/Neighborhood/AirSimNH.sh"
+    call = f"{envDir}"
 
 CAM_YAW = -0.5
 CAM_PITCH = 0.
@@ -44,7 +51,7 @@ Zglobal = -30
 
 SAVE_RAW_IMAGES = True
 MAX_EXPLORATION_STEPS = 50
-GLOBAL_HAWK_ACTIVE = True
+GLOBAL_HAWK_ACTIVE = False
 
 
 def collisionCorrection(timeOutCollision=300):
@@ -707,7 +714,6 @@ def get_options():
 
 def launchAirSim():
 
-    call = f"{envDir}\\CityEnviron -windowed -ResX=640 -ResY=480"
     sp.Popen(call, shell=True)
     time.sleep(10)
 

@@ -200,7 +200,12 @@ class controller:
                     vehicle_name = self.name)  #scene vision image in uncompressed RGB array
 
                 img1d = np.frombuffer(responses[1].image_data_uint8, dtype=np.uint8) #get numpy array
-                img_rgb = img1d.reshape(responses[1].height, responses[1].width, 3) #reshape array to 3 channel image array H X W X 3
+                if os.name=='nt':
+                    img_rgb = img1d.reshape(responses[1].height, responses[1].width, 3) #reshape array to 3 channel image array H X W X 3
+                else:
+                    img_rgb = img1d.reshape(responses[1].height, responses[1].width, 4) #reshape array to 3 channel image array H X W X 3
+                    img_rgb = img_rgb[:,:,0:3]
+
                 self.imageScene = img_rgb
                 self.imageDepthCamera = responses[0]
 
