@@ -13,6 +13,7 @@ The implemented algorithm is not specifically tailored to the dynamics of either
 
 # 3D Reconstruction #
 Combining the information extracted from the Depth Image and the focal length of the camera we can recreate the 3D percepective for each UAV
+
 ![](toGiF.gif)
 
 # Combined 3D Reconstruction #
