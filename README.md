@@ -19,5 +19,7 @@ Combining the information extracted from the Depth Image and the focal length of
 
 # Combined 3D Reconstruction #
 Combining the aforementioned 3D reconstruction of each UAV we can generate the a point cloud for the whole enviroment 
-![](combined.gif)
+<p align="center">
+  <img width="712" height="400" src="combined.gif">
+</p>
 
