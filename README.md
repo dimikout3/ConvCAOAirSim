@@ -11,13 +11,11 @@ Example:
 
 The implemented algorithm is not specifically tailored to the dynamics of either UAVs or the environment, instead, it learns, from the real-time images, exactly the most effective formations of the swarm for the underlying monitoring task. Moreover, and to be able to evaluate at each iteration the swarm formation, images from the UAVs are fed to a novel computation scheme that assigns a single scalar score, taking into consideration the number and quality of all unique objects of interest.
 
-#3D Reconstruction#
-
-Combining the information extracted from the Depth Image and the focal length of the camera we can recreate the 3D percepective
-for each UAV
+# 3D Reconstruction #
+Combining the information extracted from the Depth Image and the focal length of the camera we can recreate the 3D percepective for each UAV
 ![](toGiF.gif)
 
-#Combined 3D Reconstruction#
+# Combined 3D Reconstruction #
 Combining the aforementioned 3D reconstruction of each UAV we can generate the a point cloud for the whole enviroment 
 ![](combinedPCD.gif)
 
