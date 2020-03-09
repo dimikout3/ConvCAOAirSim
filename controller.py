@@ -205,6 +205,7 @@ class controller:
                 else:
                     img_rgb = img1d.reshape(responses[1].height, responses[1].width, 4) #reshape array to 3 channel image array H X W X 3
                     img_rgb = img_rgb[:,:,0:3]
+                    img_rgb = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2RGB)
 
                 self.imageScene = img_rgb
                 self.imageDepthCamera = responses[0]
