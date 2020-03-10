@@ -20,22 +20,21 @@ The ConvCAO_AirSim repository contains the following applications:
 - appLinux: Implementation for working on Linux OS.
 - appNavigate: Navigating a UAV swarm on a predetermined path.
 
-This section provides a step by step guide to installing the full flavor of ConvCAO_AirSim.
+This section provides a step-by-step guide for installing the ConvCAO_AirSim framework.
 
 ### Dependencies
 
-First install the required system packages (NOTE: the majority of the experiments we have concluded are done in a conda enviroment, therefore we stongly advise you to download and install a conda virtual enviroment):
+First, install the required system packages 
+(NOTE: the majority of the experiments we have concluded are done in a conda enviroment, therefore we stongly advise you to download and install a conda virtual enviroment):
 ```
 $ pip install airsim Shapely descartes opencv-contrib-python=4.1.26
 ```
 
 ### Detector
-
 In our experiments we are using a YOLOv3 detector, trained on the [COCO dataset](http://cocodataset.org/#home). However, you can utilize a different detector (tailored to the application needs) and our methodology will still be capable of delivering an optimized set of UAVs’ monitor positions, adapting to the detector’s specific characteristics. [Download](https://convcao.hopto.org/index.php/s/mh8WIDpprE70SO3) the pretrained detector we are using and copy the yolo-coco folder inside your ConvCAO_AirSim path.
 
 ### Enviroments
-
-Since our approach is agnostic, as far as the enviroment is concered, you can download any of the [AirSim Enviroments](https://github.com/microsoft/AirSim/releases). Nonetheless, the enviroment that is the most challenging and therefore the most interesting is the CityEnv, which is a vast, realistic environment that simulates both the static structures and the highly non-linear and dynamic behavior of the moving assets (e.g. cars, trucks, pedestrians, etc. 
+Download any of the available [AirSim Enviroments](https://github.com/microsoft/AirSim/releases)
 
 ### Run Example
 Lastly, you can have an illustrative example by running the "MultiAgent.py" script in the ConvCAO_AirSim folder: 
