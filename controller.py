@@ -42,7 +42,8 @@ WEIGHTS = {"cars":1.0, "persons":0.0 , "trafficLights":1.0}
 class controller:
 
     def __init__(self, clientIn, droneName, offSets, ip="1",
-                 wayPointsSize=200, estimatorWindow=55):
+                 wayPointsSize=200, estimatorWindow=55,
+                 detectorPath=".."):
 
         self.client = clientIn
         self.name = droneName
@@ -53,7 +54,7 @@ class controller:
 
         self.estimatorWindow = estimatorWindow
 
-        self.detector = yoloDetector.yoloDetector()
+        self.detector = yoloDetector.yoloDetector(path=detectorPath)
 
         self.scoreDetections = []
         self.scoreDetectionsNum = []

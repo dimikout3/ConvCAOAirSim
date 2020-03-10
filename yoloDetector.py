@@ -12,12 +12,12 @@ from tqdm import tqdm
 
 class yoloDetector:
 
-    def __init__(self):
+    def __init__(self, path):
 
         self.args = {"confidence": 0.5, "threshold": 0.3 }
 
         # load the COCO class labels our YOLO model was trained on
-        labelsPath = os.path.join(os.getcwd(),"yolo-coco", "coco.names")
+        labelsPath = os.path.join(path,"yolo-coco", "coco.names")
         self.LABELS = open(labelsPath).read().strip().split("\n")
 
         # initialize a list of colors to represent each possible class label
@@ -26,8 +26,8 @@ class yoloDetector:
         	dtype="uint8")
 
         # derive the paths to the YOLO weights and model configuration
-        weightsPath = os.path.join(os.getcwd(),"yolo-coco", "yolov3.weights")
-        configPath = os.path.join(os.getcwd(),"yolo-coco", "yolov3.cfg")
+        weightsPath = os.path.join(path,"yolo-coco", "yolov3.weights")
+        configPath = os.path.join(path,"yolo-coco", "yolov3.cfg")
 
         # load our YOLO object detector trained on COCO dataset (80 classes)
         print("[INFO] loading YOLO from disk...")
