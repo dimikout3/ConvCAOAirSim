@@ -37,7 +37,7 @@ In our experiments we are using a YOLOv3 detector, trained on the [COCO dataset]
 Download any of the available [AirSim Enviroments](https://github.com/microsoft/AirSim/releases)
 
 ### Run Example
-Lastly, you can have an illustrative example by running the "MultiAgent.py" script in the ConvCAO_AirSim folder: 
+Lastly, you can have an illustrative example by running the "MultiAgent.py" script in the ConvCAO_AirSim folder, simply add the path "detector-path":"path-to-your-detector-folder" to the detector folder in the "appSettings.json". Detailed Instructions for running specific applications are inside every corresponding app folder
 ```
 $ python MultiAgent.py
 ```
