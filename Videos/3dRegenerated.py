@@ -13,6 +13,8 @@ from tqdm import tqdm
 
 """Parses all the position and reconstructs 3D model of the full(!) depth map"""
 
+PATH = "/home/dkoutras/ownCloud/CREST_Shared/results/IROS/6Drones/results_2"
+
 def savePointCloud(data, fileName):
 
    f = open(fileName, "w")
@@ -120,7 +122,8 @@ if __name__ == "__main__":
 
     global posIndex, detections
 
-    simulation_dir = os.path.join(os.getcwd(), "..","results_Objective")
+    simulation_dir = PATH
+    # simulation_dir = os.path.join(os.getcwd(), "..","results_Objective")
 
     parent_dir = os.path.join(simulation_dir, "swarm_raw_output")
     detected_dir = os.path.join(simulation_dir, "swarm_detected")

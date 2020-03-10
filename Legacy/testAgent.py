@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+# sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 import setup_path
 import airsim
@@ -26,3 +26,8 @@ drone = "UAV1"
 ctrl = controller(client, drone, OFFSETS[drone], ip=optionsIP, wayPointsSize=100, estimatorWindow=100)
 ctrl.takeOff()
 # points[points[:,2]<1]
+
+import yoloDetector
+yolo = yoloDetector.yoloDetector()
+
+import cv2
