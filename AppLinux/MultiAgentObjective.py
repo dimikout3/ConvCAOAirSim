@@ -692,8 +692,8 @@ def fillTemplate():
 
     global options
 
-    settingsTemplate = os.path.join(settingsDir,"settingsTemplate.json")
-    json_data = json.load(open(settingsTemplate,'r'))
+    # settingsTemplate = os.path.join(settingsDir,"settingsTemplate.json")
+    json_data = json.load(open('airsimSettings.json','r'))
 
     json_data["LocalHostIp"] = f"127.0.0.{options.ip}"
 
