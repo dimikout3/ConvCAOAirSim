@@ -11,7 +11,7 @@ Example:
 
 The implemented algorithm is not specifically tailored to the dynamics of either UAVs or the environment, instead, it learns, from the real-time images, exactly the most effective formations of the swarm for the underlying monitoring task. Moreover, and to be able to evaluate at each iteration the swarm formation, images from the UAVs are fed to a novel computation scheme that assigns a single scalar score, taking into consideration the number and quality of all unique objects of interest.
 
-## Installation
+# Installation #
 
 The ConvCAO_AirSim repository contains the following applications:
 - MultiAgent: Positioning a swarm of UAVs inside a completely unknown terrain, having as objective to maximize the overall situational awareness.
