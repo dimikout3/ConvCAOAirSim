@@ -758,7 +758,8 @@ if __name__ == "__main__":
         controllers.append(controller(client, drone, OFFSETS[drone],
                                       ip=options.ip,
                                       wayPointsSize=wayPointsSize,
-                                      estimatorWindow=options.estimatorWindow))
+                                      estimatorWindow=options.estimatorWindow,
+                                      detectorPath=baseSet['detector-path']))
 
     # Setting Camera Orientation
     for ctrl in controllers: ctrl.setCameraOrientation(CAM_YAW, CAM_PITCH, CAM_ROOL)
