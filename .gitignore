@@ -23,6 +23,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+/AppLinux/yolo-coco/
+
 # C extensions
 *.so
 

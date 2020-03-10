@@ -30,28 +30,30 @@ else:
     envDir = r"/home/" + os.getlogin() + "/Downloads/Neighborhood/AirSimNH.sh"
     call = f"{envDir}"
 
-CAM_YAW = -0.5
-CAM_PITCH = 0.
-CAM_ROOL = 0.
+# Loading App settings from json file
+appSettings = json.load(open('appSettings.json','r'))
+baseSet = appSettings['baseApp']
 
-NORM = {'information':10.0, 'similarity':10.0}
-WEIGHT = {'information':1.0, 'similarity':-1.0}
-KW = 1
+CAM_YAW = baseSet['CamYaw']
+CAM_PITCH = baseSet['CamPitch']
+CAM_ROOL = baseSet['CamRoll']
 
-fenceR = 70
-fenceX = 25
-fenceY = -25
-fenceZ = -14
+geoFenceSet = baseSet['GeoFence']
+fenceR = geoFenceSet['R']
+fenceX = geoFenceSet['x']
+fenceY = geoFenceSet['y']
+fenceZ = geoFenceSet['z']
 
 #positions of GlobalHawk
 # (25, 33, -20)
-Xglobal = 25
-Yglobal = 33
-Zglobal = -30
+globalHawkSet = baseSet['GlobalHawk']
+GLOBAL_HAWK_ACTIVE = globalHawkSet['active']
+Xglobal = globalHawkSet['x']
+Yglobal = globalHawkSet['y']
+Zglobal = globalHawkSet['z']
 
-SAVE_RAW_IMAGES = True
+SAVE_RAW_IMAGES = baseSet['SaveRawImages']
 MAX_EXPLORATION_STEPS = 50
-GLOBAL_HAWK_ACTIVE = False
 
 
 def collisionCorrection(timeOutCollision=300):

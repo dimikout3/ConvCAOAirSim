@@ -1,0 +1,4 @@
+Add SettingsTemplate.json in every App
+Create a .json file for specific app setting 
+Create Folder -> Detectors
+              -> Estimators(Later)
