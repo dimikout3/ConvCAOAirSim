@@ -31,7 +31,7 @@ $ pip install airsim Shapely descartes opencv-contrib-python=4.1.26
 
 ### Detector
 
-In our experiments we are using a YOLOv3 detector, trained on the [COCO dataset](http://cocodataset.org/#home). However, you can utilize a different detector (tailored to the application needs) and our methodology will still be capable of delivering an optimized set of UAVs’ monitor positions, adapting to the detector’s specific characteristics. Download the pretrained detector we are using from here-add-link and copy the yolo-coco folder inside your ConvCAO_AirSim path.
+In our experiments we are using a YOLOv3 detector, trained on the [COCO dataset](http://cocodataset.org/#home). However, you can utilize a different detector (tailored to the application needs) and our methodology will still be capable of delivering an optimized set of UAVs’ monitor positions, adapting to the detector’s specific characteristics. [Download](https://convcao.hopto.org/index.php/s/mh8WIDpprE70SO3) the pretrained detector we are using and copy the yolo-coco folder inside your ConvCAO_AirSim path.
 
 ### Enviroments
 
