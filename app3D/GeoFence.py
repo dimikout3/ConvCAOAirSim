@@ -22,3 +22,21 @@ class GeoFence:
 
     def initializeSphere(self, **kwargs):
         print(f"Initialize GeoFence as sphere")
+
+
+    def getHighValues(self):
+
+        highX = self.centerX + self.length/2
+        highY = self.centerY + self.width/2
+        highZ = 0
+
+        return highX, highY, highZ
+
+
+    def getLowValues(self):
+
+        lowX = self.centerX - self.length/2
+        lowY = self.centerY - self.width/2
+        lowZ = -(self.height)
+
+        return lowX, lowY, lowZ

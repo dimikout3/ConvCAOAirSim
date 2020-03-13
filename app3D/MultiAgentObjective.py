@@ -6,6 +6,7 @@ import cv2
 import time
 from tqdm import tqdm
 from controller import controller
+import Discretizator
 
 import sys
 import os
@@ -316,6 +317,9 @@ if __name__ == "__main__":
     for ctrl in controllers:
         # no need for task list (just setting values here)
         ctrl.setGeoFence(geofence = fence)
+
+    discretizator = Discretizator.Discretizator(discrete=baseSet['Discrete'], geofence=fence)
+    discretizator.report()
 
     startTime = time.time()
 
