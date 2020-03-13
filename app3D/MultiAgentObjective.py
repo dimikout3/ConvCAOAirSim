@@ -39,13 +39,12 @@ CAM_PITCH = baseSet['CamPitch']
 CAM_ROOL = baseSet['CamRoll']
 
 geoFenceSet = baseSet['GeoFence']
-fenceR = geoFenceSet['R']
-fenceX = geoFenceSet['x']
-fenceY = geoFenceSet['y']
-fenceZ = geoFenceSet['z']
+fenceCenterX = geoFenceSet['centerX']
+fenceCenterY = geoFenceSet['centerY']
+fenceWidth = geoFenceSet['width']
+fenceLength = geoFenceSet['length']
+fenceHeight = geoFenceSet['height']
 
-#positions of GlobalHawk
-# (25, 33, -20)
 globalHawkSet = baseSet['GlobalHawk']
 GLOBAL_HAWK_ACTIVE = globalHawkSet['active']
 Xglobal = globalHawkSet['x']
@@ -311,7 +310,9 @@ if __name__ == "__main__":
     for t in tasks: t.join()
 
     print("\nSetting Geo Fence for all drones")
-    fence = GeoFence.GeoFence(centerX=0, centerY=0, width=100, length=100, height=15)
+    fence = GeoFence.GeoFence(centerX = fenceCenterX, centerY = fenceCenterY,
+                              width = fenceWidth, length = fenceLength,
+                              height = fenceHeight)
     for ctrl in controllers:
         # no need for task list (just setting values here)
         ctrl.setGeoFence(geofence = fence)
