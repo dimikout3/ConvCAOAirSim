@@ -1,3 +1,5 @@
+import numpy as np
+
 class Discretizator:
 
     def __init__(self, discrete=None, geofence=None):
