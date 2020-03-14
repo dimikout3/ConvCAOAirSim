@@ -5,7 +5,7 @@ import numpy as np
 import cv2
 import time
 from tqdm import tqdm
-from controller import controller
+from controllerApp import controllerApp
 import Discretizator
 
 import sys
@@ -259,7 +259,15 @@ def launchAirSim():
 
 def killAirSim():
     """ Killing all the exe that have 'CityEnviron' string """
-    os.system('TASKKILL /F /IM CityEnviron*')
+
+    if os.name == 'nt':
+        print(f"\n[KILLING|AIRSIM] closing CityEnviron.exe")
+        os.system('TASKKILL /F /IM CityEnviron*')
+    else:
+        print(f"\n[KILLING|AIRSIM] closing AirSimNH")
+        output = os.system("pkill AirSim")
+        print(output)
+        # sp.Popen(r"killall AirSim*", shell=True)
 
 
 if __name__ == "__main__":
@@ -295,7 +303,7 @@ if __name__ == "__main__":
     for drone in dronesID:
         client = airsim.MultirotorClient(ip = ip_id)
         client.confirmConnection()
-        controllers.append(controller(client, drone, OFFSETS[drone],
+        controllers.append(controllerApp(client, drone, OFFSETS[drone],
                                       ip=options.ip,
                                       wayPointsSize=wayPointsSize,
                                       estimatorWindow=options.estimatorWindow))
@@ -355,7 +363,8 @@ if __name__ == "__main__":
             z = positions.z_val
             _,_,yaw = airsim.to_eularian_angles(orientation)
 
-            print(f"[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{np.degrees(yaw):.2f}) with Ji:{ctrl.getJi():.2f}")
+            # print(f"[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{np.degrees(yaw):.2f}) with Ji:{ctrl.getJi():.2f}")
+            print(f"[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{np.degrees(yaw):.2f})")
 
         # threadList = []
         # for ctrl in controllers:
@@ -384,7 +393,6 @@ if __name__ == "__main__":
     for ctrl in controllers: ctrl.quit()
     client.reset()
 
-    print(f"\n[KILLING|AIRSIM] closing CityEnviron.exe")
     killAirSim()
 
     print(f"\n --- elapsed time:{startTime - time.time():.2f} [sec] ---")
