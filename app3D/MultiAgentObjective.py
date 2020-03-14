@@ -321,6 +321,10 @@ if __name__ == "__main__":
     discretizator = Discretizator.Discretizator(discrete=baseSet['Discrete'], geofence=fence)
     discretizator.report()
 
+    discr = baseSet['Discrete']
+    Explored = np.zeros((discr['x'], discr['y'], discr['z']), dtype=bool)
+    Obstacles = np.ones((discr['x'], discr['y'], discr['z']), dtype=bool)
+
     startTime = time.time()
 
     global costJ
@@ -330,16 +334,16 @@ if __name__ == "__main__":
 
         ptime = time.time()
 
-        tasks = []
-        for ctrl in controllers:
-            t = ctrl.moveToPositionYawModeAsync( float(d[ctrl.getName()]["x"][positionIdx]),
-                                                 float(d[ctrl.getName()]["y"][positionIdx]),
-                                                 float(d[ctrl.getName()]["z"][positionIdx]),
-                                                 speed=3, yawmode = d[ctrl.getName()]["yaw"][positionIdx])
-            tasks.append(t)
-
-        for task in tasks[::-1]:
-            task.join()
+        # tasks = []
+        # for ctrl in controllers:
+        #     t = ctrl.moveToPositionYawModeAsync( float(d[ctrl.getName()]["x"][positionIdx]),
+        #                                          float(d[ctrl.getName()]["y"][positionIdx]),
+        #                                          float(d[ctrl.getName()]["z"][positionIdx]),
+        #                                          speed=3, yawmode = d[ctrl.getName()]["yaw"][positionIdx])
+        #     tasks.append(t)
+        #
+        # for task in tasks[::-1]:
+        #     task.join()
 
         for ctrl in controllers:
 
@@ -353,13 +357,13 @@ if __name__ == "__main__":
 
             print(f"[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{np.degrees(yaw):.2f}) with Ji:{ctrl.getJi():.2f}")
 
-        threadList = []
-        for ctrl in controllers:
-            thread = Thread(target = ctrl.updateEstimator)
-            thread.start()
-            threadList.append(thread)
-        for thread in threadList:
-            thread.join()
+        # threadList = []
+        # for ctrl in controllers:
+        #     thread = Thread(target = ctrl.updateEstimator)
+        #     thread.start()
+        #     threadList.append(thread)
+        # for thread in threadList:
+        #     thread.join()
 
         # for ctrl in controllers: ctrl.plotEstimator1DoF()
 
@@ -372,21 +376,9 @@ if __name__ == "__main__":
         if GLOBAL_HAWK_ACTIVE:
             globalViewScene()
 
-    file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "similarity_objects",
-                            f"similarityList.pickle")
-    pickle.dump(similarityList,open(file_out,"wb"))
-
-    file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "information",
-                            f"informationAggregated.pickle")
-    pickle.dump(informationJ,open(file_out,"wb"))
-
     file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "costJ",
                             f"costJ.pickle")
     pickle.dump(costJ,open(file_out,"wb"))
-
-    file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "survaillance",
-                            f"survaillanceJ.pickle")
-    pickle.dump(survaillanceJ,open(file_out,"wb"))
 
     print("\n[RESETING] to original state ....")
     for ctrl in controllers: ctrl.quit()
