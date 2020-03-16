@@ -22,7 +22,7 @@ from multiprocessing import Process
 
 import GeoFence
 
-import copy
+import open3d as o3d
 
 if os.name == 'nt':
     settingsDir = r"C:/Users/" + os.getlogin() + "/Documents/AirSim"
@@ -268,6 +268,34 @@ def descretization():
         thread.join()
 
 
+def updateMaps():
+
+    global controllers, Explored, Obstacles
+
+    for ctrl in controllers:
+
+        # descretePointCloud -> [[x1,y1,z1],[x2,y2,z2],[x3,y3,z3],[x4,y4,z4] ...]
+        descretePoint = ctrl.descretePointCloud[-1]
+
+        # data -> [np.array([x1,x2,x3,x4]), np.array([y1,y2,y3,y4]), np.array([z1,z2,z3,z4])]
+        # data = descretePoint.T
+        x,y,z = descretePoint.T
+
+        Explored[(x,y,z)] = True
+
+
+def show3DMaps(map):
+
+    indexes = np.where(map)
+
+    x,y,z = indexes
+    indexes = np.stack((x,y,z),axis=1)
+
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(indexes)
+    o3d.visualization.draw_geometries([pcd]) # Visualize the point cloud
+
+
 def fillTemplate():
 
     global options
@@ -313,7 +341,7 @@ def killAirSim():
 
 if __name__ == "__main__":
 
-    global options, controllers, globalHawk
+    global options, controllers, globalHawk, Explored, Obstacles
 
     options = get_options()
 
@@ -383,7 +411,7 @@ if __name__ == "__main__":
     costJ = []
 
     for positionIdx in range(0,options.estimatorWindow):
-
+        print(f"position={positionIdx} Explored true = {np.where(Explored)[0].shape}")
         ptime = time.time()
 
         for ctrl in controllers:
@@ -392,17 +420,17 @@ if __name__ == "__main__":
         getImages()
         getPointClouds()
         descretization()
+
+        updateMaps()
         # data = controllers[0].descretePointCloud[-1]
         # discretizator.show(data)
+        show3DMaps(Explored)
 
-        # tasks = []
-        # for ctrl in controllers:
-        #     t = ctrl.moveToPositionYawModeAsync( float(d[ctrl.getName()]["x"][positionIdx]),
-        #                                          float(d[ctrl.getName()]["y"][positionIdx]),
-        #                                          float(d[ctrl.getName()]["z"][positionIdx]),
-        #                                          speed=3, yawmode = d[ctrl.getName()]["yaw"][positionIdx])
-        #     tasks.append(t)
-        #
+        tasks = []
+        for ctrl in controllers:
+            # t = ctrl.rotateYawRelative(30)
+            ctrl.rotateYawRelative(30)
+            # tasks.append(t)
         # for task in tasks[::-1]:
         #     task.join()
 
@@ -418,16 +446,6 @@ if __name__ == "__main__":
 
             # print(f"[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{np.degrees(yaw):.2f}) with Ji:{ctrl.getJi():.2f}")
             print(f"[INFO] {ctrl.getName()} is at (x:{x:.2f} ,y:{y:.2f} ,z:{z:.2f}, yaw:{np.degrees(yaw):.2f})")
-
-        # threadList = []
-        # for ctrl in controllers:
-        #     thread = Thread(target = ctrl.updateEstimator)
-        #     thread.start()
-        #     threadList.append(thread)
-        # for thread in threadList:
-        #     thread.join()
-
-        # for ctrl in controllers: ctrl.plotEstimator1DoF()
 
         print(f"----- elapsed time: {time.time() - ptime:.3f} ------")
         print("---------------------------------\n")
