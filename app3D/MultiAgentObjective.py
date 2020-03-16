@@ -255,13 +255,12 @@ def getPointClouds():
         thread.join()
 
 
-def descretization(discretizator):
+def descretization():
 
     global controllers
 
     threadList = []
     for ctrl in controllers:
-        # argsDict = dict(discretizator = copy.deepcopy(discretizator))
         thread = Thread(target = ctrl.pointCloud2Descrete)
         thread.start()
         threadList.append(thread)
@@ -392,9 +391,9 @@ if __name__ == "__main__":
 
         getImages()
         getPointClouds()
-        descretization(discretizator)
-        data = controllers[0].descretePointCloud[-1]
-        discretizator.show(data)
+        descretization()
+        # data = controllers[0].descretePointCloud[-1]
+        # discretizator.show(data)
 
         # tasks = []
         # for ctrl in controllers:
