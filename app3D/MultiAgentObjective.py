@@ -22,6 +22,8 @@ from multiprocessing import Process
 
 import GeoFence
 
+import copy
+
 if os.name == 'nt':
     settingsDir = r"C:/Users/" + os.getlogin() + "/Documents/AirSim"
     envDir = r"C:/Users/" + os.getlogin() + "/Documents/AirSim/CityEnviron"
@@ -259,7 +261,7 @@ def descretization(discretizator):
 
     threadList = []
     for ctrl in controllers:
-        argsDict = dict(discretizator = discretizator)
+        # argsDict = dict(discretizator = copy.deepcopy(discretizator))
         thread = Thread(target = ctrl.pointCloud2Descrete)
         thread.start()
         threadList.append(thread)
@@ -369,6 +371,9 @@ if __name__ == "__main__":
     discretizator = Discretizator.Discretizator(discrete=baseSet['Discrete'], geofence=fence)
     discretizator.report()
 
+    for ctrl in controllers:
+        ctrl.updateDescretizator(discretizator)
+
     discr = baseSet['Discrete']
     Explored = np.zeros((discr['x'], discr['y'], discr['z']), dtype=bool)
     Obstacles = np.ones((discr['x'], discr['y'], discr['z']), dtype=bool)
@@ -382,9 +387,14 @@ if __name__ == "__main__":
 
         ptime = time.time()
 
+        for ctrl in controllers:
+            ctrl.updateState(positionIdx,0)
+
         getImages()
         getPointClouds()
         descretization(discretizator)
+        data = controllers[0].descretePointCloud[-1]
+        discretizator.show(data)
 
         # tasks = []
         # for ctrl in controllers:
