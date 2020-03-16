@@ -225,6 +225,48 @@ def generatingResultsFolders():
             raise
 
 
+def getImages():
+
+    global controllers
+
+    threadList = []
+    for ctrl in controllers:
+        argsDict = dict(save_raw = True)
+        thread = Thread(target = ctrl.getImages, kwargs=argsDict)
+        thread.start()
+        threadList.append(thread)
+    for thread in threadList:
+        thread.join()
+
+
+def getPointClouds():
+
+    global controllers
+
+    threadList = []
+    for ctrl in controllers:
+        argsDict = dict(x = 100, y = 100)
+        thread = Thread(target = ctrl.getPointCloud, kwargs=argsDict)
+        thread.start()
+        threadList.append(thread)
+    for thread in threadList:
+        thread.join()
+
+
+def descretization(discretizator):
+
+    global controllers
+
+    threadList = []
+    for ctrl in controllers:
+        argsDict = dict(discretizator = discretizator)
+        thread = Thread(target = ctrl.pointCloud2Descrete)
+        thread.start()
+        threadList.append(thread)
+    for thread in threadList:
+        thread.join()
+
+
 def fillTemplate():
 
     global options
@@ -266,8 +308,6 @@ def killAirSim():
     else:
         print(f"\n[KILLING|AIRSIM] closing AirSimNH")
         output = os.system("pkill AirSim")
-        print(output)
-        # sp.Popen(r"killall AirSim*", shell=True)
 
 
 if __name__ == "__main__":
@@ -341,6 +381,10 @@ if __name__ == "__main__":
     for positionIdx in range(0,options.estimatorWindow):
 
         ptime = time.time()
+
+        getImages()
+        getPointClouds()
+        descretization(discretizator)
 
         # tasks = []
         # for ctrl in controllers:
