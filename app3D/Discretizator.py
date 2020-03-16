@@ -1,4 +1,5 @@
 import numpy as np
+import open3d as o3d
 
 class Discretizator:
 
@@ -38,3 +39,10 @@ class Discretizator:
         descrete = (data - self.lowValues) / self.stepSizes
 
         return descrete.astype(np.int)
+
+
+    def show(self, descreteData):
+
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(descreteData)
+        o3d.visualization.draw_geometries([pcd]) # Visualize the point cloud
