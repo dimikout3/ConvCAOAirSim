@@ -20,13 +20,18 @@ class controllerApp(controller):
         self.descretePointCloud = []
 
 
-    def pointCloud2Descrete(self, discretizator=None):
+    def updateDescretizator(self, discretizator_in):
+
+        self.descretizator = discretizator_in
+
+
+    def pointCloud2Descrete(self):
 
         x, y, z, colors = self.pointCloud[-1]
 
         data = np.stack((x,y,z),axis=1)
-
-        self.descretePointCloud.append( discretizator.descrete(data) )
+        print(f"[pointCloud2Descrete]")
+        self.descretePointCloud.append( self.descretizator.descretize(data) )
 
 
     def connectIntermidiate(self):
