@@ -345,6 +345,8 @@ class controller:
 
     def rotateYawRelative(self, relavtiveYaw):
 
+        """ Relative rotate in degrees"""
+        
         self.client.rotateByYawRateAsync(relavtiveYaw,1,vehicle_name=self.name).join()
         self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
 

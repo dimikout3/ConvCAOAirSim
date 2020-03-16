@@ -30,7 +30,7 @@ class controllerApp(controller):
         x, y, z, colors = self.pointCloud[-1]
 
         data = np.stack((x,y,z),axis=1)
-        print(f"[pointCloud2Descrete]")
+
         self.descretePointCloud.append( self.descretizator.descretize(data) )
 
 

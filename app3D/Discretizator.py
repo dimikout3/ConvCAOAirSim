@@ -37,6 +37,9 @@ class Discretizator:
         """Given a set of data [(x,y,z), dtype=float] convert them to descrete"""
 
         descrete = (data - self.lowValues) / self.stepSizes
+        descrete = np.clip(descrete,
+                           a_min=[0, 0, 0],
+                           a_max=[self.discreteX-1, self.discreteY-1, self.discreteZ-1])
 
         return descrete.astype(np.int)
 
