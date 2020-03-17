@@ -56,7 +56,7 @@ def rotate(x,y,z,theta):
     return rotated[:,0],rotated[:,1],rotated[:,2]
 
 
-def to3D(pixelX, pixelY, camInfo, depthImage, color=[]):
+def to3D(pixelX, pixelY, camInfo, depthImage, color=[], maxDistView = None):
     """From image pixels (2D) to relative(!) 3D coordinates"""
 
     if type(depthImage) == str:
@@ -65,6 +65,8 @@ def to3D(pixelX, pixelY, camInfo, depthImage, color=[]):
         depthData = depthImage.image_data_float
         depthArray = np.array(depthData)
         depth = np.reshape(depthArray, (depthImage.height, depthImage.width))
+        if isinstance(maxDistView, float) or isinstance(maxDistView, int):
+            depth[depth>maxDistView] = maxDistView
 
     height, width = depth.shape
     # print(f"Image size: width:{width} -- height:{height}")

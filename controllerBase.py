@@ -45,7 +45,7 @@ WEIGHTS = {"cars":1.0, "persons":0.0 , "trafficLights":1.0}
 class controller:
 
     def __init__(self, clientIn, droneName, offSets, ip="1",
-                 wayPointsSize=200, estimatorWindow=55):
+                 wayPointsSize=200, estimatorWindow=55, maxDistView=None):
 
         self.client = clientIn
         self.name = droneName
@@ -66,6 +66,8 @@ class controller:
         self.offSetZ = offSets[2]
 
         self.wayPointSize = wayPointsSize
+
+        self.maxDistView = maxDistView
 
         self.updateMultirotorState()
         self.updateCameraInfo()
@@ -254,7 +256,7 @@ class controller:
 
         xRelative, yRelative, zRelative, colors = utils.to3D(pointsW, pointsH,
                                           self.cameraInfo, self.imageDepthCamera,
-                                          color = colors)
+                                          color = colors, maxDistView = self.maxDistView)
         x, y, z = utils.to_absolute_coordinates(xRelative, yRelative, zRelative,
                                                 self.cameraInfo)
 
@@ -346,7 +348,7 @@ class controller:
     def rotateYawRelative(self, relavtiveYaw):
 
         """ Relative rotate in degrees"""
-        
+
         self.client.rotateByYawRateAsync(relavtiveYaw,1,vehicle_name=self.name).join()
         self.client.rotateByYawRateAsync(0,1,vehicle_name=self.name).join()
 
