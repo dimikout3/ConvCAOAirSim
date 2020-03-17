@@ -11,11 +11,13 @@ import numpy as np
 class controllerApp(controller):
 
     def __init__(self, clientIn, droneName, offSets, ip="1",
-                 wayPointsSize=200, estimatorWindow=55):
+                 wayPointsSize=200, estimatorWindow=55,
+                 maxDistView = 10.0):
 
         super().__init__(clientIn, droneName, offSets, ip=ip,
                          wayPointsSize = wayPointsSize,
-                         estimatorWindow = estimatorWindow)
+                         estimatorWindow = estimatorWindow,
+                         maxDistView = maxDistView)
 
         self.descretePointCloud = []
 

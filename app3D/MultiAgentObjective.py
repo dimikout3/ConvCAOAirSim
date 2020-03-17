@@ -37,6 +37,8 @@ else:
 appSettings = json.load(open('appSettings.json','r'))
 baseSet = appSettings['baseApp']
 
+MAX_DIST_VIEW = baseSet['maxDistView']
+
 CAM_YAW = baseSet['CamYaw']
 CAM_PITCH = baseSet['CamPitch']
 CAM_ROOL = baseSet['CamRoll']
@@ -277,8 +279,7 @@ def updateMaps():
         # descretePointCloud -> [[x1,y1,z1],[x2,y2,z2],[x3,y3,z3],[x4,y4,z4] ...]
         descretePoint = ctrl.descretePointCloud[-1]
 
-        # data -> [np.array([x1,x2,x3,x4]), np.array([y1,y2,y3,y4]), np.array([z1,z2,z3,z4])]
-        # data = descretePoint.T
+        # descretePoint.T -> [np.array([x1,x2,x3,x4]), np.array([y1,y2,y3,y4]), np.array([z1,z2,z3,z4])]
         x,y,z = descretePoint.T
 
         Explored[(x,y,z)] = True
@@ -375,7 +376,8 @@ if __name__ == "__main__":
         controllers.append(controllerApp(client, drone, OFFSETS[drone],
                                       ip=options.ip,
                                       wayPointsSize=wayPointsSize,
-                                      estimatorWindow=options.estimatorWindow))
+                                      estimatorWindow=options.estimatorWindow,
+                                      maxDistView = MAX_DIST_VIEW))
 
     # Setting Camera Orientation
     for ctrl in controllers: ctrl.setCameraOrientation(CAM_YAW, CAM_PITCH, CAM_ROOL)
