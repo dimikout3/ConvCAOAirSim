@@ -249,7 +249,7 @@ def getPointClouds():
 
     threadList = []
     for ctrl in controllers:
-        argsDict = dict(x = 100, y = 100)
+        argsDict = dict(x = 30, y = 30)
         thread = Thread(target = ctrl.getPointCloud, kwargs=argsDict)
         thread.start()
         threadList.append(thread)
@@ -282,6 +282,9 @@ def updateMaps():
         # descretePoint.T -> [np.array([x1,x2,x3,x4]), np.array([y1,y2,y3,y4]), np.array([z1,z2,z3,z4])]
         x,y,z = descretePoint.T
 
+        Explored[(x,y,z)] = True
+
+        x,y,z = ctrl.connectIntermidiate()
         Explored[(x,y,z)] = True
 
 

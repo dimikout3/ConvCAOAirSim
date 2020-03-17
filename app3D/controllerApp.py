@@ -7,6 +7,7 @@ from controllerBase import controller
 
 import airsim
 import numpy as np
+from scipy.spatial.distance import cdist
 
 class controllerApp(controller):
 
@@ -36,10 +37,39 @@ class controllerApp(controller):
         self.descretePointCloud.append( self.descretizator.descretize(data) )
 
 
-    def connectIntermidiate(self):
+    def connectIntermidiate(self, map=None, minDist=2., as_true=True):
+
         """Determine where the points between last descrete and UAV belong
            (Obstacles, Explored)"""
-        pass
+
+        x, y, z, colors = self.pointCloud[-1]
+
+        points = np.stack((x,y,z),axis=1)
+
+        xCurrent = self.state.kinematics_estimated.position.x_val
+        yCurrent = self.state.kinematics_estimated.position.y_val
+        zCurrent = self.state.kinematics_estimated.position.z_val
+        uav = np.array([xCurrent, yCurrent, zCurrent])
+
+        i = np.meshgrid(np.arange(self.descretizator.discreteX),
+                        np.arange(self.descretizator.discreteY),
+                        np.arange(self.descretizator.discreteZ))
+        xVoxels = np.reshape(i[0],i[0].size)
+        yVoxels = np.reshape(i[1],i[1].size)
+        zVoxels = np.reshape(i[2],i[2].size)
+        voxels = np.stack((xVoxels, yVoxels, zVoxels),axis=1)
+
+        # dist = np.linalg.norm( np.cross(points-uav, voxels-uav),axis=1) / cdist([uav],points)
+        dist = []
+        for voxel in voxels:
+            dist.append(min( np.linalg.norm( np.cross(points-uav, voxel-uav),axis=1) / np.linalg.norm(uav - points, axis=1)) )
+        dist = np.array(dist)
+
+        # inside -> voxels which are inside the line from UAV to lidar/depth point/pixel
+        inside = np.where(dist < minDist)
+        # map[inside] = as_true
+
+        return xVoxels[inside], yVoxels[inside], zVoxels[inside]
 
 
     def quit(self):
