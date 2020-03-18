@@ -270,9 +270,24 @@ def descretization():
         thread.join()
 
 
+def updateIntermediate():
+
+    global controllers
+
+    threadList = []
+    for ctrl in controllers:
+        thread = Thread(target = ctrl.connectIntermidiate)
+        thread.start()
+        threadList.append(thread)
+    for thread in threadList:
+        thread.join()
+
+
 def updateMaps():
 
     global controllers, Explored, Obstacles
+
+    updateIntermediate()
 
     for ctrl in controllers:
 
@@ -284,7 +299,7 @@ def updateMaps():
 
         Explored[(x,y,z)] = True
 
-        x,y,z = ctrl.connectIntermidiate()
+        x,y,z = ctrl.getIntermediate()
         Explored[(x,y,z)] = True
 
 
@@ -429,7 +444,7 @@ if __name__ == "__main__":
         updateMaps()
         # data = controllers[0].descretePointCloud[-1]
         # discretizator.show(data)
-        show3DMaps(Explored)
+        # show3DMaps(Explored)
 
         tasks = []
         for ctrl in controllers:

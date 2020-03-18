@@ -59,17 +59,26 @@ class controllerApp(controller):
         zVoxels = np.reshape(i[2],i[2].size)
         voxels = np.stack((xVoxels, yVoxels, zVoxels),axis=1)
 
-        # dist = np.linalg.norm( np.cross(points-uav, voxels-uav),axis=1) / cdist([uav],points)
-        dist = []
-        for voxel in voxels:
-            dist.append(min( np.linalg.norm( np.cross(points-uav, voxel-uav),axis=1) / np.linalg.norm(uav - points, axis=1)) )
-        dist = np.array(dist)
+        # pointRepeated -> [p1,p2,p3, p1,p2,p3, p1,p2,p3 ...]
+        pointsRepeated = np.tile(points,(voxels.shape[0],1))
+        # voxelsRepeated -> [v1,v1,v1, v2,v2,v2, v3,v3,v3 ...]
+        voxelsRepeated = np.repeat(voxels,points.shape[0],axis=0)
+
+        dist = np.linalg.norm( np.cross(pointsRepeated-uav, voxelsRepeated-uav),axis=1) / np.linalg.norm(uav - pointsRepeated, axis=1)
+        dist = np.reshape(dist, (voxels.shape[0], points.shape[0]))
+        dist = np.min(dist, axis=1)
 
         # inside -> voxels which are inside the line from UAV to lidar/depth point/pixel
         inside = np.where(dist < minDist)
-        # map[inside] = as_true
 
-        return xVoxels[inside], yVoxels[inside], zVoxels[inside]
+        self.xVoxels = xVoxels[inside]
+        self.yVoxels = yVoxels[inside]
+        self.zVoxels = zVoxels[inside]
+
+
+    def getIntermediate(self):
+
+        return self.xVoxels, self.yVoxels, self.zVoxels
 
 
     def quit(self):
