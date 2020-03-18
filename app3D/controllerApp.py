@@ -37,7 +37,31 @@ class controllerApp(controller):
         self.descretePointCloud.append( self.descretizator.descretize(data) )
 
 
-    def connectIntermidiate(self, map=None, minDist=1., as_true=True):
+    def connectIntermidiate(self, line_points=30):
+
+        """Determine where the points between last descrete and UAV belong
+           (Obstacles, Explored), using points as lines! """
+
+        x, y, z, colors = self.pointCloud[-1]
+
+        points = np.stack((x,y,z),axis=1)
+
+        xCurrent = self.state.kinematics_estimated.position.x_val
+        yCurrent = self.state.kinematics_estimated.position.y_val
+        zCurrent = self.state.kinematics_estimated.position.z_val
+        uav = np.array([xCurrent, yCurrent, zCurrent])
+
+        lines = np.linspace(points, uav, line_points)
+        line_points  = np.reshape(lines, (lines.shape[0]*lines.shape[1],3))
+
+        descreteLinePoints = self.descretizator.descretize(line_points).T
+
+        self.xVoxels = descreteLinePoints[0]
+        self.yVoxels = descreteLinePoints[1]
+        self.zVoxels = descreteLinePoints[2]
+
+
+    def connectIntermidiateDist(self, map=None, minDist=1., as_true=True):
 
         """Determine where the points between last descrete and UAV belong
            (Obstacles, Explored)"""
@@ -64,6 +88,7 @@ class controllerApp(controller):
         # voxelsRepeated -> [v1,v1,v1, v2,v2,v2, v3,v3,v3 ...]
         voxelsRepeated = np.repeat(voxels,points.shape[0],axis=0)
 
+        # BUG: This is wrong ... instead of line we need LINE SEGMENT ...
         dist = np.linalg.norm( np.cross(pointsRepeated-uav, voxelsRepeated-uav),axis=1) / np.linalg.norm(uav - pointsRepeated, axis=1)
         dist = np.reshape(dist, (voxels.shape[0], points.shape[0]))
         dist = np.min(dist, axis=1)

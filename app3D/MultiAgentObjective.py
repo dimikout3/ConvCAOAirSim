@@ -475,8 +475,8 @@ if __name__ == "__main__":
         # discretizator.show(data)
         if positionIdx>=1:
 
-            # print(f"Showing Explored")
-            # show3DMaps(Explored)
+            print(f"Showing Explored")
+            show3DMaps(Explored)
 
             # print(f"Showing Obstacles")
             # show3DMaps(Obstacles)
@@ -484,8 +484,8 @@ if __name__ == "__main__":
             # print(f"Showing Frontier")
             # show3DMaps(Frontier)
 
-            print(f"Showing DescreteMap")
-            show3DMaps(DescreteMap)
+            # print(f"Showing DescreteMap")
+            # show3DMaps(DescreteMap)
 
         tasks = []
         for ctrl in controllers:
