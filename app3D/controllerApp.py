@@ -37,7 +37,7 @@ class controllerApp(controller):
         self.descretePointCloud.append( self.descretizator.descretize(data) )
 
 
-    def connectIntermidiate(self, map=None, minDist=2., as_true=True):
+    def connectIntermidiate(self, map=None, minDist=1., as_true=True):
 
         """Determine where the points between last descrete and UAV belong
            (Obstacles, Explored)"""

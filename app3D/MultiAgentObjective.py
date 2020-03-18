@@ -21,8 +21,8 @@ import subprocess as sp
 from multiprocessing import Process
 
 import GeoFence
-
 import open3d as o3d
+from functools import reduce
 
 if os.name == 'nt':
     settingsDir = r"C:/Users/" + os.getlogin() + "/Documents/AirSim"
@@ -283,9 +283,31 @@ def updateIntermediate():
         thread.join()
 
 
+def updateFrontier():
+
+    global Explored, Obstacles, Frontier
+
+    Frontier[:,:,:] = False
+
+    # neighbors -> (bot | top | left | right | front | back)
+    bot = np.roll(np.logical_not(Explored),1, axis = 0)
+    top = np.roll(np.logical_not(Explored),1, axis = 1)
+    left = np.roll(np.logical_not(Explored),1, axis = 2)
+    right = np.roll(np.logical_not(Explored),-1, axis = 0)
+    front = np.roll(np.logical_not(Explored),-1, axis = 1)
+    back = np.roll(np.logical_not(Explored),-1, axis = 2)
+    neighbors = reduce( np.logical_or, (bot, top, left, right, front, back))
+
+    canditates = np.logical_and(Explored, np.logical_not(Obstacles))
+
+    indexes = np.where( np.logical_and(canditates, neighbors) )
+
+    Frontier[indexes] = True
+
+
 def updateMaps():
 
-    global controllers, Explored, Obstacles
+    global controllers, Explored, Obstacles, DescreteMap
 
     updateIntermediate()
 
@@ -293,14 +315,19 @@ def updateMaps():
 
         # descretePointCloud -> [[x1,y1,z1],[x2,y2,z2],[x3,y3,z3],[x4,y4,z4] ...]
         descretePoint = ctrl.descretePointCloud[-1]
-
         # descretePoint.T -> [np.array([x1,x2,x3,x4]), np.array([y1,y2,y3,y4]), np.array([z1,z2,z3,z4])]
         x,y,z = descretePoint.T
 
-        Explored[(x,y,z)] = True
+        xIntermediate,yIntermediate,zIntermediate = ctrl.getIntermediate()
 
-        x,y,z = ctrl.getIntermediate()
-        Explored[(x,y,z)] = True
+        Explored[(xIntermediate,yIntermediate,zIntermediate)] = True
+
+        Obstacles[(xIntermediate,yIntermediate,zIntermediate)] = False
+        Obstacles[(x,y,z)] = True
+
+        DescreteMap[(x,y,z)] = True
+
+    updateFrontier()
 
 
 def show3DMaps(map):
@@ -360,7 +387,7 @@ def killAirSim():
 
 if __name__ == "__main__":
 
-    global options, controllers, globalHawk, Explored, Obstacles
+    global options, controllers, globalHawk, Explored, Obstacles, Frontier, DescreteMap
 
     options = get_options()
 
@@ -424,6 +451,8 @@ if __name__ == "__main__":
     discr = baseSet['Discrete']
     Explored = np.zeros((discr['x'], discr['y'], discr['z']), dtype=bool)
     Obstacles = np.ones((discr['x'], discr['y'], discr['z']), dtype=bool)
+    Frontier = np.zeros((discr['x'], discr['y'], discr['z']), dtype=bool)
+    DescreteMap = np.zeros((discr['x'], discr['y'], discr['z']), dtype=bool)
 
     startTime = time.time()
 
@@ -444,7 +473,19 @@ if __name__ == "__main__":
         updateMaps()
         # data = controllers[0].descretePointCloud[-1]
         # discretizator.show(data)
-        # show3DMaps(Explored)
+        if positionIdx>=1:
+
+            # print(f"Showing Explored")
+            # show3DMaps(Explored)
+
+            # print(f"Showing Obstacles")
+            # show3DMaps(Obstacles)
+
+            # print(f"Showing Frontier")
+            # show3DMaps(Frontier)
+
+            print(f"Showing DescreteMap")
+            show3DMaps(DescreteMap)
 
         tasks = []
         for ctrl in controllers:
