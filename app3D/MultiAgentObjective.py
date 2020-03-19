@@ -342,6 +342,18 @@ def show3DMaps(map):
     o3d.visualization.draw_geometries([pcd]) # Visualize the point cloud
 
 
+def show2DMaps(map):
+
+    indexes = np.where(map)
+
+    x,y,z = indexes
+
+    plt.scatter(x, y, c=z, vmin=0, vmax=12)
+    plt.colorbar()
+
+    plt.show()
+
+
 def fillTemplate():
 
     global options
@@ -475,17 +487,19 @@ if __name__ == "__main__":
         # discretizator.show(data)
         if positionIdx>=1:
 
-            print(f"Showing Explored")
-            show3DMaps(Explored)
+            # print(f"Showing Explored")
+            # show3DMaps(Explored)
 
             # print(f"Showing Obstacles")
             # show3DMaps(Obstacles)
 
             # print(f"Showing Frontier")
             # show3DMaps(Frontier)
+            # show2DMaps(Frontier)
 
             # print(f"Showing DescreteMap")
             # show3DMaps(DescreteMap)
+            pass
 
         tasks = []
         for ctrl in controllers:
