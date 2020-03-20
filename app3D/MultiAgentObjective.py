@@ -23,6 +23,7 @@ from multiprocessing import Process
 import GeoFence
 import open3d as o3d
 from functools import reduce
+from scipy.spatial import distance
 
 if os.name == 'nt':
     settingsDir = r"C:/Users/" + os.getlogin() + "/Documents/AirSim"
@@ -305,6 +306,47 @@ def updateFrontier():
     Frontier[indexes] = True
 
 
+def attributeFrontierCells():
+
+    """ Returning  attributes= [UAV1 -> [[FC1],[FC2],[FC3],[FC4]]
+                                UAV2 -> [[FC1],[FC2],[FC3]]]"""
+
+    global controllers, Frontier
+
+    frontierCellsIndexes = np.where(Frontier)
+    frontierCellsIndexes = np.stack(frontierCellsIndexes, axis=1)
+
+    uav = []
+    for ctrl in controllers:
+
+        positions = ctrl.getPositions()
+        orientation = ctrl.getOrientation()
+
+        x = positions.x_val
+        y = positions.y_val
+        z = positions.z_val
+
+        uav.append([x,y,z])
+    uav = np.array(uav)
+
+    dist = distance.cdist(uav, frontierCellsIndexes)
+
+    argmin = np.argmin(dist, axis=0)
+
+    attributed = []
+    for ind, ctrl in enumerate(controllers):
+
+        cellsInd = np.where(argmin == ind)
+
+        if cellsInd[0].size == 0:
+            argmin_single = np.argmin(distance.cdist(frontierCellsIndexes, [uav[ind]]), axis=0)
+            attributed.append(frontierCellsIndexes[argmin_single])
+        else:
+            attributed.append(frontierCellsIndexes[cellsInd])
+
+    return attributed
+
+
 def updateMaps():
 
     global controllers, Explored, Obstacles, DescreteMap
@@ -485,6 +527,10 @@ if __name__ == "__main__":
         updateMaps()
         # data = controllers[0].descretePointCloud[-1]
         # discretizator.show(data)
+
+        attributed = attributeFrontierCells()
+
+
         if positionIdx>=1:
 
             # print(f"Showing Explored")
@@ -502,12 +548,11 @@ if __name__ == "__main__":
             pass
 
         tasks = []
-        for ctrl in controllers:
-            # t = ctrl.rotateYawRelative(30)
-            ctrl.rotateYawRelative(30)
-            # tasks.append(t)
-        # for task in tasks[::-1]:
-        #     task.join()
+        for ind, ctrl in enumerate(controllers):
+            t = ctrl.move(frontierCellsAttributed = attributed[ind])
+            tasks.append(t)
+        for task in tasks[::-1]:
+            task.join()
 
         for ctrl in controllers:
 

@@ -7,7 +7,7 @@ from controllerBase import controller
 
 import airsim
 import numpy as np
-from scipy.spatial.distance import cdist
+from scipy.spatial import distance
 
 class controllerApp(controller):
 
@@ -104,6 +104,69 @@ class controllerApp(controller):
     def getIntermediate(self):
 
         return self.xVoxels, self.yVoxels, self.zVoxels
+
+
+    def insideGeoFence(self, c=0, d=0):
+        """ Not needed since Frontier Cells will be inside the GeoFence anyway"""
+        pass
+
+
+    def getCanditates(self, pertubations=70, saveLidar=False, minDist = 2.,
+                            maxTravelTime=5., controllers=[]):
+
+        lidarPoints = self.getLidarData(save_lidar=saveLidar)
+        lidarPoints = self.clearLidarPoints(lidarPoints=lidarPoints,
+                                            maxTravelTime=maxTravelTime,
+                                            controllers=controllers)
+        lidarPoints = self.addOffsetLidar(lidarPoints=lidarPoints)
+
+        self.updateMultirotorState()
+        xCurrent = self.state.kinematics_estimated.position.x_val
+        yCurrent = self.state.kinematics_estimated.position.y_val
+        zCurrent = self.state.kinematics_estimated.position.z_val
+
+        xCanditate = xCurrent + (np.random.random(pertubations) - 1.)*maxTravelTime
+        yCanditate = yCurrent + (np.random.random(pertubations) - 1.)*maxTravelTime
+        zCanditate = zCurrent + (np.random.random(pertubations) - 1.)*maxTravelTime
+        canditates = np.stack((xCanditate,yCanditate,zCanditate),axis=1)
+
+        # inGeoFence = self.insideGeoFence(c = canditates, d = minDist)
+        isSafeDist = self.isSafeDist(canditate = canditates,
+                                     lidarPoints = lidarPoints,
+                                     minDist = minDist)
+
+        # geoFenceSafe = np.where(inGeoFence==True)[0]
+        safeDistTrue = np.where(np.array(isSafeDist)==True)[0]
+
+        # validCandidatesIndex = np.intersect1d(geoFenceSafe, safeDistTrue)
+
+        xCanditate = xCanditate[safeDistTrue]
+        yCanditate = yCanditate[safeDistTrue]
+        zCanditate = zCanditate[safeDistTrue]
+
+        canditatesPoints = np.stack((xCanditate,yCanditate,zCanditate), axis=1)
+
+        return canditatesPoints
+
+
+    def move(self,controllers=[], frontierCellsAttributed = []):
+
+        meanFrontierCell = np.mean(frontierCellsAttributed, axis=0)
+        canditatesPoints = self.getCanditates(controllers = controllers)
+
+        xCurrent = self.state.kinematics_estimated.position.x_val
+        yCurrent = self.state.kinematics_estimated.position.y_val
+        zCurrent = self.state.kinematics_estimated.position.z_val
+        currentPos = np.array([xCurrent, yCurrent, zCurrent])
+
+        distances = distance.cdist(canditatesPoints, [meanFrontierCell])
+
+        argmin = np.argmin(distances, axis=1)
+
+        x,y,z = canditatesPoints[0]
+        task = self.moveToPosition(x, y, z, 2.0)
+
+        return task
 
 
     def quit(self):
