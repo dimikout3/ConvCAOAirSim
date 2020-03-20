@@ -165,7 +165,7 @@ class controller:
         y -= self.offSetY
         z -= self.offSetZ
 
-        return self.client.moveToPositionAsync(x,y,z,speed,vehicle_name=self.name).join()
+        return self.client.moveToPositionAsync(x,y,z,speed,vehicle_name=self.name)
 
 
     def setCameraOrientation(self, cam_yaw, cam_pitch, cam_roll):
