@@ -34,7 +34,7 @@ Second, you have to define a detector capable of producing bounding boxes of obj
 
 For the needs of our application we utilized YOLOv3 detector, trained on the [COCO dataset](http://cocodataset.org/#home). You can download this detector from [here](https://convcao.hopto.org/index.php/s/mh8WIDpprE70SO3). After downloading the file, extract the yolo-coco folder inside your local ConvCao_AirSim folder.
 
-It is worth highlighted that, you could use a deifferent detector (tailored to the application needs), as the proposed methodology is agnostic as far the detector's choise is concerned.
+It is worth highlighting that, you could use a deifferent detector (tailored to the application needs), as the proposed methodology is agnostic as far the detector's choise is concerned.
 
 ### Enviroments
 Download any of the available [AirSim Enviroments](https://github.com/microsoft/AirSim/releases)
