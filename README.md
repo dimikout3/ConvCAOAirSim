@@ -40,6 +40,8 @@ It is worth highlighted that, you could use a deifferent detector (tailored to t
 Download any of the available [AirSim Enviroments](https://github.com/microsoft/AirSim/releases)
 
 ### Run Example
+To run an example with the Convergence testbed you should just replace the detector-path entry inside this [file](https://github.com/dimikout3/ConvCAO_AirSim/blob/master/appConvergence/appSettings.json), with your path to the previsously downloaded detector. 
+
 Finally, add the path "detector-path":"path-to-your-detector-folder" to the detector folder in the "appSettings.json" and run "MultiAgent.py" script:
 ```
 $ python MultiAgent.py
