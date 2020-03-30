@@ -170,4 +170,10 @@ class controllerApp(controller):
 
 
     def quit(self):
-        pass
+
+        self.client.armDisarm(False, self.name)
+        self.client.enableApiControl(False, self.name)
+
+        state_file = os.path.join(self.parentRaw,
+                                  self.getName(), f"state_{self.name}.pickle")
+        pickle.dump(self.stateList,open(state_file,"wb"))
