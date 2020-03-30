@@ -65,8 +65,8 @@ def setGlobalHawk(client):
     """Setting the position and heading of the drone that will observer the Enviroment"""
     global options, globalHawk
 
-    OFFSET_GLOBALHAWK = [10,10,0]
-    globalHawk = controller(client, "GlobalHawk", OFFSET_GLOBALHAWK, ip=options.ip)
+    OFFSET_GLOBALHAWK = [5,0,0]
+    globalHawk = controllerApp(client, "GlobalHawk", OFFSET_GLOBALHAWK, ip=options.ip)
     # The camera orientation of the global view | yaw,pitch,roll | radians
     globalHawk.setCameraOrientation(-np.pi/2, 0., 0.)
     globalHawk.takeOff()
@@ -94,44 +94,53 @@ def plotData(data=None, folder=None, file=None):
 
 def globalViewScene():
 
+    debugGlobalScene = False
+
     global controllers, globalHawk
+
+    globalHawk.getImages()
 
     scene = globalHawk.imageScene
     cameraInfo = globalHawk.cameraInfo
     height, width, colors = scene.shape
-    print(f"height={height} width={width} ")
+    if debugGlobalScene:
+        print(f"height={height} width={width} ")
 
     altitude = abs(cameraInfo.pose.position.z_val)
     hfov = cameraInfo.fov
     vFoV = (height/width)*hfov
-    print(f"altitude={altitude} hFoV={hfov} vFoV={vFoV}")
+    if debugGlobalScene:
+        print(f"altitude={altitude} hFoV={hfov} vFoV={vFoV}")
 
     # what is the farest point global hawk can monitor
     Horizontalhypotenuse = altitude/np.cos( np.radians(hfov/2) )
     maxViewHorizontal = Horizontalhypotenuse*np.sin( np.radians(hfov/2) )
-    print(f"Horizontalhypotenuse={Horizontalhypotenuse} maxViewHorizontal={maxViewHorizontal}")
+    if debugGlobalScene:
+        print(f"Horizontalhypotenuse={Horizontalhypotenuse} maxViewHorizontal={maxViewHorizontal}")
 
     verticalhypotenuse = altitude/np.cos( np.radians(vFoV/2) )
     maxViewVertical = verticalhypotenuse*np.sin( np.radians(vFoV/2) )
     maxViewVertical = maxViewHorizontal*(height/width)
-    print(f"verticalhypotenuse={verticalhypotenuse} maxViewVertical={maxViewVertical}")
+    if debugGlobalScene:
+        print(f"verticalhypotenuse={verticalhypotenuse} maxViewVertical={maxViewVertical}")
 
-    left, right = -maxViewHorizontal + fenceY, maxViewHorizontal + fenceY
-    bottom, top = -maxViewVertical + fenceX, maxViewVertical + fenceX
-    # https://techtutorialsx.com/2019/04/21/python-opencv-flipping-an-image/
-    # flipedScene = cv2.flip(scene, 1)
-    # flipedScene = cv2.flip(scene, 0)
+    left, right = -maxViewHorizontal + fenceCenterY, maxViewHorizontal + fenceCenterY
+    bottom, top = -maxViewVertical + fenceCenterX, maxViewVertical + fenceCenterX
+
     flipedScene = scene
-    print(f"left={left} right={right} bot={bottom} top={top}")
+    if debugGlobalScene:
+        print(f"left={left} right={right} bot={bottom} top={top}")
 
     flipedScene = cv2.cvtColor(flipedScene, cv2.COLOR_BGR2RGB)
     plt.imshow(flipedScene,extent=[left, right, bottom, top])
 
     colors = ['r','b','m', 'c']
     for ind, ctrl in enumerate(controllers):
-        # x,y,z,col = ctrl.getPointCloud(x=100,y=100)
-        x,y,z,col = ctrl.getPointCloudList()
+        x,y,z,col = ctrl.getPointCloud(x=10,y=10)
+        print(f"[GlobalView] {ctrl.getName()} has x.size={len(x)} y.size={len(y)}")
         plt.scatter(y, x, s=0.2, alpha=0.4, label=ctrl.getName(), c = colors[ind])
+
+    # plt.show()
 
     plt.xlim(left, right)
     plt.ylim(bottom, top)
@@ -143,14 +152,6 @@ def globalViewScene():
     # ax1.set_xlabel("Y-Axis (NetWork)")
     # ax1.set_ylabel("X-Axis (NetWork)")
     # plt.margins(0,0)
-
-    # Add line with operations area
-    theta = np.linspace(0,2*np.pi,500)
-    # r = np.sqrt(fenceR)
-    r = fenceR
-    y = fenceY + r*np.cos(theta)
-    x = fenceX + r*np.sin(theta)
-    plt.plot(y,x,'k--')
 
     plt.legend(markerscale=20)
     # plt.tight_layout()
@@ -413,7 +414,7 @@ def get_options():
 
     optParser = optparse.OptionParser()
     optParser.add_option("--ip", dest="ip", default=1,type="int", help="the ip of the simulations launched")
-    optParser.add_option("--waypoints", default=500, dest="waypoints",type="int", help="the number of waypoints provided")
+    optParser.add_option("--waypoints", default=200, dest="waypoints",type="int", help="the number of waypoints provided")
     optParser.add_option("--maxYaw", default=10, dest="maxYaw",type="float", help="max Yaw change")
     optParser.add_option("--maxTravelTime", default=2.5, dest="maxTravelTime",type="float", help="max distance to be travelled in one step")
     optParser.add_option("--estimatorWindow", default=30, dest="estimatorWindow",type="int", help="CAO estimator window")
@@ -519,6 +520,7 @@ if __name__ == "__main__":
 
         for ctrl in controllers:
             ctrl.updateState(positionIdx,0)
+            globalHawk.updateState(positionIdx,0)
 
         getImages()
         getPointClouds()

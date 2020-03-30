@@ -8,8 +8,8 @@
       "CaptureSettings": [
         {
           "ImageType": 0,
-          "Width": 1024,
-          "Height": 1024	,
+          "Width": 700,
+          "Height": 700	,
           "FOV_Degrees": 90,
           "AutoExposureSpeed": 100,
           "MotionBlurAmount": 0,
@@ -20,8 +20,8 @@
         },
 				{
 					"ImageType": 2,
-					"Width": 1024,
-					"Height": 1024	,
+					"Width": 700,
+					"Height": 700	,
 					"FOV_Degrees": 90,
 					"AutoExposureSpeed": 100,
 					"MotionBlurAmount": 0,
@@ -32,8 +32,8 @@
 				},
 				{
 					"ImageType": 2,
-					"Width": 1024,
-					"Height": 1024	,
+					"Width": 700,
+					"Height": 700	,
 					"FOV_Degrees": 90,
 					"AutoExposureSpeed": 100,
 					"MotionBlurAmount": 0,
@@ -44,8 +44,8 @@
 				},
 				{
 					"ImageType": 2,
-					"Width": 1024,
-					"Height": 1024	,
+					"Width": 700,
+					"Height": 700	,
 					"FOV_Degrees": 90,
 					"AutoExposureSpeed": 100,
 					"MotionBlurAmount": 0,
@@ -56,8 +56,8 @@
 				},
 				{
 					"ImageType": 2,
-					"Width": 1024,
-					"Height": 1024	,
+					"Width": 700,
+					"Height": 700	,
 					"FOV_Degrees": 90,
 					"AutoExposureSpeed": 100,
 					"MotionBlurAmount": 0,
@@ -79,8 +79,8 @@
 					 "X": 0, "Y": 0, "Z": -1,
 					 "Roll": 0, "Pitch": 0, "Yaw" : 0,
 					 "Range":70,
-					 "VerticalFOVUpper": 45,
-					 "VerticalFOVLower": -45,
+					 "VerticalFOVUpper": 180,
+					 "VerticalFOVLower": -180,
 					 "HorizontalFOVStart": -180,
 					 "HorizontalFOVEnd": 180,
 					 "DrawDebugPoints": true
