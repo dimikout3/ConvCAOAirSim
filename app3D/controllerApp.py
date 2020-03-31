@@ -22,6 +22,8 @@ class controllerApp(controller):
 
         self.descretePointCloud = []
 
+        self.attributed = []
+
 
     def updateDescretizator(self, discretizator_in):
 
@@ -151,6 +153,8 @@ class controllerApp(controller):
 
     def move(self,controllers=[], frontierCellsAttributed = []):
 
+        self.attributed.append(frontierCellsAttributed)
+
         meanFrontierCell = np.mean(frontierCellsAttributed, axis=0)
         canditatesPoints = self.getCanditates(controllers = controllers)
 
@@ -161,9 +165,10 @@ class controllerApp(controller):
 
         distances = distance.cdist(canditatesPoints, [meanFrontierCell])
 
-        argmin = np.argmin(distances, axis=1)
+        argmin = np.argmin(distances)
 
-        x,y,z = canditatesPoints[0]
+        x,y,z = canditatesPoints[argmin]
+        print(f"[MOVE] {self.getName()} toward target points (x:{x}, y:{y}, z:{z})")
         task = self.moveToPosition(x, y, z, 2.0)
 
         return task

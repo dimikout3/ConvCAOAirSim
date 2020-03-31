@@ -44,6 +44,18 @@ class Discretizator:
         return descrete.astype(np.int)
 
 
+    def toGroundTruth(self, data):
+        # data -> [[x1,y1,z1],[x2,y2,z2],[x3,y3,z3],[x4,y4,z4] ... ]
+        # from indexes to gound truth values
+        x = data[:,0] - abs(self.lowX)
+        y = data[:,1] - abs(self.lowY)
+        z = -data[:,2]
+
+        data = np.stack((x,y,z),axis=1)
+
+        return data
+
+
     def show(self, descreteData):
 
         pcd = o3d.geometry.PointCloud()

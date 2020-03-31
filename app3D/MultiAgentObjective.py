@@ -136,8 +136,12 @@ def globalViewScene():
 
     colors = ['r','b','m', 'c']
     for ind, ctrl in enumerate(controllers):
-        x,y,z,col = ctrl.getPointCloud(x=10,y=10)
-        print(f"[GlobalView] {ctrl.getName()} has x.size={len(x)} y.size={len(y)}")
+        # x,y,z,col = ctrl.getPointCloud(x=10,y=10)
+        # print(f"[GlobalView] {ctrl.getName()} has x.size={len(x)} y.size={len(y)}")
+
+        attributed = ctrl.attributed[-1]
+        x,y,z = np.reshape(attributed, (3, attributed.shape[0]))
+
         plt.scatter(y, x, s=0.2, alpha=0.4, label=ctrl.getName(), c = colors[ind])
 
     # plt.show()
@@ -289,7 +293,7 @@ def updateFrontier():
 
     global Explored, Obstacles, Frontier
 
-    Frontier[:,:,:] = False
+    # Frontier[:,:,:] = False
 
     # neighbors -> (bot | top | left | right | front | back)
     bot = np.roll(np.logical_not(Explored),1, axis = 0)
@@ -312,10 +316,11 @@ def attributeFrontierCells():
     """ Returning  attributes= [UAV1 -> [[FC1],[FC2],[FC3],[FC4]]
                                 UAV2 -> [[FC1],[FC2],[FC3]]]"""
 
-    global controllers, Frontier
+    global controllers, Frontier, discretizator
 
     frontierCellsIndexes = np.where(Frontier)
     frontierCellsIndexes = np.stack(frontierCellsIndexes, axis=1)
+    frontierCellsIndexes = discretizator.toGroundTruth(frontierCellsIndexes)
 
     uav = []
     for ctrl in controllers:
@@ -344,6 +349,9 @@ def attributeFrontierCells():
             attributed.append(frontierCellsIndexes[argmin_single])
         else:
             attributed.append(frontierCellsIndexes[cellsInd])
+
+        # print(f"[ATTRIBUTED] 3d for UAV{ind}")
+        # show3DVector(attributed[ind])
 
     return attributed
 
@@ -382,6 +390,13 @@ def show3DMaps(map):
 
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(indexes)
+    o3d.visualization.draw_geometries([pcd]) # Visualize the point cloud
+
+
+def show3DVector(vector):
+
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(vector)
     o3d.visualization.draw_geometries([pcd]) # Visualize the point cloud
 
 
@@ -442,7 +457,7 @@ def killAirSim():
 
 if __name__ == "__main__":
 
-    global options, controllers, globalHawk, Explored, Obstacles, Frontier, DescreteMap
+    global options, controllers, globalHawk, Explored, Obstacles, Frontier, DescreteMap, discretizator
 
     options = get_options()
 
@@ -514,13 +529,14 @@ if __name__ == "__main__":
     global costJ
     costJ = []
 
-    for positionIdx in range(0,options.estimatorWindow):
+    for positionIdx in range(0,options.waypoints):
         print(f"position={positionIdx} Explored true = {np.where(Explored)[0].shape}")
         ptime = time.time()
 
         for ctrl in controllers:
             ctrl.updateState(positionIdx,0)
-            globalHawk.updateState(positionIdx,0)
+            if GLOBAL_HAWK_ACTIVE:
+                globalHawk.updateState(positionIdx,0)
 
         getImages()
         getPointClouds()
