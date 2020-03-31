@@ -23,24 +23,30 @@ The ConvCAO_AirSim repository contains the following applications:
 This section provides a step-by-step guide for installing the ConvCAO_AirSim framework.
 
 ### Dependencies
-
 First, install the required system packages 
-(NOTE: the majority of the experiments we have concluded are done in a conda enviroment, therefore we stongly advise you to download and install a conda virtual enviroment):
+(NOTE: the majority of the experiments were conducted in a conda enviroment, therefore we stongly advise you to download and install a conda virtual enviroment):
 ```
 $ pip install airsim Shapely descartes opencv-contrib-python=4.1.26
 ```
 
 ### Detector
-In our experiments we are using a YOLOv3 detector, trained on the [COCO dataset](http://cocodataset.org/#home). However, you can utilize a different detector (tailored to the application needs) and our methodology will still be capable of delivering an optimized set of UAVs’ monitor positions, adapting to the detector’s specific characteristics. [Download](https://convcao.hopto.org/index.php/s/mh8WIDpprE70SO3) the pretrained detector we are using and copy the yolo-coco folder inside your ConvCAO_AirSim path.
+Second, you have to define a detector capable of producing bounding boxes of objects along with the corresponding confidences levels from RGB images. 
+
+For the needs of our application we utilized YOLOv3 detector, trained on the [COCO dataset](http://cocodataset.org/#home). You can download this detector from [here](https://convcao.hopto.org/index.php/s/mh8WIDpprE70SO3). After downloading the file, extract the yolo-coco folder inside your local ConvCao_AirSim folder.
+
+It is worth highlighting that, you could use a deifferent detector (tailored to the application needs), as the proposed methodology is agnostic as far the detector's choise is concerned.
 
 ### Enviroments
 Download any of the available [AirSim Enviroments](https://github.com/microsoft/AirSim/releases)
 
 ### Run Example
-Lastly, you can have an illustrative example by running the "MultiAgent.py" script in the ConvCAO_AirSim folder, simply add the path "detector-path":"path-to-your-detector-folder" to the detector folder in the "appSettings.json". Detailed Instructions for running specific applications are inside every corresponding app folder
+To run an example with the Convergence testbed you need to just replace the "detector-path" entry - inside this [file](https://github.com/dimikout3/ConvCAO_AirSim/blob/master/appConvergence/appSettings.json) - with your path to the previsously downloaded detector. 
+
+Finally run the "MultiAgent.py" script:
 ```
 $ python MultiAgent.py
 ```
+Detailed instructions for running specific applications are inside every corresponding app folder
 
 
 # 3D Reconstruction #
