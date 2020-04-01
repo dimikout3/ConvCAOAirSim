@@ -265,6 +265,8 @@ def getPointClouds():
 
 def applyForces():
 
+    """ Applying forces in circle, from line points (detections) """
+
     global spaceParticles, controllers
 
     uav = []
@@ -335,6 +337,87 @@ def applyForces():
         sumDisplacement = np.sum(displacement,axis=1)
 
         spaceParticles[uavPointsIndexes] += sumDisplacement*0.1
+
+
+def applyForcesCurrent():
+
+    """ Applying forces from uav to particles inside current field of view """
+
+    global spaceParticles, controllers
+
+    uav = []
+    for ctrl in controllers:
+
+        positions = ctrl.getPositions()
+        orientation = ctrl.getOrientation()
+
+        x = positions.x_val
+        y = positions.y_val
+        z = positions.z_val
+
+        uav.append([x,y,z])
+    uav = np.array(uav)
+
+    # random2uav = distance.cdist(spaceParticles, uav)
+    # argmin = np.argmin(random2uav, axis=1)
+
+    for ind, ctrl in enumerate(controllers):
+
+        # uavPointsIndexes = np.where(argmin == ind)
+
+        forcePoints = ctrl.getForcePoints()
+
+        dist = distance.cdist(spaceParticles, forcePoints)
+        dist = np.min(dist, axis=1)
+
+        uavPointsIndexes = np.where(dist<2.)
+
+        # forceValues ->    + f1 | f2 | f3 ..
+        #                 p1| d1   d2   d3
+        #                 p2|
+        #                 p3|
+        forceValue = 1/np.power(distance.cdist(spaceParticles[uavPointsIndexes], forcePoints),2)
+        # forceValuesRepeated ->    +     f1     |    f2     |    f3
+        #                         p1| (d1,d1,d1)  (d2,d2,d2)  (d3,d3,d3)
+        #                         p2|
+        #                         p3|
+        forceValueRepeated = np.repeat(forceValue,3).reshape((spaceParticles[uavPointsIndexes].shape[0],forcePoints.shape[0],3))
+
+        # pointRepeated ->   + f1 | f2 | f3 ...
+                         # p1| p1 | p1 | p1
+                         # p2|
+                         # p3|
+        pointRepeated = np.reshape( np.tile(spaceParticles[uavPointsIndexes],
+                                           (1,forcePoints.shape[0])),
+                                  (spaceParticles[uavPointsIndexes].shape[0],
+                                   forcePoints.shape[0],3))
+
+        # fr -> pointsRandom - forcePoints
+        fr = np.subtract(pointRepeated, uav[ind])
+
+        length = np.linalg.norm(fr,axis=2)
+        lengthRepeated = np.repeat(length,3, axis=1).reshape(
+                                  (length.shape[0], length.shape[1],3))
+
+        # unitVector ->     +     f1   |    f2   |    f3
+                         # p1| (x,y,z) | (x,y,z) | (x,y,z)
+                         # p2|
+                         # p3|
+        frU = np.divide(fr, lengthRepeated)
+
+        # displacement      +           f1       |        f2        |        f3
+                         # p1|  (x*d1,y*d1,z*d1)  (x*d1,y*d1,z*d1)    (x*d1,y*d1,z*d1)
+                         # p2|
+                         # p3|
+        displacement = np.multiply(frU, forceValueRepeated)
+
+        # sumDisplacement    +   f1+f2+f3+...
+                         # p1| (x*d1 + x*d1 + x*d1, y*d1 + y*d1 ....)
+                         # p2|
+                         # p3|
+        sumDisplacement = np.sum(displacement,axis=1)
+
+        spaceParticles[uavPointsIndexes] += sumDisplacement*0.01
 
 
 def show3DMaps(map):
@@ -500,7 +583,7 @@ if __name__ == "__main__":
         getImages()
         getPointClouds()
 
-        applyForces()
+        applyForcesCurrent()
         # calculateJi()
 
         # tasks = []
