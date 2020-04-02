@@ -10,6 +10,18 @@ import numpy as np
 from scipy.spatial import distance
 import pickle
 
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import Pipeline
+from sklearn.svm import SVR
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neural_network import MLPRegressor
+
+DEBUG_ESTIMATOR = False
+DEBUG_ESTIMATE = True
+DEBUG_INSIDE_GEOFENCE = False
+DEBUG_CANDITATES = True
+
 class controllerApp(controller):
 
     def __init__(self, clientIn, droneName, offSets, ip="1",
@@ -24,6 +36,67 @@ class controllerApp(controller):
         self.descretePointCloud = []
 
         self.attributed = []
+
+        self.resetEstimator()
+
+
+    def resetEstimator(self, DoF=4):
+
+        # DoF -> Degrees of Freedom (in this App x,y,z,yaw)
+
+        self.model = Pipeline([('poly', PolynomialFeatures(degree=DoF)),
+                               ('linear', LinearRegression())])
+
+        self.estimator = self.model.fit([np.random.uniform(0,1,DoF)],[np.random.uniform(0,1)])
+
+
+    def updateEstimator(self):
+
+        """ Virtual function, redefines here from controlelrBase"""
+
+        xList = [state[0].kinematics_estimated.position.x_val for state in self.stateList]
+        yList = [state[0].kinematics_estimated.position.y_val for state in self.stateList]
+        zList = [state[0].kinematics_estimated.position.z_val for state in self.stateList]
+        yawList = [airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2] for state in self.stateList]
+
+        yawListDegrees = [np.degrees(airsim.to_eularian_angles(state[0].kinematics_estimated.orientation)[2]) for state in self.stateList]
+
+        data = np.stack((xList,yList,zList,yawList),axis=1)
+        dataDegrees = np.stack((xList,yList,yawListDegrees),axis=1)
+
+        if DEBUG_ESTIMATOR:
+            print(f"\n[ESTIMATOR] {self.getName()} is using data:{[list(i) for i in dataDegrees[-self.estimatorWindow:]]} and Ji:{self.j_i[-self.estimatorWindow:]}")
+
+        # weights = np.linspace(1,1,len(data[-self.estimatorWindow:]))
+        weights = self.estimatorWeights[-len(data):]
+
+        # import pdb; pdb.set_trace()
+        # self.estimator = self.model.fit(data[-self.estimatorWindow:],self.j_i[-self.estimatorWindow:], **{'linear__sample_weight': weights})
+        self.estimator = self.model.fit(data[-self.estimatorWindow:],self.j_i[-self.estimatorWindow:])
+
+
+    def estimate(self, x, y, z, yaw):
+
+        if type(x) is np.ndarray:
+
+            yaw[yaw > np.pi] = -np.pi*2 + yaw[yaw > np.pi]
+            yaw[yaw < -np.pi] = np.pi*2 - yaw[yaw < -np.pi]
+
+            canditates = np.stack((x,y,z,yaw),axis=1)
+
+            if DEBUG_ESTIMATE:
+                print(f"[ESTIMATE] {self.getName()} canditates.shape={canditates.shape}")
+
+            return self.estimator.predict(canditates)
+
+        else:
+
+            if yaw > np.pi:
+                yaw = -np.pi*2 + yaw
+            if yaw < -np.pi:
+                yaw = np.pi*2 - yaw
+
+            return float(self.estimator.predict([[x,y,z,yaw]]))
 
 
     def getForcePoints(self, line_points=10):
@@ -90,68 +163,103 @@ class controllerApp(controller):
         return self.xVoxels, self.yVoxels, self.zVoxels
 
 
-    def insideGeoFence(self, c=0, d=0):
+    def insideGeoFence(self, points):
+
         """ Not needed since Frontier Cells will be inside the GeoFence anyway"""
-        pass
+
+        inGeoFence = self.geoFence.isInside(points)
+
+        if DEBUG_INSIDE_GEOFENCE:
+            print(f"[INSIDE_GEOFENCE] {self.getName()} inGeoFence.size={len(inGeoFence)}")
+
+        return inGeoFence
 
 
-    def getCanditates(self, pertubations=70, saveLidar=False, minDist = 2.,
-                            maxTravelTime=5., controllers=[]):
+    def getCanditates(self, pertubations=250, saveLidar=False, minDist = 4.,
+                            maxTravelTime=1., maxYaw=15., controllers=[]):
 
-        lidarPoints = self.getLidarData(save_lidar=saveLidar)
-        lidarPoints = self.clearLidarPoints(lidarPoints=lidarPoints,
-                                            maxTravelTime=maxTravelTime,
-                                            controllers=controllers)
-        lidarPoints = self.addOffsetLidar(lidarPoints=lidarPoints)
+        speedScalar = 1
+        np.random.seed()
 
         self.updateMultirotorState()
+        _,_,currentYaw = airsim.to_eularian_angles(self.state.kinematics_estimated.orientation)
         xCurrent = self.state.kinematics_estimated.position.x_val
         yCurrent = self.state.kinematics_estimated.position.y_val
         zCurrent = self.state.kinematics_estimated.position.z_val
 
-        xCanditate = xCurrent + (np.random.random(pertubations) - 1.)*maxTravelTime
-        yCanditate = yCurrent + (np.random.random(pertubations) - 1.)*maxTravelTime
-        zCanditate = zCurrent + (np.random.random(pertubations) - 1.)*maxTravelTime
-        canditates = np.stack((xCanditate,yCanditate,zCanditate),axis=1)
+        # decreasing the available movement because we are getting closer to convergence point
+        # initialy we wan to explore and then exploit more carefully
+        a = self.restrictingMovement[self.posIdx]
 
-        # inGeoFence = self.insideGeoFence(c = canditates, d = minDist)
-        isSafeDist = self.isSafeDist(canditate = canditates,
-                                     lidarPoints = lidarPoints,
-                                     minDist = minDist)
+        for helperIcreasedMove in np.linspace(1,5,40):
 
-        # geoFenceSafe = np.where(inGeoFence==True)[0]
-        safeDistTrue = np.where(np.array(isSafeDist)==True)[0]
+            # [-np.pi, np.pi] canditates are inside a shpere with radius=maxTravelTime
+            randomOrientation = np.random.uniform(-np.pi, np.pi, pertubations)
+            travelTime = np.random.uniform(0., maxTravelTime, pertubations)
+            yawCanditate = np.random.uniform(np.degrees(currentYaw) - (maxYaw/2)*a, np.degrees(currentYaw) + (maxYaw/2)*a, pertubations)
 
-        # validCandidatesIndex = np.intersect1d(geoFenceSafe, safeDistTrue)
+            lidarPoints = self.getLidarData(save_lidar=saveLidar)
+            lidarPoints = self.clearLidarPoints(lidarPoints=lidarPoints,
+                                                maxTravelTime=maxTravelTime,
+                                                controllers=controllers)
+            lidarPoints = self.addOffsetLidar(lidarPoints=lidarPoints)
 
-        xCanditate = xCanditate[safeDistTrue]
-        yCanditate = yCanditate[safeDistTrue]
-        zCanditate = zCanditate[safeDistTrue]
+            xCanditate = xCurrent + np.cos(randomOrientation)*speedScalar*travelTime*helperIcreasedMove
+            yCanditate = yCurrent + np.sin(randomOrientation)*speedScalar*travelTime*a*helperIcreasedMove
+            zCanditate = zCurrent + (np.random.random(pertubations)*2-1)*speedScalar*travelTime
+            canditates = np.stack((xCanditate,yCanditate,zCanditate),axis=1)
 
-        canditatesPoints = np.stack((xCanditate,yCanditate,zCanditate), axis=1)
+            inGeoFence = self.insideGeoFence(canditates)
+            isSafeDist = self.isSafeDist(canditate = canditates,
+                                         lidarPoints = lidarPoints,
+                                         minDist = minDist)
 
-        return canditatesPoints
+            geoFenceSafe = inGeoFence
+            safeDistTrue = np.where(np.array(isSafeDist)==True)[0]
+
+            # import pdb; pdb.set_trace()
+            validCandidatesIndex = np.intersect1d(geoFenceSafe, safeDistTrue)
+
+            if validCandidatesIndex.size == 0:
+                # something went wrong ...
+                if helperIcreasedMove<5.:
+                    # increase helperIcreasedMove, check further canditates
+                    continue
+                else:
+                    # if further canditates also fail, go to debug mode ...
+                    import pdb
+                    pdb.set_trace()
+
+        if DEBUG_CANDITATES:
+            print(f"[CANDITATES] {self.getName()}")
+            print(f"    geoFenceSafe.size={len(geoFenceSafe)}")
+            print(f"    safeDistTrue.size={len(safeDistTrue)}")
+            print(f"    validCandidatesIndex.size={len(validCandidatesIndex)}")
+            print(f"    helperIcreasedMove={helperIcreasedMove}")
+
+        xCanditate = xCanditate[validCandidatesIndex]
+        yCanditate = yCanditate[validCandidatesIndex]
+        zCanditate = zCanditate[validCandidatesIndex]
+        yawCanditate = yawCanditate[validCandidatesIndex]
+
+        jEstimated = self.estimate(xCanditate, yCanditate, zCanditate, np.radians(yawCanditate))
+
+        return jEstimated,xCanditate,yCanditate,zCanditate,yawCanditate
 
 
-    def move(self,controllers=[], frontierCellsAttributed = []):
+    def move(self,controllers=[]):
 
-        self.attributed.append(frontierCellsAttributed)
-
-        meanFrontierCell = np.mean(frontierCellsAttributed, axis=0)
         canditatesPoints = self.getCanditates(controllers = controllers)
 
-        xCurrent = self.state.kinematics_estimated.position.x_val
-        yCurrent = self.state.kinematics_estimated.position.y_val
-        zCurrent = self.state.kinematics_estimated.position.z_val
-        currentPos = np.array([xCurrent, yCurrent, zCurrent])
+        jEstimated, xCanditateList, yCanditateList, zCanditateList, yawCanditateList = canditatesPoints
 
-        distances = distance.cdist(canditatesPoints, [meanFrontierCell])
+        tartgetPointIndex = np.argmax(jEstimated)
 
-        argmin = np.argmin(distances)
-
-        x,y,z = canditatesPoints[argmin]
-        print(f"[MOVE] {self.getName()} toward target points (x:{x}, y:{y}, z:{z})")
-        task = self.moveToPosition(x, y, z, 2.0)
+        task = self.moveToPositionYawModeAsync(xCanditateList[tartgetPointIndex],
+                                               yCanditateList[tartgetPointIndex],
+                                               zCanditateList[tartgetPointIndex],
+                                               1,
+                                               yawmode = yawCanditateList[tartgetPointIndex])
 
         return task
 

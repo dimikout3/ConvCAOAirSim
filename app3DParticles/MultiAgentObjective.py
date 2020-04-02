@@ -563,7 +563,7 @@ if __name__ == "__main__":
     y = np.linspace(yLow, yHigh,randomPoints['y'])
     z = np.linspace(zLow, zHigh,randomPoints['z'])
     x, y, z = np.meshgrid(x, y, z, indexing='ij')
-    x = x.reshape(x.size)+-
+    x = x.reshape(x.size)
     y = y.reshape(y.size)
     z = z.reshape(z.size)
     spaceParticles = np.stack((x,y,z), axis=1)
@@ -579,12 +579,13 @@ if __name__ == "__main__":
 
         # show3DVector(spaceParticlesList[-1])
 
+        print(f"[POSITION] position={positionIdx}")
         ptime = time.time()
 
         for ctrl in controllers:
-            ctrl.updateState(positionIdx,0)
+            ctrl.updateState(positionIdx,0, addInList=True)
             if GLOBAL_HAWK_ACTIVE:
-                globalHawk.updateState(positionIdx,0)
+                globalHawk.updateState(positionIdx,0, addInList=True)
 
         getImages()
         getPointClouds()
@@ -598,12 +599,21 @@ if __name__ == "__main__":
         # J = np.sum( np.linalg.norm(spaceParticlesList[-1] - spaceParticlesList[-2],axis=1 ))
         # print(f"Total J={J} ")
 
-        # tasks = []
-        # for ind, ctrl in enumerate(controllers):
-        #     t = ctrl.move(frontierCellsAttributed = attributed[ind])
-        #     tasks.append(t)
-        # for task in tasks[::-1]:
-        #     task.join()
+        tasks = []
+        for ind, ctrl in enumerate(controllers):
+            t = ctrl.move(controllers=controllers)
+            tasks.append(t)
+        for task in tasks[::-1]:
+            task.join()
+
+        threadList = []
+        for ctrl in controllers:
+            thread = Thread(target = ctrl.updateEstimator)
+            thread.start()
+            threadList.append(thread)
+        for thread in threadList:
+            thread.join()
+
 
         for ctrl in controllers:
 
