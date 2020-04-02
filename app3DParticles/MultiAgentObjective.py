@@ -185,26 +185,26 @@ def generatingResultsFolders():
         if not os.path.isdir(detected_objects_folder):
             raise
 
-    similarity_objects_folder = os.path.join(result_folder, "similarity_objects")
-    try:
-        os.makedirs(similarity_objects_folder)
-    except OSError:
-        if not os.path.isdir(similarity_objects_folder):
-            raise
+    # similarity_objects_folder = os.path.join(result_folder, "similarity_objects")
+    # try:
+    #     os.makedirs(similarity_objects_folder)
+    # except OSError:
+    #     if not os.path.isdir(similarity_objects_folder):
+    #         raise
 
-    information_folder = os.path.join(result_folder, "information")
-    try:
-        os.makedirs(information_folder)
-    except OSError:
-        if not os.path.isdir(information_folder):
-            raise
+    # information_folder = os.path.join(result_folder, "information")
+    # try:
+    #     os.makedirs(information_folder)
+    # except OSError:
+    #     if not os.path.isdir(information_folder):
+    #         raise
 
-    survaillance_folder = os.path.join(result_folder, "survaillance")
-    try:
-        os.makedirs(survaillance_folder)
-    except OSError:
-        if not os.path.isdir(survaillance_folder):
-            raise
+    # survaillance_folder = os.path.join(result_folder, "survaillance")
+    # try:
+    #     os.makedirs(survaillance_folder)
+    # except OSError:
+    #     if not os.path.isdir(survaillance_folder):
+    #         raise
 
     costJ_folder = os.path.join(result_folder, "costJ")
     try:
@@ -227,12 +227,12 @@ def generatingResultsFolders():
         if not os.path.isdir(globalView_folder):
             raise
 
-    globalViewDetection_folder = os.path.join(result_folder, "globalViewDetections")
-    try:
-        os.makedirs(globalViewDetection_folder)
-    except OSError:
-        if not os.path.isdir(globalViewDetection_folder):
-            raise
+    # globalViewDetection_folder = os.path.join(result_folder, "globalViewDetections")
+    # try:
+    #     os.makedirs(globalViewDetection_folder)
+    # except OSError:
+    #     if not os.path.isdir(globalViewDetection_folder):
+    #         raise
 
 
 def getImages():
@@ -343,7 +343,7 @@ def applyForcesCurrent():
 
     """ Applying forces from uav to particles inside current field of view """
 
-    global spaceParticles, controllers
+    global spaceParticles, controllers, spaceParticlesList
 
     uav = []
     for ctrl in controllers:
@@ -416,6 +416,10 @@ def applyForcesCurrent():
                          # p2|
                          # p3|
         sumDisplacement = np.sum(displacement,axis=1)
+
+        Ji = np.sum(np.linalg.norm(sumDisplacement, axis=1))
+        print(f"{ctrl.getName()} has Ji={Ji}")
+        ctrl.appendJi(Ji)
 
         spaceParticles[uavPointsIndexes] += sumDisplacement*0.01
 
@@ -496,7 +500,7 @@ def killAirSim():
 
 if __name__ == "__main__":
 
-    global options, controllers, globalHawk
+    global options, controllers, globalHawk, spaceParticles, spaceParticlesList
 
     options = get_options()
 
@@ -559,7 +563,7 @@ if __name__ == "__main__":
     y = np.linspace(yLow, yHigh,randomPoints['y'])
     z = np.linspace(zLow, zHigh,randomPoints['z'])
     x, y, z = np.meshgrid(x, y, z, indexing='ij')
-    x = x.reshape(x.size)
+    x = x.reshape(x.size)+-
     y = y.reshape(y.size)
     z = z.reshape(z.size)
     spaceParticles = np.stack((x,y,z), axis=1)
@@ -569,9 +573,11 @@ if __name__ == "__main__":
 
     startTime = time.time()
 
-    show3DVector(spaceParticles)
+    # show3DVector(spaceParticles)
 
     for positionIdx in range(0,options.waypoints):
+
+        # show3DVector(spaceParticlesList[-1])
 
         ptime = time.time()
 
@@ -585,6 +591,12 @@ if __name__ == "__main__":
 
         applyForcesCurrent()
         # calculateJi()
+        spaceParticlesList.append(spaceParticles)
+
+        # if positionIdx>2:
+        # import pdb; pdb.set_trace()
+        # J = np.sum( np.linalg.norm(spaceParticlesList[-1] - spaceParticlesList[-2],axis=1 ))
+        # print(f"Total J={J} ")
 
         # tasks = []
         # for ind, ctrl in enumerate(controllers):
@@ -612,13 +624,11 @@ if __name__ == "__main__":
         # plotData(data=informationJ, folder="information", file="information")
         # plotData(data=survaillanceJ, folder="survaillance", file="survaillance")
 
-        show3DVector(spaceParticles)
-
         if GLOBAL_HAWK_ACTIVE: globalViewScene()
 
-    file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "costJ",
-                            f"costJ.pickle")
-    pickle.dump(costJ,open(file_out,"wb"))
+    file_out = os.path.join(os.getcwd(),f"results_{options.ip}", "report",
+                            f"spaceParticlesList.pickle")
+    pickle.dump(spaceParticlesList,open(file_out,"wb"))
 
     print("\n[RESETING] to original state ....")
     for ctrl in controllers: ctrl.quit()
