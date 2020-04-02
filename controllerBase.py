@@ -1006,7 +1006,7 @@ class controller:
         plt.close()
 
 
-    def updateState(self, posIdx, timeStep):
+    def updateState(self, posIdx, timeStep, addInList=False):
 
         # self.state = self.getState()
         self.updateMultirotorState()
@@ -1024,6 +1024,9 @@ class controller:
         self.detected_dir = os.path.join(self.parentDetect, self.name, f"position_{self.posIdx}")
         if not os.path.isdir(self.detected_dir):
             os.makedirs(self.detected_dir)
+
+        if addInList:
+            self.stateList.append([self.state, self.cameraInfo])
 
 
     def detectObjects(self, save_detected=SAVE_DETECTED):
