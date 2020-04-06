@@ -20,7 +20,7 @@ from sklearn.neural_network import MLPRegressor
 DEBUG_ESTIMATOR = False
 DEBUG_ESTIMATE = True
 DEBUG_INSIDE_GEOFENCE = False
-DEBUG_CANDITATES = True
+DEBUG_CANDITATES = False
 
 class controllerApp(controller):
 
@@ -118,51 +118,6 @@ class controllerApp(controller):
         return line_points
 
 
-    def connectIntermidiateDist(self, map=None, minDist=1., as_true=True):
-
-        """Determine where the points between last descrete and UAV belong
-           (Obstacles, Explored)"""
-
-        x, y, z, colors = self.pointCloud[-1]
-
-        points = np.stack((x,y,z),axis=1)
-
-        xCurrent = self.state.kinematics_estimated.position.x_val
-        yCurrent = self.state.kinematics_estimated.position.y_val
-        zCurrent = self.state.kinematics_estimated.position.z_val
-        uav = np.array([xCurrent, yCurrent, zCurrent])
-
-        i = np.meshgrid(np.arange(self.descretizator.discreteX),
-                        np.arange(self.descretizator.discreteY),
-                        np.arange(self.descretizator.discreteZ))
-        xVoxels = np.reshape(i[0],i[0].size)
-        yVoxels = np.reshape(i[1],i[1].size)
-        zVoxels = np.reshape(i[2],i[2].size)
-        voxels = np.stack((xVoxels, yVoxels, zVoxels),axis=1)
-
-        # pointRepeated -> [p1,p2,p3, p1,p2,p3, p1,p2,p3 ...]
-        pointsRepeated = np.tile(points,(voxels.shape[0],1))
-        # voxelsRepeated -> [v1,v1,v1, v2,v2,v2, v3,v3,v3 ...]
-        voxelsRepeated = np.repeat(voxels,points.shape[0],axis=0)
-
-        # BUG: This is wrong ... instead of line we need LINE SEGMENT ...
-        dist = np.linalg.norm( np.cross(pointsRepeated-uav, voxelsRepeated-uav),axis=1) / np.linalg.norm(uav - pointsRepeated, axis=1)
-        dist = np.reshape(dist, (voxels.shape[0], points.shape[0]))
-        dist = np.min(dist, axis=1)
-
-        # inside -> voxels which are inside the line from UAV to lidar/depth point/pixel
-        inside = np.where(dist < minDist)
-
-        self.xVoxels = xVoxels[inside]
-        self.yVoxels = yVoxels[inside]
-        self.zVoxels = zVoxels[inside]
-
-
-    def getIntermediate(self):
-
-        return self.xVoxels, self.yVoxels, self.zVoxels
-
-
     def insideGeoFence(self, points):
 
         """ Not needed since Frontier Cells will be inside the GeoFence anyway"""
@@ -175,8 +130,8 @@ class controllerApp(controller):
         return inGeoFence
 
 
-    def getCanditates(self, pertubations=250, saveLidar=False, minDist = 4.,
-                            maxTravelTime=1., maxYaw=15., controllers=[]):
+    def getCanditates(self, pertubations=250, saveLidar=False, minDist = 1.,
+                            maxTravelTime=2., maxYaw=15., controllers=[]):
 
         speedScalar = 1
         np.random.seed()
@@ -206,7 +161,8 @@ class controllerApp(controller):
 
             xCanditate = xCurrent + np.cos(randomOrientation)*speedScalar*travelTime*helperIcreasedMove
             yCanditate = yCurrent + np.sin(randomOrientation)*speedScalar*travelTime*a*helperIcreasedMove
-            zCanditate = zCurrent + (np.random.random(pertubations)*2-1)*speedScalar*travelTime
+            # zCanditate = zCurrent + (np.random.random(pertubations)*2-1)*speedScalar*travelTime
+            zCanditate = np.array([zCurrent]).repeat(pertubations)
             canditates = np.stack((xCanditate,yCanditate,zCanditate),axis=1)
 
             inGeoFence = self.insideGeoFence(canditates)
@@ -229,6 +185,10 @@ class controllerApp(controller):
                     # if further canditates also fail, go to debug mode ...
                     import pdb
                     pdb.set_trace()
+
+            else:
+                # There are validate canditates, tehrfore break the searchi process
+                break
 
         if DEBUG_CANDITATES:
             print(f"[CANDITATES] {self.getName()}")
