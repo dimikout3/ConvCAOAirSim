@@ -136,12 +136,7 @@ def globalViewScene():
 
     colors = ['r','b','m', 'c']
     for ind, ctrl in enumerate(controllers):
-        # x,y,z,col = ctrl.getPointCloud(x=10,y=10)
-        # print(f"[GlobalView] {ctrl.getName()} has x.size={len(x)} y.size={len(y)}")
-
-        attributed = ctrl.attributed[-1]
-        x,y,z = np.reshape(attributed, (3, attributed.shape[0]))
-
+        x,y,z,col = ctrl.getPointCloud(x=10,y=10)
         plt.scatter(y, x, s=0.2, alpha=0.4, label=ctrl.getName(), c = colors[ind])
 
     # plt.show()
