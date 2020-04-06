@@ -130,8 +130,35 @@ class controllerApp(controller):
         return inGeoFence
 
 
-    def getCanditates(self, pertubations=250, saveLidar=False, minDist = 1.,
-                            maxTravelTime=2., maxYaw=15., controllers=[]):
+    def isSafeDist(self, canditates=[], lidarPoints=[], minDist=1.):
+
+        xCurrent = self.state.kinematics_estimated.position.x_val
+        yCurrent = self.state.kinematics_estimated.position.y_val
+        zCurrent = self.state.kinematics_estimated.position.z_val
+
+        canditatesTrue = []
+
+        for ind, (x, y, z) in enumerate(canditates):
+
+            xInter = np.linspace(xCurrent, x ,10)
+            yInter = np.linspace(yCurrent, y ,10)
+            zInter = np.linspace(zCurrent, z, 10)
+
+            pathPoints = np.stack((xInter, yInter, zInter),axis=1)
+
+            dist = distance.cdist(lidarPoints, pathPoints)
+
+            min = np.min(dist)
+
+            if min>=minDist:
+
+                canditatesTrue.append(ind)
+
+        return canditatesTrue
+
+
+    def getCanditates(self, pertubations=300, saveLidar=False, minDist = 1.,
+                            maxTravelTime=3., maxYaw=15., controllers=[]):
 
         speedScalar = 1
         np.random.seed()
@@ -166,12 +193,12 @@ class controllerApp(controller):
             canditates = np.stack((xCanditate,yCanditate,zCanditate),axis=1)
 
             inGeoFence = self.insideGeoFence(canditates)
-            isSafeDist = self.isSafeDist(canditate = canditates,
+            isSafeDist = self.isSafeDist(canditates = canditates,
                                          lidarPoints = lidarPoints,
                                          minDist = minDist)
 
             geoFenceSafe = inGeoFence
-            safeDistTrue = np.where(np.array(isSafeDist)==True)[0]
+            safeDistTrue = isSafeDist
 
             # import pdb; pdb.set_trace()
             validCandidatesIndex = np.intersect1d(geoFenceSafe, safeDistTrue)
@@ -183,8 +210,16 @@ class controllerApp(controller):
                     continue
                 else:
                     # if further canditates also fail, go to debug mode ...
-                    import pdb
-                    pdb.set_trace()
+                    print(f"[ERROR] {self.getName()}")
+                    print(f"    geoFenceSafe.size={len(geoFenceSafe)}")
+                    print(f"    safeDistTrue.size={len(safeDistTrue)}")
+                    print(f"    validCandidatesIndex.size={len(validCandidatesIndex)}")
+                    print(f"    helperIcreasedMove={helperIcreasedMove}")
+
+                    # import pdb
+                    # pdb.set_trace()
+
+                    
 
             else:
                 # There are validate canditates, tehrfore break the searchi process
