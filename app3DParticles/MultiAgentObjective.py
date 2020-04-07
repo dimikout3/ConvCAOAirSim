@@ -51,6 +51,12 @@ fenceWidth = geoFenceSet['width']
 fenceLength = geoFenceSet['length']
 fenceHeight = geoFenceSet['height']
 
+# ,
+# "GlobalHawk": {
+#   "VehicleType": "SimpleFlight",
+#     "AutoCreate": true,
+#   "X": 5, "Y": 0, "Z": 0
+# }
 globalHawkSet = baseSet['GlobalHawk']
 GLOBAL_HAWK_ACTIVE = globalHawkSet['active']
 Xglobal = globalHawkSet['x']
@@ -470,7 +476,7 @@ def get_options():
     optParser.add_option("--waypoints", default=200, dest="waypoints",type="int", help="the number of waypoints provided")
     optParser.add_option("--maxYaw", default=10, dest="maxYaw",type="float", help="max Yaw change")
     optParser.add_option("--maxTravelTime", default=2.5, dest="maxTravelTime",type="float", help="max distance to be travelled in one step")
-    optParser.add_option("--estimatorWindow", default=30, dest="estimatorWindow",type="int", help="CAO estimator window")
+    optParser.add_option("--estimatorWindow", default=5, dest="estimatorWindow",type="int", help="CAO estimator window")
     options, args = optParser.parse_args()
 
     return options
@@ -549,6 +555,15 @@ if __name__ == "__main__":
     for ctrl in controllers:
         # no need for task list (just setting values here)
         ctrl.setGeoFence(geofence = fence)
+
+    print("\nLifting all drones to specified Z altitude")
+    tasks = []
+    intialAlt = -4
+    stepAlt = -0.5
+    for i,ctrl in enumerate(controllers):
+        t = ctrl.moveToZ(intialAlt + stepAlt*i,2)
+        tasks.append(t)
+    for t in tasks: t.join()
 
     xHigh, yHigh, zHigh = fence.getHighValues()
     xLow, yLow, zLow = fence.getLowValues()
