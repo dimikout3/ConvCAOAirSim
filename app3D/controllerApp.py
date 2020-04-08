@@ -142,8 +142,8 @@ class controllerApp(controller):
         return canditatesTrue
 
 
-    def getCanditates(self, pertubations=120, saveLidar=False, minDist = 1.,
-                            maxTravelTime=2., controllers=[]):
+    def getCanditates(self, pertubations=300, saveLidar=False, minDist = 2.,
+                            maxTravelTime=3., controllers=[]):
 
         lidarPoints = self.getLidarData(save_lidar=saveLidar)
         lidarPoints = self.clearLidarPoints(lidarPoints=lidarPoints,
@@ -156,20 +156,29 @@ class controllerApp(controller):
         yCurrent = self.state.kinematics_estimated.position.y_val
         zCurrent = self.state.kinematics_estimated.position.z_val
 
-        xCanditate = xCurrent + (np.random.random(pertubations) - 1.)*maxTravelTime
-        yCanditate = yCurrent + (np.random.random(pertubations) - 1.)*maxTravelTime
-        zCanditate = zCurrent + (np.random.random(pertubations) - 1.)*maxTravelTime
-        canditates = np.stack((xCanditate,yCanditate,zCanditate),axis=1)
+        for helperIncreased in np.linspace(1,5,40):
 
-        # inGeoFence = self.insideGeoFence(c = canditates, d = minDist)
-        isSafeDist = self.isSafeDist(canditates = canditates,
-                                     lidarPoints = lidarPoints,
-                                     minDist = minDist)
+            xCanditate = xCurrent + (np.random.random(pertubations) - .5)*maxTravelTime*helperIncreased
+            yCanditate = yCurrent + (np.random.random(pertubations) - .5)*maxTravelTime*helperIncreased
+            zCanditate = zCurrent + (np.random.random(pertubations) - .5)*maxTravelTime*helperIncreased
+            canditates = np.stack((xCanditate,yCanditate,zCanditate),axis=1)
 
-        # geoFenceSafe = np.where(inGeoFence==True)[0]
-        safeDistTrue = np.where(np.array(isSafeDist)==True)[0]
+            # inGeoFence = self.insideGeoFence(c = canditates, d = minDist)
+            isSafeDist = self.isSafeDist(canditates = canditates,
+                                         lidarPoints = lidarPoints,
+                                         minDist = minDist)
 
-        # validCandidatesIndex = np.intersect1d(geoFenceSafe, safeDistTrue)
+            # geoFenceSafe = np.where(inGeoFence==True)[0]
+            safeDistTrue = np.where(np.array(isSafeDist)==True)[0]
+
+            if safeDistTrue.size == 0:
+                print(f"[CANDITATES] {self.getName()} found canditates with helperIncreased={helperIncreased}")
+            else:
+                break
+            # validCandidatesIndex = np.intersect1d(geoFenceSafe, safeDistTrue)
+
+        if safeDistTrue.size == 0:
+            import pdb; pdb.set_trace()
 
         xCanditate = xCanditate[safeDistTrue]
         yCanditate = yCanditate[safeDistTrue]
@@ -182,9 +191,13 @@ class controllerApp(controller):
 
     def move(self,controllers=[], frontierCellsAttributed = []):
 
+        frontierCellsAttributed = frontierCellsAttributed[0]
+
         self.attributed.append(frontierCellsAttributed)
 
         meanFrontierCell = np.mean(frontierCellsAttributed, axis=0)
+        print(f"[MOVE] {self.getName()} meanFrontierCell={meanFrontierCell}")
+
         canditatesPoints = self.getCanditates(controllers = controllers)
 
         xCurrent = self.state.kinematics_estimated.position.x_val
