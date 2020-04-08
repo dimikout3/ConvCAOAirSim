@@ -138,6 +138,8 @@ class controllerApp(controller):
 
         canditatesTrue = []
 
+        # TODO: Avoid this loop if possible
+
         for ind, (x, y, z) in enumerate(canditates):
 
             xInter = np.linspace(xCurrent, x ,10)
@@ -158,7 +160,7 @@ class controllerApp(controller):
 
 
     def getCanditates(self, pertubations=300, saveLidar=False, minDist = 1.,
-                            maxTravelTime=3., maxYaw=15., controllers=[]):
+                            maxTravelTime=1., maxYaw=15., controllers=[]):
 
         speedScalar = 1
         np.random.seed()
@@ -185,6 +187,7 @@ class controllerApp(controller):
                                                 maxTravelTime=maxTravelTime,
                                                 controllers=controllers)
             lidarPoints = self.addOffsetLidar(lidarPoints=lidarPoints)
+            print(f"[LIDAR] {self.getName()} has lidarPoints.shape={lidarPoints.shape}")
 
             xCanditate = xCurrent + np.cos(randomOrientation)*speedScalar*travelTime*helperIcreasedMove
             yCanditate = yCurrent + np.sin(randomOrientation)*speedScalar*travelTime*a*helperIcreasedMove
@@ -216,10 +219,10 @@ class controllerApp(controller):
                     print(f"    validCandidatesIndex.size={len(validCandidatesIndex)}")
                     print(f"    helperIcreasedMove={helperIcreasedMove}")
 
-                    # import pdb
-                    # pdb.set_trace()
+                    # BUG: it is possible that lidarPoints dont get slim vertical obstacles (DEH)
 
-                    
+                    import pdb
+                    pdb.set_trace()
 
             else:
                 # There are validate canditates, tehrfore break the searchi process

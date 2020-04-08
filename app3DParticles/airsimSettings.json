@@ -75,12 +75,12 @@
 	         "Enabled" : true,
 	         "NumberOfChannels": 16,
 					 "RotationsPerSecond": 20,
-	         "PointsPerSecond": 10000,
+	         "PointsPerSecond": 30000,
 					 "X": 0, "Y": 0, "Z": -1,
 					 "Roll": 0, "Pitch": 0, "Yaw" : 0,
 					 "Range":70,
-					 "VerticalFOVUpper": 180,
-					 "VerticalFOVLower": -180,
+					 "VerticalFOVUpper": 45,
+					 "VerticalFOVLower": -45,
 					 "HorizontalFOVStart": -180,
 					 "HorizontalFOVEnd": 180,
 					 "DrawDebugPoints": true
@@ -99,11 +99,6 @@
 		  "VehicleType": "SimpleFlight",
 			"AutoCreate": true,
 		  "X": 0, "Y": -5, "Z": 0
-	  },
-	  "GlobalHawk": {
-		"VehicleType": "SimpleFlight",
-		  "AutoCreate": true,
-		"X": 5, "Y": 0, "Z": 0
 	  }
   }
 }
