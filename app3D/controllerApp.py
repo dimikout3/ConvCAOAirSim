@@ -113,8 +113,37 @@ class controllerApp(controller):
         pass
 
 
-    def getCanditates(self, pertubations=70, saveLidar=False, minDist = 2.,
-                            maxTravelTime=5., controllers=[]):
+    def isSafeDist(self, canditates=[], lidarPoints=[], minDist=1.):
+
+        xCurrent = self.state.kinematics_estimated.position.x_val
+        yCurrent = self.state.kinematics_estimated.position.y_val
+        zCurrent = self.state.kinematics_estimated.position.z_val
+
+        canditatesTrue = []
+
+        # TODO: Avoid this loop if possible
+
+        for ind, (x, y, z) in enumerate(canditates):
+
+            xInter = np.linspace(xCurrent, x ,10)
+            yInter = np.linspace(yCurrent, y ,10)
+            zInter = np.linspace(zCurrent, z, 10)
+
+            pathPoints = np.stack((xInter, yInter, zInter),axis=1)
+
+            dist = distance.cdist(lidarPoints, pathPoints)
+
+            min = np.min(dist)
+
+            if min>=minDist:
+
+                canditatesTrue.append(ind)
+
+        return canditatesTrue
+
+
+    def getCanditates(self, pertubations=120, saveLidar=False, minDist = 1.,
+                            maxTravelTime=2., controllers=[]):
 
         lidarPoints = self.getLidarData(save_lidar=saveLidar)
         lidarPoints = self.clearLidarPoints(lidarPoints=lidarPoints,
@@ -133,7 +162,7 @@ class controllerApp(controller):
         canditates = np.stack((xCanditate,yCanditate,zCanditate),axis=1)
 
         # inGeoFence = self.insideGeoFence(c = canditates, d = minDist)
-        isSafeDist = self.isSafeDist(canditate = canditates,
+        isSafeDist = self.isSafeDist(canditates = canditates,
                                      lidarPoints = lidarPoints,
                                      minDist = minDist)
 
