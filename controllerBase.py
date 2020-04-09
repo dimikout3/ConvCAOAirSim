@@ -734,7 +734,7 @@ class controller:
 
                 distLidar2Drone = scipy.spatial.distance.cdist(lidarPoints, [ctrlCurrent])
 
-                lidarPoints = lidarPoints[np.where(distLidar2Drone>=2.)[0]]
+                lidarPoints = lidarPoints[np.where(distLidar2Drone>=3.)[0]]
 
                 # if DEBUG_CLEAR_LIDAR:
                 #     print(f"{self.getName()} excluding lidar from {ctrl.getName()} excluded size {len(np.where(distLidar2Drone<2.)[0])}")
@@ -1250,6 +1250,16 @@ class controller:
         self.cameraInfo.pose.position.z_val += self.offSetZ
 
         # self.cameraInfo.fov = max(120,self.cameraInfo.fov)
+
+        self.cameraInfoFront = self.client.simGetCameraInfo(1, vehicle_name=self.name)
+        self.cameraInfoFront.pose.position.x_val += self.offSetX
+        self.cameraInfoFront.pose.position.y_val += self.offSetY
+        self.cameraInfoFront.pose.position.z_val += self.offSetZ
+
+        self.cameraInfoBack = self.client.simGetCameraInfo(4, vehicle_name=self.name)
+        self.cameraInfoBack.pose.position.x_val += self.offSetX
+        self.cameraInfoBack.pose.position.y_val += self.offSetY
+        self.cameraInfoBack.pose.position.z_val += self.offSetZ
 
 
     def getPositions(self, index=None):
