@@ -51,6 +51,12 @@ fenceWidth = geoFenceSet['width']
 fenceLength = geoFenceSet['length']
 fenceHeight = geoFenceSet['height']
 
+# ,
+# "GlobalHawk": {
+#   "VehicleType": "SimpleFlight",
+#     "AutoCreate": true,
+#   "X": 5, "Y": 0, "Z": 0
+# }
 globalHawkSet = baseSet['GlobalHawk']
 GLOBAL_HAWK_ACTIVE = globalHawkSet['active']
 Xglobal = globalHawkSet['x']
@@ -339,16 +345,17 @@ def attributeFrontierCells():
 
     argmin = np.argmin(dist, axis=0)
 
-    attributed = []
+    attributed = [[] for _ in controllers]
+
     for ind, ctrl in enumerate(controllers):
 
         cellsInd = np.where(argmin == ind)
 
         if cellsInd[0].size == 0:
             argmin_single = np.argmin(distance.cdist(frontierCellsIndexes, [uav[ind]]), axis=0)
-            attributed.append(frontierCellsIndexes[argmin_single])
+            attributed[ind].append(frontierCellsIndexes[argmin_single])
         else:
-            attributed.append(frontierCellsIndexes[cellsInd])
+            attributed[ind].append(frontierCellsIndexes[cellsInd])
 
         # print(f"[ATTRIBUTED] 3d for UAV{ind}")
         # show3DVector(attributed[ind])
@@ -374,7 +381,7 @@ def updateMaps():
         Explored[(xIntermediate,yIntermediate,zIntermediate)] = True
 
         Obstacles[(xIntermediate,yIntermediate,zIntermediate)] = False
-        Obstacles[(x,y,z)] = True
+        # Obstacles[(x,y,z)] = True
 
         DescreteMap[(x,y,z)] = True
 
@@ -394,7 +401,7 @@ def show3DMaps(map):
 
 
 def show3DVector(vector):
-
+    # import open3d as o3d
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(vector)
     o3d.visualization.draw_geometries([pcd]) # Visualize the point cloud
@@ -511,6 +518,15 @@ if __name__ == "__main__":
     for ctrl in controllers:
         # no need for task list (just setting values here)
         ctrl.setGeoFence(geofence = fence)
+
+    print("\nLifting all drones to specified Z altitude")
+    tasks = []
+    intialAlt = -10
+    stepAlt = -0.5
+    for i,ctrl in enumerate(controllers):
+        t = ctrl.moveToZ(intialAlt + stepAlt*i,2)
+        tasks.append(t)
+    for t in tasks: t.join()
 
     discretizator = Discretizator.Discretizator(discrete=baseSet['Discrete'], geofence=fence)
     discretizator.report()

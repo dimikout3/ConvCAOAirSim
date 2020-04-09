@@ -79,8 +79,8 @@
 					 "X": 0, "Y": 0, "Z": -1,
 					 "Roll": 0, "Pitch": 0, "Yaw" : 0,
 					 "Range":70,
-					 "VerticalFOVUpper": 180,
-					 "VerticalFOVLower": -180,
+					 "VerticalFOVUpper": 30,
+					 "VerticalFOVLower": -30,
 					 "HorizontalFOVStart": -180,
 					 "HorizontalFOVEnd": 180,
 					 "DrawDebugPoints": true
