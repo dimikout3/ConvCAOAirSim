@@ -13,6 +13,7 @@ import utilities.utils as utils
 import matplotlib.pyplot as plt
 
 import scipy
+from scipy.spatial import Delaunay
 
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
@@ -207,11 +208,13 @@ class controller:
                                                            responses[2].width,
                                                            responses[2].height)
                 self.imageDepthFront = imageDepthFront
+                self.imageDepthFrontRaw = responses[2]
 
                 imageDepthBack = airsim.list_to_2d_float_array(responses[3].image_data_float,
                                                            responses[3].width,
                                                            responses[3].height)
                 self.imageDepthBack = imageDepthBack
+                self.imageDepthBackRaw = responses[3]
 
                 self.imageDepthPeripheralWidth = responses[3].width
                 self.imageDepthPeripheralHeight = responses[3].height
@@ -267,6 +270,62 @@ class controller:
 
         return x,y,z,colors
     # TODO: getDepth() -> from camera "0", similar to rgb
+
+
+    def getPseudoLidar(self, size=1000):
+
+        depthImageList = [(self.imageDepthFrontRaw, self.cameraInfoFront),
+                          (self.imageDepthBackRaw, self.cameraInfoBack)]
+
+        height, width, _ = self.imageScene.shape
+        halfWidth = width/2
+        halfHeight= height/2
+
+        randomPointsSize = int(size/len(depthImageList))
+
+        x = np.array([])
+        y = np.array([])
+        z = np.array([])
+
+        hullList = []
+
+        xCurrent = self.state.kinematics_estimated.position.x_val
+        yCurrent = self.state.kinematics_estimated.position.y_val
+        zCurrent = self.state.kinematics_estimated.position.z_val
+        uav = np.array([xCurrent, yCurrent, zCurrent])
+
+        for depthImage, camInfo in depthImageList:
+
+            r = np.random.uniform(0,min(halfHeight,halfWidth),randomPointsSize)
+            thetas = np.random.uniform(0,2*np.pi,randomPointsSize)
+
+            pointsH = r*np.sin(thetas)
+            pointsW = r*np.cos(thetas)
+
+            centerH = int(halfHeight)
+            centerW = int(halfWidth)
+
+            pointsH = centerH + pointsH.astype(int)
+            pointsW = centerW + pointsW.astype(int)
+
+            xRelative, yRelative, zRelative = utils.to3D(pointsW, pointsH,
+                                              camInfo, depthImage,
+                                              maxDistView = self.maxDistView)
+            xCommon, yCommon, zCommon = utils.to_absolute_coordinates(xRelative, yRelative, zRelative,
+                                                    camInfo)
+
+            x = np.append(x, xCommon)
+            y = np.append(y, yCommon)
+            z = np.append(z, zCommon)
+
+            pointsHull = np.stack((xCommon, yCommon, zCommon), axis=1)
+            pointsHull = np.append(pointsHull, uav.reshape(1,3), axis=0)
+            hull = Delaunay(pointsHull)
+            hullList.append(hull)
+
+        lidarPoints = np.stack((x,y,z), axis=1)
+
+        return lidarPoints, hullList
 
 
     def getPointCloudList(self, index=-1):
