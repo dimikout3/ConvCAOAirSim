@@ -113,7 +113,9 @@ class controllerApp(controller):
         pass
 
 
-    def isSafeDist(self, canditates=[], lidarPoints=[], minDist=1.):
+    def isSafeDist(self, canditates=[], lidarPoints=[], minDist=1.,
+                         pathSize=10, multiplier=1.5):
+
 
         xCurrent = self.state.kinematics_estimated.position.x_val
         yCurrent = self.state.kinematics_estimated.position.y_val
@@ -125,9 +127,9 @@ class controllerApp(controller):
 
         for ind, (x, y, z) in enumerate(canditates):
 
-            xInter = np.linspace(xCurrent, x ,10)
-            yInter = np.linspace(yCurrent, y ,10)
-            zInter = np.linspace(zCurrent, z, 10)
+            xInter = np.linspace(xCurrent, x, pathSize)
+            yInter = np.linspace(yCurrent, y, pathSize)
+            zInter = np.linspace(zCurrent, z,  pathSize)
 
             pathPoints = np.stack((xInter, yInter, zInter),axis=1)
 
@@ -142,7 +144,7 @@ class controllerApp(controller):
         return canditatesTrue
 
 
-    def getCanditates(self, pertubations=300, saveLidar=False, minDist = 2.,
+    def getCanditates(self, pertubations=300, saveLidar=False, minDist = 1.,
                             maxTravelTime=3., controllers=[]):
 
         lidarPoints = self.getLidarData(save_lidar=saveLidar)
@@ -158,9 +160,10 @@ class controllerApp(controller):
 
         for helperIncreased in np.linspace(1,5,40):
 
-            xCanditate = xCurrent + (np.random.random(pertubations) - .5)*maxTravelTime*helperIncreased
-            yCanditate = yCurrent + (np.random.random(pertubations) - .5)*maxTravelTime*helperIncreased
-            zCanditate = zCurrent + (np.random.random(pertubations) - .5)*maxTravelTime*helperIncreased
+            xCanditate = xCurrent + (np.random.random(pertubations) - .5)*2*maxTravelTime*helperIncreased
+            yCanditate = yCurrent + (np.random.random(pertubations) - .5)*2*maxTravelTime*helperIncreased
+            # zCanditate = zCurrent + (np.random.random(pertubations) - .5)*maxTravelTime*helperIncreased
+            zCanditate = np.repeat(zCurrent,pertubations)
             canditates = np.stack((xCanditate,yCanditate,zCanditate),axis=1)
 
             # inGeoFence = self.insideGeoFence(c = canditates, d = minDist)
@@ -189,21 +192,89 @@ class controllerApp(controller):
         return canditatesPoints
 
 
-    def move(self,controllers=[], frontierCellsAttributed = []):
+    def canditatesInsidePseudoLidar(self, canditates, hullList):
+
+        validIndexes = np.array([])
+
+        for hull in hullList:
+
+            currentValid = np.where( hull.find_simplex(canditates)>=0 )
+
+            validIndexes = np.append(validIndexes, currentValid)
+
+        # import pdb; pdb.set_trace()
+        return canditates[np.unique(validIndexes).astype(int)]
+
+
+    def getCanditatesPseudoLidar(self, pertubations=600, saveLidar=False, minDist = 2.,
+                            maxTravelTime=3., controllers=[]):
+
+        lidarPoints, hullList = self.getPseudoLidar(size=3000)
+        lidarPoints = self.clearLidarPoints(lidarPoints=lidarPoints,
+                                            maxTravelTime=maxTravelTime,
+                                            controllers=controllers)
+
+        self.updateMultirotorState()
+        xCurrent = self.state.kinematics_estimated.position.x_val
+        yCurrent = self.state.kinematics_estimated.position.y_val
+        zCurrent = self.state.kinematics_estimated.position.z_val
+
+        xCanditate = xCurrent + (np.random.random(pertubations) - .5)*2*maxTravelTime
+        yCanditate = yCurrent + (np.random.random(pertubations) - .5)*2*maxTravelTime
+        # zCanditate = zCurrent + (np.random.random(pertubations) - .5)*maxTravelTime
+        zCanditate = np.repeat(zCurrent,pertubations)
+        canditates = np.stack((xCanditate,yCanditate,zCanditate),axis=1)
+
+        canditates = self.canditatesInsidePseudoLidar(canditates, hullList)
+
+        isSafeDist = self.isSafeDist(canditates = canditates,
+                                     lidarPoints = lidarPoints,
+                                     minDist = minDist)
+
+        # geoFenceSafe = np.where(inGeoFence==True)[0]
+        safeDistTrue = np.where(np.array(isSafeDist)==True)[0]
+
+        # validCandidatesIndex = np.intersect1d(geoFenceSafe, safeDistTrue)
+
+        # import pdb; pdb.set_trace()
+        if safeDistTrue.size == 0:
+            import pdb; pdb.set_trace()
+
+        xCanditate = xCanditate[safeDistTrue]
+        yCanditate = yCanditate[safeDistTrue]
+        zCanditate = zCanditate[safeDistTrue]
+
+        canditatesPoints = np.stack((xCanditate,yCanditate,zCanditate), axis=1)
+
+        return canditatesPoints
+
+
+    def move(self,controllers=[], frontierCellsAttributed = [], moveToClosestFrontier=True):
 
         frontierCellsAttributed = frontierCellsAttributed[0]
 
         self.attributed.append(frontierCellsAttributed)
 
-        meanFrontierCell = np.mean(frontierCellsAttributed, axis=0)
-        print(f"[MOVE] {self.getName()} meanFrontierCell={meanFrontierCell}")
-
-        canditatesPoints = self.getCanditates(controllers = controllers)
-
         xCurrent = self.state.kinematics_estimated.position.x_val
         yCurrent = self.state.kinematics_estimated.position.y_val
         zCurrent = self.state.kinematics_estimated.position.z_val
         currentPos = np.array([xCurrent, yCurrent, zCurrent])
+
+        if moveToClosestFrontier:
+
+            # import pdb; pdb.set_trace()
+            distances = distance.cdist(frontierCellsAttributed, [currentPos])
+            argmin = np.argmax(distances)
+            meanFrontierCell = frontierCellsAttributed[argmin]
+
+        else:
+
+            meanFrontierCell = np.mean(frontierCellsAttributed, axis=0)
+
+        print(f"[MOVE] {self.getName()} meanFrontierCell={meanFrontierCell}")
+
+        # canditatesPoints = self.getCanditates(controllers = controllers)
+        canditatesPoints = self.getCanditatesPseudoLidar(controllers = controllers)
 
         distances = distance.cdist(canditatesPoints, [meanFrontierCell])
 
@@ -211,7 +282,7 @@ class controllerApp(controller):
 
         x,y,z = canditatesPoints[argmin]
         print(f"[MOVE] {self.getName()} toward target points (x:{x}, y:{y}, z:{z})")
-        task = self.moveToPosition(x, y, z, 2.0)
+        task = self.moveToPositionYawModeAsync(x, y, z, 2.0)
 
         return task
 
