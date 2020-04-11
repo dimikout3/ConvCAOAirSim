@@ -18,54 +18,30 @@
 	      "MotionBlurAmount": 0,
 	      "TargetGamma": 0.5
         },
-				{
-					"ImageType": 2,
-					"Width": 700,
-					"Height": 700	,
-					"FOV_Degrees": 90,
-					"AutoExposureSpeed": 100,
-					"MotionBlurAmount": 0,
-					"AutoExposureMaxBrightness": 0.64,
-			        "AutoExposureMinBrightness": 0.03,
-			        "MotionBlurAmount": 0,
-			        "TargetGamma": 0.5
-				},
-				{
-					"ImageType": 2,
-					"Width": 700,
-					"Height": 700	,
-					"FOV_Degrees": 90,
-					"AutoExposureSpeed": 100,
-					"MotionBlurAmount": 0,
-					"AutoExposureMaxBrightness": 0.64,
-			        "AutoExposureMinBrightness": 0.03,
-			        "MotionBlurAmount": 0,
-			        "TargetGamma": 0.5
-				},
-				{
-					"ImageType": 2,
-					"Width": 700,
-					"Height": 700	,
-					"FOV_Degrees": 90,
-					"AutoExposureSpeed": 100,
-					"MotionBlurAmount": 0,
-					"AutoExposureMaxBrightness": 0.64,
-			        "AutoExposureMinBrightness": 0.03,
-			        "MotionBlurAmount": 0,
-			        "TargetGamma": 0.5
-				},
-				{
-					"ImageType": 2,
-					"Width": 700,
-					"Height": 700	,
-					"FOV_Degrees": 90,
-					"AutoExposureSpeed": 100,
-					"MotionBlurAmount": 0,
-					"AutoExposureMaxBrightness": 0.64,
-			        "AutoExposureMinBrightness": 0.03,
-			        "MotionBlurAmount": 0,
-			        "TargetGamma": 0.5
-				}
+		{
+			"ImageType": 2,
+			"Width": 700,
+			"Height": 700	,
+			"FOV_Degrees": 90,
+			"AutoExposureSpeed": 100,
+			"MotionBlurAmount": 0,
+			"AutoExposureMaxBrightness": 0.64,
+	        "AutoExposureMinBrightness": 0.03,
+	        "MotionBlurAmount": 0,
+	        "TargetGamma": 0.5
+		},
+		{
+			"ImageType": 5,
+			"Width": 700,
+			"Height": 700	,
+			"FOV_Degrees": 90,
+			"AutoExposureSpeed": 100,
+			"MotionBlurAmount": 0,
+			"AutoExposureMaxBrightness": 0.64,
+	        "AutoExposureMinBrightness": 0.03,
+	        "MotionBlurAmount": 0,
+	        "TargetGamma": 0.5
+		}
     ]
   },
 

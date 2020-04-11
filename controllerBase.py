@@ -190,7 +190,9 @@ class controller:
                     airsim.ImageRequest("0", airsim.ImageType.DepthPerspective, True),  #depth visualization image
                     airsim.ImageRequest("0", airsim.ImageType.Scene, False, False),
                     airsim.ImageRequest("1", airsim.ImageType.DepthPerspective, True),
-                    airsim.ImageRequest("4", airsim.ImageType.DepthPerspective, True)],
+                    airsim.ImageRequest("4", airsim.ImageType.DepthPerspective, True),
+                    airsim.ImageRequest("1", airsim.ImageType.Segmentation, True), #depth in perspective projection
+                    airsim.ImageRequest("4", airsim.ImageType.Segmentation, True)],
                     vehicle_name = self.name)  #scene vision image in uncompressed RGB array
 
                 img1d = np.frombuffer(responses[1].image_data_uint8, dtype=np.uint8) #get numpy array
@@ -209,12 +211,18 @@ class controller:
                                                            responses[2].height)
                 self.imageDepthFront = imageDepthFront
                 self.imageDepthFrontRaw = responses[2]
+                self.frontSegmented  = airsim.list_to_2d_float_array(responses[4].image_data_float,
+                                                           responses[4].width,
+                                                           responses[4].height)
 
                 imageDepthBack = airsim.list_to_2d_float_array(responses[3].image_data_float,
                                                            responses[3].width,
                                                            responses[3].height)
                 self.imageDepthBack = imageDepthBack
                 self.imageDepthBackRaw = responses[3]
+                self.backSegmented  = airsim.list_to_2d_float_array(responses[5].image_data_float,
+                                                           responses[5].width,
+                                                           responses[5].height)
 
                 self.imageDepthPeripheralWidth = responses[3].width
                 self.imageDepthPeripheralHeight = responses[3].height
