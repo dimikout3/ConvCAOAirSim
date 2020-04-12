@@ -280,6 +280,85 @@ class controller:
     # TODO: getDepth() -> from camera "0", similar to rgb
 
 
+    def getCanditatesSegmented(self, maxDistTravel=5., size=500, safeDist=2.):
+
+        depthImageList = [(self.imageDepthFrontRaw, self.imageDepthFront, self.frontSegmented, self.cameraInfoFront),
+                          (self.imageDepthBackRaw, self.imageDepthBack, self.backSegmented, self.cameraInfoBack)]
+
+        height, width, _ = self.imageScene.shape
+        halfWidth = width/2
+        halfHeight= height/2
+
+        centerH = int(halfHeight)
+        centerW = int(halfWidth)
+
+        randomBatchSize = int(size/len(depthImageList))
+
+        x = np.array([])
+        y = np.array([])
+        z = np.array([])
+
+        xCurrent = self.state.kinematics_estimated.position.x_val
+        yCurrent = self.state.kinematics_estimated.position.y_val
+        zCurrent = self.state.kinematics_estimated.position.z_val
+        uav = np.array([xCurrent, yCurrent, zCurrent])
+
+        for depthImageRaw, depthImage, segmentedImage, camInfo in depthImageList:
+
+            r = np.random.uniform(0,min(halfHeight,halfWidth),randomBatchSize)
+            thetas = np.random.uniform(0,2*np.pi,randomBatchSize)
+            distTravel = np.random.uniform(0, maxDistTravel, randomBatchSize)
+
+            # Identify how many unique objects are in the segmented image
+            uni = np.unique(segmentedImage)
+            # find the closest point of each segment from the drone and map them
+            # as dictionary. segMinDist -> { objectID_1 -> 13.4 [meters],
+                                           # objectID_2 -> 33.4 [meters]}
+            segMinDist = {}
+            for objectID in uni:
+                # import pdb; pdb.set_trace()
+                segMinDist[objectID] = np.min( depthImage[segmentedImage == objectID] )
+
+            pointsHFloat = r*np.sin(thetas)
+            pointsWFloat = r*np.cos(thetas)
+
+            pointsH = centerH + pointsHFloat.astype(int)
+            pointsW = centerW + pointsWFloat.astype(int)
+
+            # Points from center of image to target pixels (= the line from current
+            # position towards the target position, in pixel coordinates)
+            widthSpaced = np.linspace(np.repeat(centerW,randomBatchSize), pointsW, int(halfWidth))
+            heightSpaced = np.linspace(np.repeat(centerH,randomBatchSize), pointsH, int(halfHeight))
+
+            # segmentID of the points in the line
+            #  axis_0 -> line step
+            #  axis_1 -> pertubation
+            segmentsSpaced = segmentedImage[widthSpaced.astype(int), heightSpaced.astype(int)]
+
+            segmentClosest = np.zeros(segmentsSpaced.shape)
+            for objectID, closestPoint in segMinDist.items():
+                segmentClosest[segmentsSpaced == objectID] = closestPoint
+
+            pertubationClosest = np.min( segmentClosest, axis=0)
+
+            valid = np.where( pertubationClosest > distTravel + safeDist)
+
+            xRelative, yRelative, zRelative = utils.vectorTo3D(pointsW, pointsH,
+                                              camInfo, depthImage,
+                                              maxDistView = self.maxDistView,
+                                              vectorDistances = distTravel)
+            xCommon, yCommon, zCommon = utils.to_absolute_coordinates(xRelative, yRelative, zRelative,
+                                                    camInfo)
+
+            x = np.append(x, xCommon[valid])
+            y = np.append(y, yCommon[valid])
+            z = np.append(z, zCommon[valid])
+
+        safeCanditates = np.stack((x,y,z), axis=1)
+
+        return safeCanditates
+
+
     def getPseudoLidar(self, size=1000):
 
         depthImageList = [(self.imageDepthFrontRaw, self.cameraInfoFront),

@@ -56,6 +56,42 @@ def rotate(x,y,z,theta):
     return rotated[:,0],rotated[:,1],rotated[:,2]
 
 
+def vectorTo3D(pixelX, pixelY, camInfo, depthImage, maxDistView = None, vectorDistances = None):
+    """From image pixels (2D) to relative(!) 3D coordinates"""
+
+    if isinstance(maxDistView, float) or isinstance(maxDistView, int):
+        depthImage[ depthImage > maxDistView] = maxDistView
+
+    height, width = depthImage.shape
+    # print(f"Image size: width:{width} -- height:{height}")
+    halfWidth = width/2
+    halfHeight= height/2
+
+    camPitch, camRoll,camYaw = airsim.to_eularian_angles(camInfo.pose.orientation)
+
+    # to rads (its on degrees now)
+    hFoV = np.radians(camInfo.fov)
+    vFoV = (height/width)*hFoV
+
+    pointsH = np.array(pixelY, dtype=int)
+    pointsW = np.array(pixelX, dtype=int)
+
+    pixelPitch = ((pointsH-halfHeight)/halfHeight) * (vFoV/2)
+    pixelYaw = ((pointsW-halfWidth)/halfWidth) * (hFoV/2)
+
+    theta = (np.pi/2) - pixelPitch
+    # turn
+    phi = pixelYaw
+
+    r = vectorDistances
+
+    x = r*np.sin(theta)*np.cos(phi)
+    y = r*np.sin(theta)*np.sin(phi)
+    z = r*np.cos(theta)
+
+    return x, y, z
+
+
 def to3D(pixelX, pixelY, camInfo, depthImage, color=[], maxDistView = None):
     """From image pixels (2D) to relative(!) 3D coordinates"""
 
