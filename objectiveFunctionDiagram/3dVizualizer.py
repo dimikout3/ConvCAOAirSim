@@ -57,10 +57,10 @@ def custom_draw_geometry(pcd, position_dir):
     # ctr = vis.get_view_control()
     # ctr.convert_from_pinhole_camera_parameters(param)
 
-    vis.update_geometry()
-    vis.poll_events()
-    vis.update_renderer()
-    # vis.run()
+    # vis.update_geometry()
+    # vis.poll_events()
+    # vis.update_renderer()
+    vis.run()
     # capture_image(vis)
     pcdPNG_dir = os.path.join(position_dir, "pointCloud.png")
     vis.capture_screen_image(pcdPNG_dir)
@@ -76,7 +76,7 @@ def plot3D(position_dir):
 
 if __name__ == "__main__":
 
-    simulation_dir = os.path.join(os.getcwd(), "..","results_pointCloud")
+    simulation_dir = os.path.join(os.getcwd() ,"results_1_legacy")
 
     parent_dir = os.path.join(simulation_dir, "swarm_raw_output")
     detected_dir = os.path.join(simulation_dir, "swarm_detected")

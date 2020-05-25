@@ -92,7 +92,7 @@ def getPixels(img_dir):
 
 if __name__ == "__main__":
 
-    simulation_dir = os.path.join(os.getcwd(), "..","results_1")
+    simulation_dir = os.path.join(os.getcwd(),"results_1_legacy")
 
     parent_dir = os.path.join(simulation_dir, "swarm_raw_output")
     detected_dir = os.path.join(simulation_dir, "swarm_detected")
