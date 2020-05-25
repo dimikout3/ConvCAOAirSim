@@ -274,7 +274,12 @@ class controllerApp(controller):
         print(f"[MOVE] {self.getName()} meanFrontierCell={meanFrontierCell}")
 
         # canditatesPoints = self.getCanditates(controllers = controllers)
-        canditatesPoints = self.getCanditatesPseudoLidar(controllers = controllers)
+        # canditatesPoints = self.getCanditatesPseudoLidar(controllers = controllers)
+        canditatesPoints = self.getCanditatesSegmented(maxDistTravel=2.,
+                                                       size=500,
+                                                       safeDist=2.)
+
+        # import pdb; pdb.set_trace()
 
         distances = distance.cdist(canditatesPoints, [meanFrontierCell])
 
