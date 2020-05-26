@@ -56,8 +56,16 @@ if __name__ == "__main__":
 
         ctrl = drone(name = f"UAV{i}",
                      maxView = MAX_VIEW,
-                     pose = [POSE_X, POSE_Y + 5*i, POSE_Z])
+                     pose = [POSE_X, POSE_Y + 5*i, POSE_Z],
+                     fence = fence,
+                     map = map)
 
         controllers.append(ctrl)
+
+    for step in range(10):
+
+        print(f"---- Time Step: {step} -----")
+        for ctrl in controllers:
+            ctrl.move()
 
     show3DMap()
