@@ -81,11 +81,14 @@ if __name__ == "__main__":
     client = airsim.CarClient()
     client.confirmConnection()
 
-    for step in range(10):
+    lidraPoints = np.array([[0,0,0]])
+
+    for step in range(appSettings["TotalSteps"]):
 
         newPoints = getLidar(client)
+        lidraPoints = np.concatenate((lidraPoints, newPoints))
 
-        print(f"{step} [TimeStep] got {newPoints.size} new points ")
+        print(f"{step} [TimeStep] | new points :{newPoints.shape}| total points {lidraPoints.shape} ")
 
         time.sleep(appSettings["LidarPerSec"])
 
