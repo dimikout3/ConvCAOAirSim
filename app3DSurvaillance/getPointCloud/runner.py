@@ -56,10 +56,37 @@ def killAirSim():
         output = os.system("pkill AirSim")
 
 
+def getLidar(client):
+
+    for test in range(10):
+
+        lidarData = client.getLidarData()
+
+        points = np.array(lidarData.point_cloud, dtype=np.dtype('f4'))
+        if points.size != 0:
+            break
+        time.sleep(1)
+
+    points = np.reshape(points, (int(points.shape[0]/3), 3))
+
+    return points
+
+
 if __name__ == "__main__":
+
+    fillTemplate()
 
     launchAirSim()
 
-    for i in range(10):
+    client = airsim.CarClient()
+    client.confirmConnection()
+
+    for step in range(10):
+
+        newPoints = getLidar(client)
+
+        print(f"{step} [TimeStep] got {newPoints.size} new points ")
+
+        time.sleep(appSettings["LidarPerSec"])
 
     killAirSim()

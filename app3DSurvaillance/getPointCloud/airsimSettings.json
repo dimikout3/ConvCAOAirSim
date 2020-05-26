@@ -1,7 +1,7 @@
 {
 	"SeeDocsAt": "https://github.com/Microsoft/AirSim/blob/master/docs/settings.md",
 	"SettingsVersion": 1.2,
-	"SimMode": "",
+	"SimMode": "Car",
 	"ViewMode":"",
 
 	"DefaultSensors": {
@@ -10,7 +10,7 @@
 	         "Enabled" : true,
 	         "NumberOfChannels": 16,
 					 "RotationsPerSecond": 20,
-	         "PointsPerSecond": 10000,
+	                 "PointsPerSecond": 5000,
 					 "X": 0, "Y": 0, "Z": -1,
 					 "Roll": 0, "Pitch": 0, "Yaw" : 0,
 					 "Range":150,
