@@ -28,7 +28,7 @@ class geoFence:
         p6 = [self.maxX, self.minY, self.maxZ]
         p7 = [self.maxX, self.maxY, self.minZ]
         p8 = [self.maxX, self.maxY, self.maxZ]
-        poipointsHullts = [p1, p2, p3, p4, p5, p6, p7, p8]
+        pointsHull = [p1, p2, p3, p4, p5, p6, p7, p8]
 
         self.hull = Delaunay(pointsHull)
 
@@ -36,3 +36,10 @@ class geoFence:
     def isInside(self, point):
 
         return self.hull.find_simplex(point) >=0
+
+
+    def clearPointCloud(self, pointCloud):
+
+        validPoints = self.isInside(pointCloud)
+
+        return pointCloud[validPoints]
