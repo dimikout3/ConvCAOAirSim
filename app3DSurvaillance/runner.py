@@ -6,6 +6,7 @@ import pickle
 import json
 import open3d as o3d
 from drone import drone
+from geoFence import geoFence
 
 
 # Loading App settings from json file
@@ -46,6 +47,9 @@ if __name__ == "__main__":
     global map, controllers
 
     map = loadMap()
+
+    fence = geoFence(appSettings)
+    map = fence.clearPointCloud(map)
 
     controllers = []
     for i in range(SWARM_SIZE):
