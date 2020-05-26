@@ -101,4 +101,6 @@ if __name__ == "__main__":
 
     show3DMap(lidraPoints)
 
+    np.save("lidarPoints.npy",lidraPoints)
+
     killAirSim()
