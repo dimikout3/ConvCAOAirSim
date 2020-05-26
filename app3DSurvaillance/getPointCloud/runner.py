@@ -72,6 +72,13 @@ def getLidar(client):
     return points
 
 
+def show3DMap(lidarPoints):
+
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(lidarPoints)
+    o3d.visualization.draw_geometries([pcd]) # Visualize the point cloud
+
+
 if __name__ == "__main__":
 
     fillTemplate()
@@ -91,5 +98,7 @@ if __name__ == "__main__":
         print(f"{step} [TimeStep] | new points :{newPoints.shape}| total points {lidraPoints.shape} ")
 
         time.sleep(appSettings["LidarPerSec"])
+
+    show3DMap(lidraPoints)
 
     killAirSim()
