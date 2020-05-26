@@ -10,15 +10,15 @@
 	         "Enabled" : true,
 	         "NumberOfChannels": 16,
 					 "RotationsPerSecond": 20,
-	                 "PointsPerSecond": 5000,
-					 "X": 0, "Y": 0, "Z": -1,
+	                 "PointsPerSecond": 20000,
+					 "X": 0, "Y": 0, "Z": -7.5,
 					 "Roll": 0, "Pitch": 0, "Yaw" : 0,
-					 "Range":150,
-					 "VerticalFOVUpper": 45,
-					 "VerticalFOVLower": -45,
+					 "Range": 100,
+					 "VerticalFOVUpper": 0,
+					 "VerticalFOVLower": -25,
 					 "HorizontalFOVStart": -180,
 					 "HorizontalFOVEnd": 180,
-					 "DrawDebugPoints": true
+					 "DrawDebugPoints": false
 	    }
 	},
 
