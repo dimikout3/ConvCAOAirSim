@@ -7,6 +7,7 @@ import json
 import open3d as o3d
 from drone import drone
 from geoFence import geoFence
+from scipy.spatial import distance
 
 
 # Loading App settings from json file
@@ -18,9 +19,41 @@ POSE_X = appSettings["UAVS"]["Positions"]["X"]
 POSE_Y = appSettings["UAVS"]["Positions"]["Y"]
 POSE_Z =appSettings["UAVS"]["Positions"]["Z"]
 
+wayPointsSize = 200
+
+
 def loadMap():
 
     return np.load(appSettings["MapPath"])
+
+
+def calculateCostJ():
+
+    global costJ, controllers, map
+
+    # ___________ Calculating Cost J ____________
+    dronesPositions = []
+    for ctrl in controllers:
+        dronesPositions.append(ctrl.pose)
+
+    distP2R = distance.cdist(map, dronesPositions, 'euclidean')
+    minDistPFromR = np.argmin(distP2R, axis=1)
+
+    J = 0.0
+    for ind, ctrl in enumerate(controllers):
+        Ji = np.sum(distP2R[np.where(minDistPFromR==ind)])
+        J += Ji
+
+    costJ.append(J)
+    # _____________ End of Cost J ____________________
+
+
+    # ____________ Update Ji ___________________
+    for ctrl in controllers:
+        
+
+
+    # ____________ End of Ji Update  ___________________
 
 
 def show3DMap():
@@ -44,7 +77,7 @@ def show3DMap():
 
 if __name__ == "__main__":
 
-    global map, controllers
+    global map, controllers, costJ
 
     map = loadMap()
 
@@ -62,10 +95,22 @@ if __name__ == "__main__":
 
         controllers.append(ctrl)
 
-    for step in range(10):
+    costJ = []
+
+    for step in range(wayPointsSize):
 
         print(f"---- Time Step: {step} -----")
         for ctrl in controllers:
+            ctrl.updateState(step)
             ctrl.move()
 
+        calculateCostJ()
+
+        for ctrl in controllers:
+            # ctrl.updateEstimator1DoF()
+            ctrl.updateEstimator()
+
+        print(f"    J = {costJ[-1]}")
+
+    print(f"\n----- Improvement in J={costJ[0] - costJ[-1]}")
     show3DMap()
