@@ -16,7 +16,6 @@ The implemented algorithm is not specifically tailored to the dynamics of either
 The ConvCAO_AirSim repository contains the following applications:
 - [appConvergence](https://github.com/dimikout3/ConvCAO_AirSim/tree/master/appConvergence): Positioning a swarm of UAVs inside a completely unknown terrain, having as objective to maximize the overall situational awareness.
 - [appExhaustiveSearch](https://github.com/dimikout3/ConvCAO_AirSim/tree/master/appExhaustiveSearch): Centralized, semi-exhaustive methodology.
-- [appHoldLine](https://github.com/dimikout3/ConvCAO_AirSim/tree/master/appHoldLine): A rather simple problem (toy-problem), where the robots should be deployed in a specific formation (line).
 - [appLinux](https://github.com/dimikout3/ConvCAO_AirSim/tree/master/appLinux): Implementation for working on Linux OS.
 - [appNavigate](https://github.com/dimikout3/ConvCAO_AirSim/tree/master/appNavigate): Navigating a UAV swarm on a predetermined path.
 
