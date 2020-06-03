@@ -21,24 +21,24 @@ The ConvCAO_AirSim repository contains the following applications:
 
 This section provides a step-by-step guide for installing the ConvCAO_AirSim framework.
 
-###1. Dependencies
+### 1. Dependencies
 First, install the required system packages
 (NOTE: the majority of the experiments were conducted in a conda enviroment, therefore we stongly advise you to download and [install](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) a conda virtual enviroment):
 ```
 $ pip install airsim Shapely descartes opencv-contrib-python=4.1.26
 ```
 
-###2. Detector
+### 2. Detector
 Second, you have to define a detector capable of producing bounding boxes of objects along with the corresponding confidences levels from RGB images.
 
 For the needs of our application we utilized YOLOv3 detector, trained on the [COCO dataset](http://cocodataset.org/#home). You can download this detector from [here](https://convcao.hopto.org/index.php/s/mh8WIDpprE70SO3). After downloading the file, extract the yolo-coco folder inside your local ConvCao_AirSim folder.
 
 It is worth highlighting that, you could use a deifferent detector (tailored to the application needs), as the proposed methodology is agnostic as far the detector's choise is concerned.
 
-###3. Enviroments
+### 3. Enviroments
 Download any of the available [AirSim Enviroments](https://github.com/microsoft/AirSim/releases)
 
-###4. Run Example
+### 4. Run Example
 To run an example with the Convergence testbed you need to just replace the "detector-path" entry - inside this [file](https://github.com/dimikout3/ConvCAO_AirSim/blob/master/appConvergence/appSettings.json) - with your path to the previsously downloaded detector.
 
 Finally run the "MultiAgent.py" script:
