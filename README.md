@@ -7,7 +7,7 @@ Example:
 
 [![Video demonstration](http://kapoutsis.info/wp-content/uploads/2020/02/video_thumbnail.png)](https://www.youtube.com/watch?v=L8ycmS20rZs)
 
-[AirSim platform](https://github.com/microsoft/AirSim) was utilized to evaluate the perfmance of the swarm. 
+[AirSim platform](https://github.com/microsoft/AirSim) was utilized to evaluate the perfmance of the swarm.
 
 The implemented algorithm is not specifically tailored to the dynamics of either UAVs or the environment, instead, it learns, from the real-time images, exactly the most effective formations of the swarm for the underlying monitoring task. Moreover, and to be able to evaluate at each iteration the swarm formation, images from the UAVs are fed to a novel computation scheme that assigns a single scalar score, taking into consideration the number and quality of all unique objects of interest.
 
@@ -23,14 +23,14 @@ The ConvCAO_AirSim repository contains the following applications:
 This section provides a step-by-step guide for installing the ConvCAO_AirSim framework.
 
 ### Dependencies
-First, install the required system packages 
+First, install the required system packages
 (NOTE: the majority of the experiments were conducted in a conda enviroment, therefore we stongly advise you to download and install a conda virtual enviroment):
 ```
 $ pip install airsim Shapely descartes opencv-contrib-python=4.1.26
 ```
 
 ### Detector
-Second, you have to define a detector capable of producing bounding boxes of objects along with the corresponding confidences levels from RGB images. 
+Second, you have to define a detector capable of producing bounding boxes of objects along with the corresponding confidences levels from RGB images.
 
 For the needs of our application we utilized YOLOv3 detector, trained on the [COCO dataset](http://cocodataset.org/#home). You can download this detector from [here](https://convcao.hopto.org/index.php/s/mh8WIDpprE70SO3). After downloading the file, extract the yolo-coco folder inside your local ConvCao_AirSim folder.
 
@@ -40,7 +40,7 @@ It is worth highlighting that, you could use a deifferent detector (tailored to 
 Download any of the available [AirSim Enviroments](https://github.com/microsoft/AirSim/releases)
 
 ### Run Example
-To run an example with the Convergence testbed you need to just replace the "detector-path" entry - inside this [file](https://github.com/dimikout3/ConvCAO_AirSim/blob/master/appConvergence/appSettings.json) - with your path to the previsously downloaded detector. 
+To run an example with the Convergence testbed you need to just replace the "detector-path" entry - inside this [file](https://github.com/dimikout3/ConvCAO_AirSim/blob/master/appConvergence/appSettings.json) - with your path to the previsously downloaded detector.
 
 Finally run the "MultiAgent.py" script:
 ```
@@ -52,12 +52,11 @@ Detailed instructions for running specific applications are inside every corresp
 # 3D Reconstruction #
 Combining the information extracted from the Depth Image and the focal length of the camera we can recreate the 3D percepective for each UAV
 <p align="center">
-  <img width="712" height="400" src="toGiF.gif">
+  <img width="712" height="400" src="Videos/toGiF.gif">
 </p>
 
 # Combined 3D Reconstruction #
-Combining the aforementioned 3D reconstruction of each UAV we can generate the a point cloud for the whole enviroment 
+Combining the aforementioned 3D reconstruction of each UAV we can generate the a point cloud for the whole enviroment
 <p align="center">
-  <img width="712" height="400" src="combined.gif">
+  <img width="712" height="400" src="Videos/combined.gif">
 </p>
-
