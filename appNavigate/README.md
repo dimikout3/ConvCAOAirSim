@@ -1,14 +1,14 @@
 # Navigate #
 
-An app developed for providing a predetermined path to the UAVs. Used mainly for reproducing experiments for debuging purposes
+An app developed for providing a predetermined path to the UAVs. Used mainly on reproducing experiments for debuging purposes
 
 # Specific App Instructions #
 
-to be provided
+### 1. Dependencies
+In order to run this application you will nee a number of pickle objects. Each pickle object corresponds to a UAV and it is a list which element is an airsim multirotor [state](https://microsoft.github.io/AirSim/apis/). The UAV will move to all the positions  described in the aforementioned multirotor state list sequentially.
 
-# Run # 
-
-Copy and paste the pickle states in the folder. Update the naming in the the MultiAgent.py script. Run 
+### 2. Run
+Run the script
 ```
-$ python MultiAgent.py
+$ python navigate.py
 ```
