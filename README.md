@@ -11,6 +11,10 @@ Example:
 
 The implemented algorithm is not specifically tailored to the dynamics of either UAVs or the environment, instead, it learns, from the real-time images, exactly the most effective formations of the swarm for the underlying monitoring task. Moreover, and to be able to evaluate at each iteration the swarm formation, images from the UAVs are fed to a novel computation scheme that assigns a single scalar score, taking into consideration the number and quality of all unique objects of interest.
 
+The following video is a presentation of our work
+
+[![](http://img.youtube.com/vi/C53Gsex-op8/0.jpg)](http://www.youtube.com/watch?v=C53Gsex-op8 "")
+
 # Installation #
 
 The ConvCAO_AirSim repository contains the following applications:
