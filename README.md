@@ -64,7 +64,7 @@ Combining the aforementioned 3D reconstruction of each UAV we can generate the a
   <img width="712" height="400" src="Videos/combined.gif">
 </p>
 
-## Cite as: ##
+# Cite as: #
 
 ```
 @article{koutras2020autonomous,
