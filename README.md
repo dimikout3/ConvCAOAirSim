@@ -63,3 +63,18 @@ Combining the aforementioned 3D reconstruction of each UAV we can generate the a
 <p align="center">
   <img width="712" height="400" src="Videos/combined.gif">
 </p>
+
+# Cite as: $
+
+```
+@article{koutras2020autonomous,
+  title={Autonomous and cooperative design of the monitor positions for a team of UAVs to maximize the quantity and quality of detected objects},
+  author={Koutras, Dimitrios I and Kapoutsis, Athanasios Ch and Kosmatopoulos, Elias B},
+  journal={IEEE Robotics and Automation Letters},
+  volume={5},
+  number={3},
+  pages={4986--4993},
+  year={2020},
+  publisher={IEEE}
+}
+```
