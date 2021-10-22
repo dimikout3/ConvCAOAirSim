@@ -2,7 +2,7 @@
 
 This project deals with the problem of positioning a swarm of UAVs inside a completely unknown terrain, having as objective to maximize the overall situational awareness.
 
-For full description and performance analysis, please check out our companion paper [Autonomous and cooperative design of the monitor positions for a team of UAVs to maximize the quantity and quality of detected objects](https://arxiv.org/abs/2007.01247)
+For full description and performance analysis, please check out our companion [paper](https://arxiv.org/abs/2007.01247)
 
 Example:
 ![RA-L_mainFigure](http://kapoutsis.info/wp-content/uploads/2020/02/RA-L_mainFigure.png)
